@@ -9,11 +9,11 @@ The site provides an image for every item (exact model photo, clearly labeled re
 - `index.html`, `styles.css`, `app.js`: public site.
 - `data.json`: inventory, stable `h` QR identifiers, and item locations.
 - `photos.json`: image mapping with source/license links. Original SVG illustrations are in the repository root.
-- `room.json`: geometry and board positions from the Room Locator SD snapshot.
-- `staff.html`, `staff.js`: add item form that downloads a reviewable `data.json` update.
+- `room.json`: geometry, board positions and the console's type list from the Room Locator SD snapshot.
+- `staff.html`, `staff.js`: staff tools. Make QR codes the Room Locator console reads (move a thing, move a shelf, add a new item) and download a `data.json` update for a new item's guide.
 - `sync_room.py`: refresh locations and boards from the current SD files.
 - `STAFF-GUIDE.md`: transfer, publishing, maintenance, and photo instructions.
-- `SHELF-MOVES.md`: safe shelf move logic for future console work.
+- `SHELF-MOVES.md`: the phone codes, the shelf rules, and the staff PIN.
 
 Preview locally with `python3 -m http.server` in this directory. Opening `index.html` as a file will not load the JSON.
 
