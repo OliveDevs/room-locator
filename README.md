@@ -1,20 +1,22 @@
 # IDeATe Lending item guides
 
-A student-made, unofficial guide to 382 entries in the IDeATe Lending inventory. The item names and quantities were checked against the October 2026 inventory spreadsheet provided by the IDeATe Lending Office: 1,882 checkout records and 382 distinct names. Locations, short descriptions, QR identifiers, and existing maker links were carried over from the previous single-file site. The public CMU catalog was also checked for category names and model details; some catalog records do not identify a precise product variant. The inventory is a snapshot; ask the lending desk for the current shelf, kit contents, availability, and borrowing rules.
+A student-made, unofficial guide to 382 entries in the IDeATe Lending inventory. Names were checked against the October 2026 Lending Office inventory and the current Room Locator v5.3 SD snapshot. The public CMU catalog was checked for model details; some records still do not identify a precise version. Locations and availability are a snapshot. Ask staff for the current shelf, kit contents, and checkout due date.
 
-## Site files
+The site provides an image for every item (exact model photo, clearly labeled representative photo, or original illustration), preparation lists, first steps, relevant tips, maker resources when verified, a model chooser for selected ambiguous entries, a room view, and an optional Google Calendar return reminder.
 
-- `index.html` is the page shell.
-- `styles.css` controls the layout and colors.
-- `app.js` contains the item guide rules, model-specific preparation notes, search, and routing.
-- `data.json` contains the inventory and maker resources. Each item retains its `h` identifier, so existing `?i=...` QR links still work. `#kN` links also work, but their indices depend on item order.
+## Files
 
-To preview locally, run `python3 -m http.server` in this directory and open the shown local address. The JSON fetch means opening `index.html` directly as a file may not work.
+- `index.html`, `styles.css`, `app.js`: public site.
+- `data.json`: inventory, stable `h` QR identifiers, and item locations.
+- `photos.json`: image mapping with source/license links. Original SVG illustrations are in the repository root.
+- `room.json`: geometry and board positions from the Room Locator SD snapshot.
+- `staff.html`, `staff.js`: add item form that downloads a reviewable `data.json` update.
+- `sync_room.py`: refresh locations and boards from the current SD files.
+- `STAFF-GUIDE.md`: transfer, publishing, maintenance, and photo instructions.
+- `SHELF-MOVES.md`: safe shelf move logic for future console work.
 
-## Updating an item
+Preview locally with `python3 -m http.server` in this directory. Opening `index.html` as a file will not load the JSON.
 
-Find the entry in `data.json`. Add verified maker resources as `r`, a list of `[label, URL]` pairs. Use a model-specific manual when the exact model is known. For generic inventory names, check the label on the physical device first. Do not guess that batteries, cables, cards, or other accessories are included in a loan.
+Printed `?i=<code>` QR links remain stable when the list is edited. Hash links of the form `#kN` depend on list order, so use QR codes for permanent item labels.
 
-Add unusual setup requirements or steps in `OVERRIDE` in `app.js`. The shared `GUIDE` rules cover common equipment types; every entry gets a preparation list and first steps even when no model-specific resource has been verified.
-
-The official IDeATe Lending page is linked for current policy. This site does not assert live availability, lending hours, or kit contents.
+The official policy source is https://ideate.cmu.edu/resources/lending/index.html. This site is not an official policy or checkout service.

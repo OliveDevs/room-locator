@@ -1,0 +1,318 @@
+{
+  "source": "Room Locator v5.3 SD snapshot, 2026-11-13",
+  "units": [
+    {
+      "code": "TRN",
+      "name": "Transport",
+      "first": 0,
+      "shelves": 1,
+      "boards": [
+        1
+      ]
+    },
+    {
+      "code": "CBL",
+      "name": "Cables",
+      "first": 1,
+      "shelves": 4,
+      "boards": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "rect": [
+        25,
+        129,
+        53,
+        141
+      ]
+    },
+    {
+      "code": "UND",
+      "name": "Under the Desk",
+      "first": 5,
+      "shelves": 3,
+      "boards": [
+        1,
+        2,
+        3
+      ],
+      "rect": [
+        57,
+        129,
+        83,
+        141
+      ]
+    },
+    {
+      "code": "DOO",
+      "name": "Doodads",
+      "first": 8,
+      "shelves": 4,
+      "boards": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "rect": [
+        60,
+        132,
+        80,
+        141
+      ]
+    },
+    {
+      "code": "TRI",
+      "name": "Tripods",
+      "first": 12,
+      "shelves": 2,
+      "boards": [
+        1,
+        2
+      ],
+      "rect": [
+        74,
+        60,
+        126,
+        86
+      ]
+    },
+    {
+      "code": "PV",
+      "name": "Photo/Video",
+      "first": 14,
+      "shelves": 6,
+      "boards": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "rect": [
+        2,
+        74,
+        17,
+        107
+      ]
+    },
+    {
+      "code": "LP",
+      "name": "Lighting",
+      "first": 20,
+      "shelves": 5,
+      "boards": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "rect": [
+        2,
+        38,
+        17,
+        72
+      ]
+    },
+    {
+      "code": "AUDW",
+      "name": "Audio Rack",
+      "first": 25,
+      "shelves": 6,
+      "boards": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "rect": [
+        2,
+        3,
+        17,
+        36
+      ]
+    },
+    {
+      "code": "AUD",
+      "name": "Audio",
+      "first": 31,
+      "shelves": 8,
+      "boards": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "rect": [
+        20,
+        2,
+        46,
+        14
+      ]
+    },
+    {
+      "code": "CMP",
+      "name": "Computing",
+      "first": 39,
+      "shelves": 8,
+      "boards": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "rect": [
+        46,
+        2,
+        72,
+        14
+      ]
+    },
+    {
+      "code": "VR",
+      "name": "VR",
+      "first": 47,
+      "shelves": 8,
+      "boards": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "rect": [
+        72,
+        2,
+        98,
+        14
+      ]
+    },
+    {
+      "code": "ST1",
+      "name": "Soft Tech 1",
+      "first": 55,
+      "shelves": 8,
+      "boards": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "rect": [
+        98,
+        2,
+        124,
+        14
+      ]
+    },
+    {
+      "code": "ST2",
+      "name": "Soft Tech 2",
+      "first": 63,
+      "shelves": 8,
+      "boards": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "rect": [
+        124,
+        2,
+        150,
+        14
+      ]
+    },
+    {
+      "code": "SHOP",
+      "name": "Shop",
+      "first": 71,
+      "shelves": 8,
+      "boards": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "rect": [
+        150,
+        2,
+        176,
+        14
+      ]
+    },
+    {
+      "code": "DSK",
+      "name": "Desk Storage",
+      "first": 79,
+      "shelves": 2,
+      "boards": [
+        1,
+        2
+      ],
+      "rect": [
+        183,
+        55,
+        198,
+        88
+      ]
+    },
+    {
+      "code": "A3",
+      "name": "A3 Storage",
+      "first": 0,
+      "shelves": 0,
+      "boards": []
+    },
+    {
+      "code": "MGR",
+      "name": "Manager Office",
+      "first": 0,
+      "shelves": 0,
+      "boards": []
+    },
+    {
+      "code": "EVT",
+      "name": "Events",
+      "first": 0,
+      "shelves": 0,
+      "boards": []
+    },
+    {
+      "code": "DMG",
+      "name": "Damaged",
+      "first": 0,
+      "shelves": 0,
+      "boards": []
+    }
+  ]
+}

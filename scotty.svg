@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 76" role="img" aria-label="Black Scotty terrier with a grey beard and raised paw">
+  <path d="M18 48 7 37l5-6 12 5 11-9 16-2 7-17 7 12 10-13 5 23 11 6 8 11-3 14-15 1-7 11-7-2-2-13-18 1-7 12-8-1-1-15-10 2Z" fill="#171717"/>
+  <path d="M58 10 62 2l7 20-6-2ZM76 8l8-7 2 27-7-4Z" fill="#171717"/>
+  <path d="m77 36 10-2 9 5 8 9-6 9-13-1-6 8-10-5-7 2-5-11 10-10Z" fill="#181818"/>
+  <path d="m68 44 7 5 8-2 6 8 10-2-7 9-10-2-7 7-7-7-5 1-2-8Z" fill="#9cb4b7"/>
+  <path d="m72 48 4 5 5-4 5 6 4-3" fill="none" stroke="#d7e2db" stroke-width="2" stroke-linecap="round"/>
+  <path d="m89 57 4 6-4 5-6-8" fill="#e75c72"/>
+  <ellipse cx="98" cy="46" rx="5" ry="4" fill="#111"/>
+  <circle cx="77" cy="37" r="2.7" fill="#e1f7ea"/>
+  <circle cx="78" cy="37" r="1.2" fill="#171717"/>
+  <path d="M36 31q-7 8-9 18M44 32q4 8 2 20" stroke="#4f5654" stroke-width="3" fill="none" stroke-linecap="round"/>
+</svg>
