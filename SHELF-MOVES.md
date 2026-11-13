@@ -1,6 +1,6 @@
 # Moving things with a phone code
 
-Room Locator v5.4 (code version 14) reads codes made on `staff.html`. The website never changes the console directly: the code only tells the console what to propose. The console checks every part, shows the change with the old spot lit green and the new spot lit blue, and asks for the staff PIN before it saves anything to its SD card.
+Room Locator v5.4 and later (code versions 14 and 15) read codes made on `staff.html`. The website never changes the console directly: the code only tells the console what to propose. The console checks every part, shows the change with the old spot lit green and the new spot lit blue, and asks for the staff PIN before it saves anything to its SD card.
 
 ## The codes
 
@@ -26,6 +26,14 @@ Every code must be under 60 characters, because the scanner hands the console 64
 - Stored on the console's SD card in `STAFF.TSV` (4 digits; 1234 if the file is missing). It is never on this website.
 - Once typed, changes stay open for 5 minutes; a restart locks them again.
 - Change it on the console: Home, Down past the last picture, Select, then the last spot on the map, "Change staff PIN".
+
+## Fixing a mistake on the console (v5.5)
+
+Home, Down past the last picture, Select, then **Recent changes** near the end of the map. It lists every change since the laptop last collected them, newest first. **Undo the last change** takes back the newest one (moves, shelf moves, swaps, boards). Adding a new item cannot be undone on the console.
+
+## Bringing console changes to this site without a laptop (v5.5)
+
+On the console: **Send to website** shows the change list as one or more QR codes. On a phone: `staff.html`, tab **From the console**, scan every page. The page applies the changes in order (the same rules as the console) and offers `data.json` and `room.json` to upload. It remembers how far it got (`synced` in `room.json`), so scanning again later only adds what is new.
 
 ## Bringing console changes back to the laptop and this site
 

@@ -26,7 +26,7 @@ Promise.all([fetch('data.json?v=20261113f').then(r => r.json()), fetch('room.jso
   const placeName = (code, n) => { const u = unitBy[code]; if (!u) return code; return u.shelves ? u.name + ', shelf ' + n : u.name + ' (ask at the desk)'; };
 
   // ---- tabs
-  const tabs = ['move', 'shelf', 'add'];
+  const tabs = ['move', 'shelf', 'add', 'sync'];
   tabs.forEach(t => $('tab-' + t).addEventListener('click', () => {
     tabs.forEach(o => { $('tab-' + o).setAttribute('aria-selected', o === t); $('tool-' + o).hidden = o !== t; });
     $('code-out').hidden = true; status.textContent = '';
@@ -154,4 +154,98 @@ Promise.all([fetch('data.json?v=20261113f').then(r => r.json()), fetch('room.jso
     a.href = url; a.download = 'data.json'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
     status.textContent = 'Downloaded data.json with ' + name + ' (page code ' + item.h + '). Upload it to the site repository after a check.';
   });
+
+  // ---- from the console: its change list (MOVES.TSV) as QR pages "RLSYNC|page|pages|total" + lines with | for tabs
+  // The console plays the lines back in order; this does the same to the website's copy, then offers the two files to upload.
+  const pages = {}; let pageCount = 0, stream = null, scanning = false;
+  const video = $('sync-video'), canvas = $('sync-canvas');
+  function showPages() {
+    if (!pageCount) { $('sync-pages').textContent = ''; return; }
+    const got = Object.keys(pages).length;
+    $('sync-pages').textContent = 'Pages scanned: ' + [...Array(pageCount).keys()].map(i => (pages[i + 1] ? '✓ ' : '– ') + (i + 1)).join('   ') + (got === pageCount ? '' : '   (show the console the next page: Down)');
+  }
+  function stopCamera() { scanning = false; if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; video.hidden = true; $('sync-stop').hidden = true; $('sync-start').hidden = false; }
+  function readPage(text) {
+    const lines = text.replace(/\r/g, '').split('\n');
+    const head = lines[0].split('|');
+    if (head[0] !== 'RLSYNC') return false;
+    const p = Number(head[1]), n = Number(head[2]);
+    if (pageCount && n !== pageCount) { Object.keys(pages).forEach(k => delete pages[k]); }
+    pageCount = n; pages[p] = { total: Number(head[3]), lines: lines.slice(1).filter(Boolean) };
+    showPages();
+    if (Object.keys(pages).length === pageCount) { stopCamera(); const all = []; for (let i = 1; i <= pageCount; i++) all.push(...pages[i].lines); apply(all.map(l => l.split('|'))); }
+    return true;
+  }
+  function tick() {
+    if (!scanning) return;
+    if (video.readyState >= 2) {
+      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true }); ctx.drawImage(video, 0, 0);
+      const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = window.jsQR && jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+      if (code && code.data) readPage(code.data);
+    }
+    requestAnimationFrame(tick);
+  }
+  $('sync-start').addEventListener('click', async () => {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      video.srcObject = stream; video.hidden = false; await video.play();
+      scanning = true; $('sync-start').hidden = true; $('sync-stop').hidden = false; status.textContent = ''; tick();
+    } catch (e) { status.textContent = 'The camera did not start. Allow camera access, or use "Paste instead".'; }
+  });
+  $('sync-stop').addEventListener('click', stopCamera);
+  $('sync-use-paste').addEventListener('click', () => {
+    const text = $('sync-paste').value.replace(/\r/g, '');
+    if (text.startsWith('RLSYNC')) { text.split(/\n(?=RLSYNC)/).forEach(readPage); return; }
+    apply(text.split('\n').filter(l => l.trim() && !l.startsWith('@')).map(l => l.split(/\t|\|/)));
+  });
+
+  let outData = null, outRoom = null;
+  function apply(lines) {
+    const d = JSON.parse(JSON.stringify(data)), r = JSON.parse(JSON.stringify(room));
+    const ub = Object.fromEntries(r.units.map(u => [u.code, u]));
+    const synced = r.synced || { lines: 0, first: '' };
+    const firstText = lines.length ? lines[0].join('|') : '';
+    let start = synced.lines && synced.first === firstText && synced.lines <= lines.length ? synced.lines : 0;
+    const count = { I: 0, S: 0, X: 0, U: 0, B: 0, A: 0 }, notes = [];
+    const byH = Object.fromEntries(d.kinds.map(k => [k.h, k]));
+    const inRange = (s, lo, hi) => s >= Number(lo) && s <= Number(hi);
+    for (const f of lines.slice(start)) {
+      const t = f[0].length === 1 ? f[0].toUpperCase() : 'I';
+      if (t === 'I') { const k = byH[f[0].toLowerCase()]; if (k) { k.u = f[1]; k.s = Number(f[2]); count.I++; } else notes.push('Not on the website yet: item ' + f[0]); }
+      else if (t === 'S') { d.kinds.forEach(k => { if (k.u === f[1] && inRange(k.s, f[2], f[3])) { k.u = f[4]; k.s = Number(f[5]); } }); count.S++; }
+      else if (t === 'X') { d.kinds.forEach(k => { if (k.u === f[1] && inRange(k.s, f[2], f[3])) { k.u = f[4]; k.s = Number(f[5]); } else if (k.u === f[4] && inRange(k.s, f[5], f[6])) { k.u = f[1]; k.s = Number(f[2]); } }); count.X++; }
+      else if (t === 'U') { const a = ub[f[1]], b = ub[f[2]]; if (a && b) { for (const key of ['first', 'shelves', 'rect']) [a[key], b[key]] = [b[key], a[key]]; count.U++; } }
+      else if (t === 'B') { const u = ub[f[1]], n = Number(f[2]); if (u) { const set = new Set(u.boards && u.boards.length ? u.boards : [...Array(u.shelves).keys()].map(i => i + 1)); if (f[3] === '1') set.add(n); else if (n > 1) set.delete(n); u.boards = [...set].sort((x, y) => x - y); count.B++; } }
+      else if (t === 'A') {
+        const name = f[3], h = nameCode(name);
+        if (!byH[h]) { const k = { n: name, c: CAT_ORDER[Number(f[1])] || 'Cables & More', t: f[2], x: Number(f[6]) || 1, in: true, d: '', h, u: f[4], s: Number(f[5]) }; d.kinds.push(k); byH[h] = k; count.A++; }
+      }
+    }
+    const names = Object.fromEntries(r.units.map(u => [u.code, u.name]));
+    for (const k of d.kinds) { const u = ub[k.u]; k.w = u && u.shelves && k.s ? names[k.u] + ', shelf ' + boardBelowIn(u, k.s) : (names[k.u] || k.u); }
+    d.kinds.sort((a, b) => a.n.localeCompare(b.n));
+    r.synced = { lines: lines.length, first: firstText };
+    r.source = 'Room Locator console, changes brought over on ' + new Date().toISOString().slice(0, 10);
+    outData = d; outRoom = r;
+    const done = lines.length - start;
+    const list = [];
+    if (start) list.push(start + ' changes were already on the website; ' + done + ' new.');
+    if (!done) list.push('Nothing new since the last time.');
+    if (count.I) list.push(count.I + (count.I === 1 ? ' thing moved' : ' things moved'));
+    if (count.S) list.push(count.S + (count.S === 1 ? ' whole shelf moved' : ' whole shelves moved'));
+    if (count.X) list.push(count.X + (count.X === 1 ? ' pair of shelves swapped' : ' pairs of shelves swapped'));
+    if (count.U) list.push(count.U + (count.U === 1 ? ' pair of units traded places' : ' pairs of units traded places'));
+    if (count.B) list.push(count.B + (count.B === 1 ? ' shelf board put in or taken out' : ' shelf boards put in or taken out'));
+    if (count.A) list.push(count.A + (count.A === 1 ? ' new item (its guide page starts plain; add details later)' : ' new items (their guide pages start plain; add details later)'));
+    notes.forEach(n => list.push(n));
+    $('sync-summary').innerHTML = list.map(x => '<li>' + esc(x) + '</li>').join('');
+    $('sync-result').hidden = false;
+  }
+  const boardBelowIn = (u, n) => { while (n > 1 && u.boards && u.boards.length && !u.boards.includes(n)) n--; return n; };
+  const download = (obj, name) => { const blob = new Blob([JSON.stringify(obj, null, 2) + '\n'], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
+  $('sync-data').addEventListener('click', () => outData && download(outData, 'data.json'));
+  $('sync-room').addEventListener('click', () => outRoom && download(outRoom, 'room.json'));
+  window.__rlSync = { readPage, apply: lines => { apply(lines); return { data: outData, room: outRoom }; } };   // (for testing)
 }).catch(err => { console.error(err); status.textContent = 'Could not load the inventory. Open this page from the published site or a local web server.'; });
