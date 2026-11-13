@@ -12,6 +12,7 @@ h2 { font-size:15px; margin:0 0 6px; color:var(--dim); font-weight:600; }
 p, ul { margin:0; } ul { padding-left:20px; }
 a { color:var(--accent); }
 .where { background:var(--panel); padding:16px; font-size:20px; font-weight:600; }
+.where .note { font-size:14px; font-weight:400; color:var(--dim, #8a93a3); margin-top:6px; }
 .sub { color:var(--dim); }
 input { width:100%; font:inherit; padding:12px; background:var(--panel); color:var(--fg); border:0; }
 .list a { display:block; padding:10px 0; text-decoration:none; color:var(--fg); }
@@ -54,7 +55,7 @@ function item(i) {
   const cat = 'https://cmu.primo.exlibrisgroup.com/discovery/search?vid=01CMU_INST:01CMU&query=any,contains,' + encodeURIComponent(k.n);
   document.title = k.n + ' · IDeATe Lending';
   m.innerHTML = '<div><h1>' + esc(k.n) + '</h1><p class="sub">' + esc(k.t) + ', ' + esc(k.c) + (k.x > 1 ? '. Lending has ' + k.x : '') + '</p></div>'
-    + '<div class="where">' + (k.in ? esc(k.w) : 'Ask at the desk: kept in ' + esc(k.w)) + '</div>'
+    + '<div class="where">' + (k.in ? esc(k.w) : 'Ask at the desk: kept in ' + esc(k.w)) + '<div class="note">Things get moved. The console at the desk always has the current shelf.</div></div>'
     + (k.d ? '<section><h2>What it is</h2><p>' + esc(k.d) + '</p></section>' : '')
     + (k.g ? '<section><h2>Good for</h2><p>' + esc(k.g) + '</p></section>' : '')
     + (goes.length ? '<section><h2>Goes with</h2><ul>' + goes.map(g => '<li><a href="#t' + encodeURIComponent(g) + '">' + esc(g.split('/')[1]) + '</a></li>').join('') + '</ul></section>' : '')
