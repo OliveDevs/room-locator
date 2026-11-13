@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="stylesheet" href="styles.css?v=20261113f"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="stylesheet" href="styles.css?v=20261113g"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
 <main class="staff-main">
 <p class="eyebrow">For lending staff</p>
 <h1>Staff tools</h1>
@@ -8,6 +8,7 @@
 <button type="button" role="tab" id="tab-move" aria-controls="tool-move" aria-selected="true">Move a thing</button>
 <button type="button" role="tab" id="tab-shelf" aria-controls="tool-shelf" aria-selected="false">Move a shelf</button>
 <button type="button" role="tab" id="tab-add" aria-controls="tool-add" aria-selected="false">Add a new item</button>
+<button type="button" role="tab" id="tab-sync" aria-controls="tool-sync" aria-selected="false">From the console</button>
 </div>
 
 <section id="tool-move" class="tool" role="tabpanel" aria-labelledby="tab-move">
@@ -56,6 +57,19 @@
 </form>
 </section>
 
+<section id="tool-sync" class="tool" role="tabpanel" aria-labelledby="tab-sync" hidden>
+<div class="sync-box">
+<p class="tool-note">Bring the console's changes into this website. On the console: Home, Down past the last picture, Select, then "Send to website" near the end of the map. Scan every page it shows.</p>
+<div class="sync-camera"><video id="sync-video" playsinline muted hidden></video><canvas id="sync-canvas" hidden></canvas></div>
+<div class="sync-actions"><button type="button" id="sync-start">Scan the console's codes</button><button type="button" id="sync-stop" class="button-secondary" hidden>Stop the camera</button></div>
+<p id="sync-pages" class="sync-pages"></p>
+<details class="sync-paste"><summary>No camera? Paste instead</summary><label>The console's change list (type @MOVES in the Serial Monitor and copy what it prints)<textarea id="sync-paste" rows="5"></textarea></label><button type="button" id="sync-use-paste" class="button-secondary">Use the pasted list</button></details>
+<div id="sync-result" hidden><h2>What changes on the website</h2><ul id="sync-summary"></ul>
+<p class="tool-note">The website changes only after someone uploads these two files to the site repository.</p>
+<div class="sync-actions"><button type="button" id="sync-data">Download data.json</button><button type="button" id="sync-room" class="button-secondary">Download room.json</button></div></div>
+</div>
+</section>
+
 <p id="staff-status" class="tool-status" role="status"></p>
 
 <section id="code-out" class="code-out" hidden aria-live="polite">
@@ -79,11 +93,13 @@
 <li>The PIN is checked on the console, never on this page. It starts as 1234. Change it on the console: press Down past the last picture on Home, Select, then go to the last spot on the map, "Change staff PIN".</li>
 <li>Shelf numbers count grooves from the bottom. If a board was taken out for something tall, the console puts things on the board below.</li>
 <li>This page reads the website's copy of the room. Moves made at the console since the last update are not shown here, so the console's own screen is the one to trust.</li>
-<li>A new item added with a code exists on the console right away. Its guide page appears on this site after someone uploads the downloaded data.json.</li>
+<li>A new item added with a code exists on the console right away. Its guide page appears on this site after someone uploads the downloaded data.json, or after "From the console" brings it over.</li>
+<li>A mistake on the console can be taken back there: Recent changes, then Undo the last change. Adding a new item cannot be undone on the console.</li>
 </ul>
 <p><a href="STAFF-GUIDE.md">Full maintenance instructions ↗</a></p>
 </section>
 </main>
 <datalist id="item-list"></datalist>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
-<script src="staff.js?v=20261113f" defer></script></body></html>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script src="staff.js?v=20261113g" defer></script></body></html>

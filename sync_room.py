@@ -43,7 +43,8 @@ def main():
     (ROOT / 'data.json').write_text(json.dumps(data, ensure_ascii=False, indent=2)+'\n')
     # the console's types, in TYPES.TSV order: a phone "add item" code names its type by this position
     types = [[int(row[0]), row[1]] for row in rows(folder / 'TYPES.TSV') if len(row) >= 2]
-    (ROOT / 'room.json').write_text(json.dumps({'source':'Room Locator SD snapshot (run sync_room.py after changing the card)','units':units,'types':types}, indent=2)+'\n')
+    # synced = how much of the console's change list (MOVES.TSV) the staff page already brought over; a fresh card snapshot starts at 0
+    (ROOT / 'room.json').write_text(json.dumps({'source':'Room Locator SD snapshot (run sync_room.py after changing the card)','units':units,'types':types,'synced':{'lines':0,'first':''}}, indent=2)+'\n')
     print(f"Updated {len(found)} item locations and {len(units)} room units")
 
 if __name__ == '__main__': main()
