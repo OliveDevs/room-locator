@@ -1,0 +1,10 @@
+# Shelf move logic for Room Locator review
+
+The current v5.3 console files support moves and `BOARDS.TSV`, but this website only displays a read-only snapshot. The following is a reviewable specification for any future QR or console move controls. Test it on the physical shelf before enabling a public action.
+
+- Number groove positions from the bottom, starting at 1. A board at groove `b` supports items assigned to `b` and all higher empty-board grooves up to the next board. Removing a board joins its contents into the support range below; adding a board splits a range.
+- A whole-shelf move should gather every item whose effective support board is the source board, including items whose stored groove differs because boards were removed. The move should affect all copies of each item by default, matching the team's decision.
+- For **combine**, move source items to the destination support board, keep destination items, and then update board positions as explicitly confirmed by staff. For **swap**, exchange the two shelves' item sets and their intended board states as one transaction. Reject a move if either unit or groove is invalid, if it would leave items without a support board, or if storage capacity is exceeded.
+- When moving an entire unit, require matching light counts as described in the project notes. Never infer the presence of a physical board from item data alone. The console cannot sense boards; staff must update `BOARDS.TSV` or its board screen after physically changing them.
+- Record one move with old and new unit/groove, timestamp, and operator confirmation. Show a preview before committing; write data atomically or keep a recoverable journal. Update QR/site snapshot only after the console state is verified.
+- The proposed `RL:MOVE`, `RL:SHELF`, and `RL:ADD` QR strings in the attached project notes are design ideas, not supported by the current v5.3 firmware. Do not publish scannable move codes until firmware parsing, staff PIN checks, recovery, and hardware tests pass.
