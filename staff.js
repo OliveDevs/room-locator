@@ -1,6 +1,6 @@
 const form=document.getElementById('new-item'),status=document.getElementById('staff-status');
 const lines=value=>value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
-Promise.all([fetch('data.json').then(r=>r.json()),fetch('room.json').then(r=>r.json())]).then(([data,room])=>{
+Promise.all([fetch('data.json?v=20261113b').then(r=>r.json()),fetch('room.json?v=20261113b').then(r=>r.json())]).then(([data,room])=>{
   const categories=[...new Set(data.kinds.map(x=>x.c))].sort();
   form.elements.category.innerHTML='<option value="">Choose category</option>'+categories.map(c=>'<option>'+c.replaceAll('&','&amp;')+'</option>').join('');
   form.elements.unit.innerHTML='<option value="">Choose unit</option>'+room.units.filter(u=>u.shelves).map(u=>'<option value="'+u.code+'">'+u.name.replaceAll('&','&amp;')+' ('+u.code+')</option>').join('');
