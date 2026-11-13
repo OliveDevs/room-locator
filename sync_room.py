@@ -11,7 +11,7 @@ def rows(path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('sd_folder', type=Path, help='Folder containing KINDS.TSV, UNITS.TSV and BOARDS.TSV')
+    parser.add_argument('sd_folder', type=Path, help='Folder containing KINDS.TSV, UNITS.TSV, BOARDS.TSV and TYPES.TSV')
     args = parser.parse_args()
     folder = args.sd_folder
     data = json.loads((ROOT / 'data.json').read_text())
@@ -41,7 +41,9 @@ def main():
     for item in data['kinds']:
         item['w'] = f"{names.get(item['u'], item['u'])}, shelf {item['s']}" if item['s'] else names.get(item['u'], item['u'])
     (ROOT / 'data.json').write_text(json.dumps(data, ensure_ascii=False, indent=2)+'\n')
-    (ROOT / 'room.json').write_text(json.dumps({'source':'Room Locator v5.3 SD snapshot, 2026-11-13','units':units}, indent=2)+'\n')
+    # the console's types, in TYPES.TSV order: a phone "add item" code names its type by this position
+    types = [[int(row[0]), row[1]] for row in rows(folder / 'TYPES.TSV') if len(row) >= 2]
+    (ROOT / 'room.json').write_text(json.dumps({'source':'Room Locator SD snapshot (run sync_room.py after changing the card)','units':units,'types':types}, indent=2)+'\n')
     print(f"Updated {len(found)} item locations and {len(units)} room units")
 
 if __name__ == '__main__': main()

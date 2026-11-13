@@ -11,20 +11,21 @@ This is a student project, ready for IDeATe staff to review and own. The public 
 
 No GitHub password or access token is stored in the site. The student authors do not need organization administrator access. Staff can use GitHub's web editor and normal review process.
 
-## Add an item
+## Move or add items (staff tools)
 
-1. Open `staff.html` on the published site and fill in the physical item's name, unit, shelf, preparation list, steps, and any verified maker guide.
-2. The form downloads a new `data.json` and shows the new item's stable six-character QR code. It does **not** publish automatically. Review the file, then upload it in a GitHub branch or commit. Upload a staff-owned photo if you entered a relative photo path.
-3. Add the same item to the Room Locator console inventory. The website and console are separate systems. Check the published item page and room view after both are updated.
-4. For a model name that could mean several generations, add verified versions to `MODEL_CHOICES` in `app.js`, or leave the maker guide blank until the unit label is checked. Do not link a manual for a guessed version.
+Open `staff.html` on the published site. It has three tools: **Move a thing**, **Move a shelf**, and **Add a new item**. Each one shows a QR code. Show it to the Room Locator's scanner, type the staff PIN on the console, check the screen and the lights, and press Select. See `SHELF-MOVES.md` for the code formats, the shelf rules, and how to bring console changes back into this site.
+
+For a new item, the same form can also download an updated `data.json` with the item's guide (preparation list, first steps, tips, maker guide, photo). Upload it after a check so the item gets its page. Its page code is made from its name, the same way the console makes it, so the QR on the console's item page leads to the right guide.
+
+For a model name that could mean several generations, add verified versions to `MODEL_CHOICES` in `app.js`, or leave the maker guide blank until the unit label is checked. Do not link a manual for a guessed version.
 
 The form stores a custom preparation list, first steps, and tips directly in the new item's data. Existing entries can be edited in `data.json`: `n` name, `c` category, `t` type, `x` copies, `u` unit, `s` groove, `w` display location, `d` short description, `r` official links, `need`, `start`, and `tips`. Keep the existing `h` code unchanged; changing it breaks printed QR links. `photos.json` maps existing items to licensed photos or illustrations. Each photo record has a source and license link; an individual item can instead have a `p` photo object.
 
 ## Refresh locations and shelf boards
 
-For a verified SD card snapshot, run `python3 sync_room.py /path/to/SD-card-files`. This reads `KINDS.TSV`, `UNITS.TSV`, and `BOARDS.TSV` and updates item locations in `data.json` plus the room layout in `room.json`. It stops if a new console item is missing a website guide, so the new item can be reviewed first. Do not sync an old SD snapshot over newer staff edits. Commit the updated files together and check a few real shelves.
+For a verified SD card snapshot, run `python3 sync_room.py /path/to/SD-card-files`. This reads `KINDS.TSV`, `UNITS.TSV`, `BOARDS.TSV`, and `TYPES.TSV` and updates item locations in `data.json` plus the room layout in `room.json`. It stops if a new console item is missing a website guide, so the new item can be reviewed first. Do not sync an old SD snapshot over newer staff edits. Commit the updated files together and check a few real shelves.
 
-The room view treats shelves as groove positions counted from the bottom. Only grooves listed in `BOARDS.TSV` have physical boards. For a listed item at groove `g`, the displayed support board is the highest board at or below `g`. The room view uses the November 13, 2026 v5.3 SD snapshot and must be refreshed when the physical layout changes.
+The room view treats shelves as groove positions counted from the bottom. Only grooves listed in `BOARDS.TSV` have physical boards. For a listed item at groove `g`, the displayed support board is the highest board at or below `g`. The room view uses the November 13, 2026 SD snapshot and must be refreshed when the physical layout changes.
 
 ## Return reminders and official rules
 
