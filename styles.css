@@ -19,16 +19,10 @@
 .calendar-status{margin:10px 0 0!important;font-size:12px!important;color:var(--muted)}
 @media(max-width:850px){.item-lead{grid-template-columns:1fr 1fr}.item-photo img{height:270px}}
 @media(max-width:640px){.item-lead{grid-template-columns:1fr}.item-summary .location{max-width:none}.item-photo img{height:260px}}
-.brand .scotty{width:38px;height:38px;display:block;flex:none}
 .field-label{display:block;font-size:14px;font-weight:700;margin:14px 0 6px}
 .guide-section input,.guide-section select{max-width:500px;margin-bottom:12px}
 .model-result{min-height:30px;font-size:14px;color:var(--muted)}
 .model-result .source-link{font-size:16px;margin:6px 0 0}
-.scotty-track{height:70px;position:relative;overflow:hidden;background:#efe9df;border-bottom:5px solid var(--red)}
-.scotty-track img{position:absolute;left:0;bottom:0;width:105px;height:70px;transform:translateX(-110px);animation:scotty-run 17s linear infinite,scotty-bounce .32s ease-in-out infinite alternate;transform-origin:center bottom}
-@keyframes scotty-run{to{left:calc(100% + 110px)}}
-@keyframes scotty-bounce{to{bottom:4px}}
-@media(prefers-reduced-motion:reduce){.scotty-track img{animation:none;left:24px;transform:none}}
 .header-nav{display:flex;gap:22px;align-items:center}.header-nav a{color:white;font-size:13px;font-weight:650;white-space:nowrap}
 .room-layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,1fr);gap:20px;margin-top:30px;align-items:start}
 .room-map{position:relative;aspect-ratio:4/3;background:#e9e3d8;outline:2px solid #bdb4a7;outline-offset:-2px;min-width:0}
@@ -36,5 +30,5 @@
 .room-unit:hover,.room-unit.selected{background:#651021;z-index:1;box-shadow:0 0 0 3px #20201e}
 .room-detail{background:white;padding:24px;max-height:600px;overflow:auto}.room-detail h3{font-size:16px;margin:0 0 8px}.room-shelf{border-top:1px solid var(--line);padding:14px 0}.room-shelf a{display:block;padding:4px 0;font-size:14px}.room-shelf p{font-size:13px;color:var(--muted)}.room-note{font-size:14px;color:var(--muted);margin-top:20px}
 @media(max-width:780px){.room-layout{grid-template-columns:1fr}.header-nav{gap:12px}.header-nav a{font-size:12px}.room-detail{max-height:none}}
-@media(max-width:580px){.header-nav a:last-child{display:none}.brand{font-size:15px;gap:8px}.brand .scotty{width:30px;height:30px}.room-unit{font-size:8px;border-width:1px}.room-detail{padding:18px}}
+@media(max-width:580px){.header-nav a:last-child{display:none}.brand{font-size:15px;gap:8px}.room-unit{font-size:8px;border-width:1px}.room-detail{padding:18px}}
 .staff-main{max-width:900px}.staff-form{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:30px}.staff-form label{font-size:14px;font-weight:700}.staff-form label:has(textarea){grid-column:1/-1}.staff-form input,.staff-form select,.staff-form textarea{display:block;margin-top:7px;font-weight:400;width:100%;border:1px solid var(--line);border-radius:0;background:#fff;color:var(--ink);font:inherit;padding:12px;min-height:48px}.staff-form textarea{resize:vertical}.staff-form button{background:var(--red);color:#fff;border:0;padding:15px 20px;font-size:16px;font-weight:700;cursor:pointer}.staff-form #staff-status{align-self:center;margin:0}.staff-next{margin-top:36px;background:#fff;padding:28px}.staff-next ol{padding-left:22px}.staff-next li{margin-bottom:10px}@media(max-width:640px){.staff-form{grid-template-columns:1fr}.staff-form label:has(textarea){grid-column:auto}}
