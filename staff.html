@@ -1,1 +1,89 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Add an item · IDeATe Lending</title><link rel="stylesheet" href="styles.css?v=20261113e"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header><main class="staff-main"><p class="eyebrow">For lending staff</p><h1>Add an item guide</h1><p class="intro">Fill in the details from the physical item and the checkout system. This form prepares an updated site file for review; it does not change the published site or the Room Locator console.</p><form id="new-item" class="staff-form"><label>Item name<input name="name" required placeholder="As it appears in the inventory"></label><label>Category<select name="category" required></select></label><label>Type<input name="type" required placeholder="For example, Field Recorders"></label><label>Room unit<select name="unit" required></select></label><label>Shelf or groove number<input name="shelf" required type="number" min="1"></label><label>Number of copies<input name="copies" required type="number" min="1" value="1"></label><label>Short description<textarea name="description" rows="2" placeholder="What this item is useful for"></textarea></label><label>What the borrower needs, one per line<textarea name="need" rows="4" required></textarea></label><label>First steps, one per line<textarea name="start" rows="4" required></textarea></label><label>Useful tips, one per line<textarea name="tips" rows="3"></textarea></label><label>Official maker guide URL, if model verified<input name="manual" type="url" placeholder="https://..."></label><label>Photo path or URL, if staff has usage rights<input name="photo" placeholder="photos/model-name.jpg"></label><label>Photo credit or maker<input name="credit" placeholder="IDeATe Lending staff"></label><label>Photo source or license URL<input name="crediturl" type="url" placeholder="https://..."></label><button type="submit">Download updated item data</button><p id="staff-status" role="status"></p></form><section class="staff-next"><h2>After downloading</h2><ol><li>Review the new entry and upload the downloaded <strong>data.json</strong> to the site repository. Upload any local photo file at the path you entered.</li><li>Update the Room Locator console inventory separately. The website cannot move equipment or add it to the console.</li><li>Open the new guide and room view on the published site to confirm both match the physical item.</li></ol><p><a href="STAFF-GUIDE.md">Full maintenance instructions ↗</a></p></section></main><script src="staff.js?v=20261113c" defer></script></body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="stylesheet" href="styles.css?v=20261113f"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
+<main class="staff-main">
+<p class="eyebrow">For lending staff</p>
+<h1>Staff tools</h1>
+<p class="intro">Make a code on your phone and show it to the Room Locator's scanner. The console shows what will change, lights the old and new spots, and asks for the staff PIN before it saves anything.</p>
+
+<div class="tool-tabs" role="tablist" aria-label="Staff tools">
+<button type="button" role="tab" id="tab-move" aria-controls="tool-move" aria-selected="true">Move a thing</button>
+<button type="button" role="tab" id="tab-shelf" aria-controls="tool-shelf" aria-selected="false">Move a shelf</button>
+<button type="button" role="tab" id="tab-add" aria-controls="tool-add" aria-selected="false">Add a new item</button>
+</div>
+
+<section id="tool-move" class="tool" role="tabpanel" aria-labelledby="tab-move">
+<form id="move-form" class="staff-form">
+<label class="wide">Item<input name="thing" list="item-list" required placeholder="Start typing the item name" autocomplete="off"></label>
+<p class="wide tool-note" id="move-now"></p>
+<label>Move to unit<select name="unit" required></select></label>
+<label>Shelf<select name="shelf" required></select></label>
+<button type="submit" class="wide">Make the console code</button>
+</form>
+</section>
+
+<section id="tool-shelf" class="tool" role="tabpanel" aria-labelledby="tab-shelf" hidden>
+<form id="shelf-form" class="staff-form">
+<label>From unit<select name="fromUnit" required></select></label>
+<label>Shelf<select name="fromShelf" required></select></label>
+<p class="wide tool-note" id="shelf-now"></p>
+<label>To unit<select name="toUnit" required></select></label>
+<label>Shelf<select name="toShelf" required></select></label>
+<fieldset class="wide choice"><legend>If the shelf you pick already has things on it</legend>
+<label><input type="radio" name="how" value="together" checked> Put them together</label>
+<label><input type="radio" name="how" value="swap"> Swap the two shelves</label>
+</fieldset>
+<button type="submit" class="wide">Make the console code</button>
+</form>
+</section>
+
+<section id="tool-add" class="tool" role="tabpanel" aria-labelledby="tab-add" hidden>
+<form id="add-form" class="staff-form">
+<label class="wide">Item name<input name="name" required placeholder="As it appears in the inventory"><small id="name-room" class="field-help"></small></label>
+<label>Category<select name="category" required></select></label>
+<label>Type<select name="type" required></select></label>
+<label>Room unit<select name="unit" required></select></label>
+<label>Shelf<select name="shelf" required></select></label>
+<label>Number of copies<input name="copies" required type="number" min="1" max="99" value="1"></label>
+<label>Short description<textarea name="description" rows="2" placeholder="What this item is useful for"></textarea></label>
+<label>What the borrower needs, one per line<textarea name="need" rows="4"></textarea></label>
+<label>First steps, one per line<textarea name="start" rows="4"></textarea></label>
+<label>Useful tips, one per line<textarea name="tips" rows="3"></textarea></label>
+<label>Official maker guide URL, if model verified<input name="manual" type="url" placeholder="https://..."></label>
+<label>Photo path or URL, if staff has usage rights<input name="photo" placeholder="photos/model-name.jpg"></label>
+<label>Photo credit or maker<input name="credit" placeholder="IDeATe Lending staff"></label>
+<label class="wide">Photo source or license URL<input name="crediturl" type="url" placeholder="https://..."></label>
+<button type="submit" class="wide">Make the console code</button>
+<button type="button" id="download-data" class="wide button-secondary">Download the updated site data (data.json)</button>
+</form>
+</section>
+
+<p id="staff-status" class="tool-status" role="status"></p>
+
+<section id="code-out" class="code-out" hidden aria-live="polite">
+<div id="qr" class="qr"></div>
+<div class="code-steps">
+<h2 id="code-title">Show this to the console</h2>
+<p id="code-what"></p>
+<ol>
+<li>Hold your phone about 10 cm from the console's scanner, screen bright.</li>
+<li>Type the staff PIN on the console.</li>
+<li>Check the screen and the lights, then press Select.</li>
+</ol>
+<p class="note">Code text: <code id="code-text"></code></p>
+<p class="note" id="code-extra"></p>
+</div>
+</section>
+
+<section class="staff-next">
+<h2>Good to know</h2>
+<ul>
+<li>The PIN is checked on the console, never on this page. It starts as 1234. Change it on the console: press Down past the last picture on Home, Select, then go to the last spot on the map, "Change staff PIN".</li>
+<li>Shelf numbers count grooves from the bottom. If a board was taken out for something tall, the console puts things on the board below.</li>
+<li>This page reads the website's copy of the room. Moves made at the console since the last update are not shown here, so the console's own screen is the one to trust.</li>
+<li>A new item added with a code exists on the console right away. Its guide page appears on this site after someone uploads the downloaded data.json.</li>
+</ul>
+<p><a href="STAFF-GUIDE.md">Full maintenance instructions ↗</a></p>
+</section>
+</main>
+<datalist id="item-list"></datalist>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="staff.js?v=20261113f" defer></script></body></html>
