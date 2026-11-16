@@ -2,7 +2,7 @@
 
 A student-made, unofficial guide to 382 entries in the IDeATe Lending inventory. Names were checked against the October 2026 Lending Office inventory and the current Room Locator v5.3 SD snapshot. The public CMU catalog was checked for model details; some records still do not identify a precise version. Locations and availability are a snapshot. Ask staff for the current shelf, kit contents, and checkout due date.
 
-The site provides an image for every item (exact model photo, clearly labeled representative photo, or original illustration), preparation lists, first steps, relevant tips, maker resources when verified, a model chooser for selected ambiguous entries, a room view, and an optional Google Calendar return reminder.
+Each guide has what to gather, first steps, and a link to the maker's manual or a video walkthrough where we could find one that really matches the model. Photos are shown only when they are the right kind of thing (an exact model photo or a clearly labeled representative one); otherwise the page says "No photo yet" instead of showing the wrong item.
 
 ## Files
 
@@ -11,6 +11,10 @@ The site provides an image for every item (exact model photo, clearly labeled re
 - `photos.json`: image mapping with source/license links. Original SVG illustrations are in the repository root.
 - `room.json`: geometry, board positions and the console's type list from the Room Locator SD snapshot.
 - `staff.html`, `staff.js`: staff tools. Make QR codes the Room Locator console reads (move a thing, move a shelf, add a new item) and download a `data.json` update for a new item's guide.
+- `room3d.js`: the 3D model of the room on the staff page. Click a shelf to pick where something goes.
+- `firmware/RoomLocatorV5/RoomLocatorV5.ino`: the Arduino Mega code for the console.
+- `diagrams/`: the block diagram and schematic (draw.io sources and PNG exports).
+- `docs-photos/`: photos used in the class documentation.
 - `sync_room.py`: refresh locations and boards from the current SD files.
 - `STAFF-GUIDE.md`: transfer, publishing, maintenance, and photo instructions.
 - `SHELF-MOVES.md`: the phone codes, the shelf rules, and the staff PIN.
