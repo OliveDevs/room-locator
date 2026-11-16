@@ -117,6 +117,8 @@
  Same day (v5.8): we wanted the website and the console to agree with less work. Claude made the item QR carry the
  shelf the console has for it, turned the "To the website" codes into web addresses a phone camera opens, and made
  the console print what the scanner reads (@SCAN) so scans can be checked from a laptop.
+ (v5.9): testing on the real console showed the two other QR screens also made it wait, so the staff QR is now
+ worked out once and kept, and the "To the website" screen says it is working.
   _____
 
  Diana Caballero and Gauri Sharma
@@ -186,7 +188,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.8";
+const char VERSION[] PROGMEM = "5.9";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -250,7 +252,7 @@ char shelfUnit[5]; byte shelfNumber = 0;        // the shelf a scanned label poi
 char query[32]; byte queryLen = 0;              // what is being typed
 volatile byte missedPress = 0;                   // buttons pressed while the console was busy, one bit each (see readButtons)
 byte keyQueue[16]; byte keyHead = 0, keyCount = 0;   // keys typed while the console was busy, oldest first
-bool qrWanted = false; unsigned long qrAt = 0;    // the item page is up, its QR is still to be drawn (see drawItem)
+byte qrWanted = 0; unsigned long qrAt = 0;        // a QR is still to be drawn: 1 = the item page's (see drawItem), 2 = the staff page's on the map
 bool live = false, livePending = false;         // live = the list on screen is a search that updates as you type
 unsigned long liveAt = 0;
 
@@ -970,21 +972,36 @@ void drawItemName(const char* name) {
   text(14, 50, first, WHITE, BOLD, W); text(14, 71, name + cut + 1, WHITE, BOLD, W);
 }
 // the QR on the item page: nameCode() turns the item's name into the 6 letters the website looks for
-bool drawQRText(int x, int y, const char* url) {   // a version-4 QR (up to 62 letters), 4 screen pixels a dot, white border
-  QRCode qr;
-  if (qrcode_initText(&qr, qrData, 4, ECC_MEDIUM, url) != 0) return false;
+void drawQRDots(QRCode* qr, int x, int y) {        // a worked-out QR on the screen: 4 screen pixels a dot, white border
   const int PX = 4, QUIET = 3, SIDE = (33 + 2 * QUIET) * PX;
   tft.fillRect(x, y, SIDE, SIDE, WHITE);
-  for (byte dotY = 0; dotY < qr.size; dotY++) {
+  for (byte dotY = 0; dotY < qr->size; dotY++) {
     byte dotX = 0;
-    while (dotX < qr.size) {                                        // draw each run of dark dots as one rectangle: much faster
-      if (!qrcode_getModule(&qr, dotX, dotY)) { dotX++; continue; }
-      byte run = dotX; while (run < qr.size && qrcode_getModule(&qr, run, dotY)) run++;
+    while (dotX < qr->size) {                                       // draw each run of dark dots as one rectangle: much faster
+      if (!qrcode_getModule(qr, dotX, dotY)) { dotX++; continue; }
+      byte run = dotX; while (run < qr->size && qrcode_getModule(qr, run, dotY)) run++;
       tft.fillRect(x + (QUIET + dotX) * PX, y + (QUIET + dotY) * PX, (run - dotX) * PX, PX, BLACK);
       dotX = run;
     }
   }
+}
+bool drawQRText(int x, int y, const char* url) {   // works out a version-4 QR (up to 62 letters) and draws it. Slow: over a second
+  QRCode qr;
+  if (qrcode_initText(&qr, qrData, 4, ECC_MEDIUM, url) != 0) return false;
+  drawQRDots(&qr, x, y);
   return true;
+}
+const int MAP_X = 14, MAP_Y = 48;                 // where the map sits on the screen
+// The staff page's QR on the map is always the same, so it is worked out once and its dots are kept (137 bytes):
+// after the first time it appears at once instead of holding the map up for a second and a half.
+uint8_t staffDots[137]; QRCode staffQR; bool staffQRReady = false;
+void drawStaffQR() {
+  if (!staffQRReady) {
+    char url[56]; strcpy_P(url, STAFF_URL);
+    if (qrcode_initText(&staffQR, qrData, 4, ECC_MEDIUM, url) != 0) return;
+    memcpy(staffDots, qrData, sizeof(staffDots)); staffQR.modules = staffDots; staffQRReady = true;
+  }
+  drawQRDots(&staffQR, MAP_X + 66, MAP_Y + 30);
 }
 void drawQR(int x, int y) {                     // the item's guide page
   char url[80]; strcpy_P(url, MANUAL_URL);
@@ -1027,14 +1044,13 @@ void drawItem() {
   if (field[K_GOOD][0]) { textF(14, y, F("Good for"), DIM, SMALL); y += 22; paragraph(14, y, field[K_GOOD], WHITE, LEFT_W, (284 - y) / 20 + 1); }
   // Working out a QR takes the Mega over a second, and nothing else can happen meanwhile. So the page is drawn
   // without it, and loop() adds the QR once nobody has pressed anything for a moment: flicking through items stays quick.
-  tft.fillRect(312, 82, 156, 156, PANEL); qrWanted = true; qrAt = millis();
+  tft.fillRect(312, 82, 156, 156, PANEL); qrWanted = 1; qrAt = millis();
   if (justMoved) { justMoved = false; footer(F("Moved. Its new spot is saved on the card.")); }
   else if (justAdded) { justAdded = false; footer(F("Added. It is saved on the card.")); }
   else footer(itemWasScanned ? F("Down: move it     Scan more: a list") : F("Down: move it     Back"));
 }
 
 // ---- the map: the room from above, the unit under the cursor filled in
-const int MAP_X = 14, MAP_Y = 48;
 const uint16_t NEW_BLUE = RGB(0, 80, 255);
 void mapBox(byte u, uint16_t fill, uint16_t edge) {
   if (unitMap[u][0] == 255) return;
@@ -1066,8 +1082,8 @@ void drawMapBody(int was = -1) {                 // was = the row the cursor jus
   tft.fillRect(360, 8, 120, 30, BG); rightText(right);
   if (u == ROW_PHONE) {                                         // the staff page as a QR: scan it with a phone to make move codes
     tft.fillRect(MAP_X, MAP_Y, 288, 216, PANEL);
-    char url[56]; strcpy_P(url, STAFF_URL);
-    drawQRText(MAP_X + 66, MAP_Y + 30, url);
+    if (staffQRReady) drawStaffQR();                            // (the first time it is worked out a moment later, by loop())
+    else { tft.fillRect(MAP_X + 66, MAP_Y + 30, 156, 156, WHITE); qrWanted = 2; qrAt = millis(); }
     textF(316, 72, F("Staff page"), WHITE, BOLD);
     textF(316, 100, F("Scan with a phone"), DIM, SMALL); textF(316, 124, F("to move things,"), DIM, SMALL);
     textF(316, 148, F("move shelves or"), DIM, SMALL); textF(316, 172, F("add a new item."), DIM, SMALL);
@@ -1670,8 +1686,11 @@ void drawSync() {
   char qtext[SYNC_BYTES + 80]; int first, total;
   int lines = syncText(qtext, sizeof(qtext), syncPage, syncPages, &first, &total);
   if (!total) { textF(18, 90, F("No changes yet. Nothing to send."), WHITE, SMALL); footer(F("Back")); return; }
+  textF(18, 90, F("Making the code. About 3 seconds..."), DIM, SMALL);     // this big QR takes the Mega a while: say so
   QRCode qr;
-  if (qrcode_initText(&qr, qrData, SYNC_QR, ECC_LOW, qtext) != 0) { textF(18, 90, F("Too much for one code."), WHITE, SMALL); footer(F("Back")); return; }
+  bool made = qrcode_initText(&qr, qrData, SYNC_QR, ECC_LOW, qtext) == 0;
+  tft.fillRect(0, 60, 480, 50, BG);
+  if (!made) { textF(18, 90, F("Too much for one code."), WHITE, SMALL); footer(F("Back")); return; }
   const int PX = 4, QUIET = 4, SIDE = (qr.size + 2 * QUIET) * PX, X = 14, Y = 50;
   tft.fillRect(X, Y, SIDE, SIDE, WHITE);
   for (byte dy = 0; dy < qr.size; dy++) { byte dx = 0; while (dx < qr.size) { if (!qrcode_getModule(&qr, dx, dy)) { dx++; continue; } byte r = dx; while (r < qr.size && qrcode_getModule(&qr, r, dy)) r++; tft.fillRect(X + (QUIET + dx) * PX, Y + (QUIET + dy) * PX, (r - dx) * PX, PX, BLACK); dx = r; } }
@@ -1985,9 +2004,11 @@ void loop() {
   readKeyboard();
   readLaptop();
   blinkTick();
-  if (mode != ITEM) qrWanted = false;
+  if ((qrWanted == 1 && mode != ITEM) || (qrWanted == 2 && mode != MAP)) qrWanted = 0;
   if (qrWanted && millis() - qrAt > 350 && !keyCount && !missedPress && !Serial1.available() && !Serial.available()) {
-    qrWanted = false; loadKind(currentKind); drawQR(312, 82);
+    byte which = qrWanted; qrWanted = 0;
+    if (which == 1) { loadKind(currentKind); drawQR(312, 82); }
+    else if (rowCount && row[cursor] == ROW_PHONE) drawStaffQR();
   }
   if (livePending && millis() - liveAt > 250 && !Serial1.available()) { livePending = false; if (queryLen >= 2) liveSearch(); }
   if (staffUntil && millis() - lastActivity > IDLE_MS) staffUntil = 0;          // nobody touched it for 2 minutes: changes lock again
