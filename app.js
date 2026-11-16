@@ -4,7 +4,7 @@ const search = query => 'https://www.google.com/search?q=' + encodeURIComponent(
 let DATA, K, PHOTO={}, ROOM={units:[]};
 const MODEL_CHOICES={
   'Scarlett 2i2 Audio Interface':{hint:'The generation is printed on the device or can be identified by the front panel and serial number.',options:[['1st generation','https://downloads.focusrite.com/focusrite/scarlett-1st-gen/scarlett-2i2-1st-gen'],['2nd generation','https://downloads.focusrite.com/focusrite/scarlett-2nd-gen/scarlett-2i2-2nd-gen'],['3rd generation','https://downloads.focusrite.com/focusrite/scarlett-3rd-gen/scarlett-2i2-3rd-gen'],['4th generation','https://userguides.focusrite.com/hc/en-gb/sections/19640363031570-Scarlett-2i2-4th-Gen-User-Guide']]},
-  'Audio Mixer ProFX16':{hint:'Look for ProFX16v2 or ProFX16v3 on the mixer label.',options:[['ProFX16v2','https://mackie-jp.com/mixers/profxv2/'],['ProFX16v3','https://mackie.com/en/products/accessories/ProFX16v3.html']]},
+  'Audio Mixer ProFX16':{hint:'Look for ProFX16v2 or ProFX16v3 on the mixer label.',options:[['ProFX16v2 (video walkthrough)','https://www.youtube.com/watch?v=AdtaAadMUl4'],['ProFX16v3','https://mackie.com/en/products/accessories/ProFX16v3.html']]},
   'Fostex 6301 Powered Speakers':{hint:'Look at the rear label for the complete suffix, such as 6301N. Different suffixes have different inputs.',options:[['6301N series','https://www.fostex.jp/cms/wp-content/uploads/6301N_Manual_EN72-1.pdf'],['Another 6301 version','https://www.fostex.jp/en/support/manual/']]},
   'Alesis Multimix4 4-Channel Mixer':{hint:'Use this guide only if the faceplate says MultiMix 4 USB FX.',options:[['MultiMix 4 USB FX','https://www.alesis.com/products/view/multimix-4-usb-fx']]}
 };
