@@ -309,9 +309,20 @@ function renderCards(rows){const target=document.getElementById('results');docum
 function listing(category='',type=''){
   document.title='IDeATe Lending · Item guides';
   const categories=[...new Set(K.map(k=>k.c))].sort();
-  app.innerHTML='<p class="eyebrow">CMU / Hunt Library A29</p><h1>Equipment for what you make</h1><p class="intro">Browse all '+K.length+' IDeATe Lending items. Each guide shows where to ask for it, what to gather, first steps, and maker instructions where a matching resource is available.</p><div class="search-tools"><input id="query" type="search" placeholder="Search equipment by name" aria-label="Search equipment by name" autocomplete="off"><select id="category" aria-label="Filter by category"><option value="">All categories</option>'+categories.map(c=>'<option value="'+esc(c)+'"'+(c===category?' selected':'')+'>'+esc(categoryName(c))+'</option>').join('')+'</select></div><p class="result-count" id="count"></p><div class="item-grid" id="results"></div>';
+  app.innerHTML='<p class="eyebrow">CMU / Hunt Library A29</p><h1>Equipment for what you make</h1><p class="intro">Browse all '+K.length+' IDeATe Lending items. Each guide shows where to ask for it, what to gather, first steps, and maker instructions where a matching resource is available.</p><div class="search-tools"><input id="query" type="search" placeholder="A name, or what you need it for (interviews, time lapse...)" aria-label="Search by name or by what you need it for" autocomplete="off"><select id="category" aria-label="Filter by category"><option value="">All categories</option>'+categories.map(c=>'<option value="'+esc(c)+'"'+(c===category?' selected':'')+'>'+esc(categoryName(c))+'</option>').join('')+'</select></div><p class="result-count" id="count"></p><div class="item-grid" id="results"></div>';
   const q=document.getElementById('query'),c=document.getElementById('category');
-  function draw(){const term=q.value.trim().toLowerCase();renderCards(K.filter(k=>(!c.value||k.c===c.value)&&(!type||k.t===type)&&(!term||(k.n+' '+k.c+' '+k.t).toLowerCase().includes(term))))}
+  // Search looks at the name, the type, what it is good for and what it is. Every typed word has to be there. If nothing
+  // fits, it tries again allowing one slip per word (a wrong, missing, extra or swapped letter), the same as the console.
+  const hayOf=k=>(k.n+' '+k.c+' '+k.t+' '+(k.g||'')+' '+(k.d||'')).toLowerCase();
+  const near=(word,hay)=>{if(word.length<4)return false;return hay.split(/[^a-z0-9]+/).some(h=>{if(!h||h[0]!==word[0])return false;let i=0;while(i<word.length&&i<h.length&&h[i]===word[i])i++;if(i===word.length)return true;if(i>=h.length)return false;const rest=(a,b)=>h.slice(a).startsWith(word.slice(b));return rest(i+1,i+1)||rest(i+1,i)||rest(i,i+1)||(i+1<word.length&&h[i]===word[i+1]&&h[i+1]===word[i]&&rest(i+2,i+2))})};
+  function draw(){
+    const words=q.value.trim().toLowerCase().split(/\s+/).filter(Boolean), pool=K.filter(k=>(!c.value||k.c===c.value)&&(!type||k.t===type));
+    let rows=pool.filter(k=>{const hay=hayOf(k);return words.every(w=>hay.includes(w))}), close=false;
+    if(!rows.length&&words.length){rows=pool.filter(k=>{const hay=hayOf(k);return words.every(w=>hay.includes(w)||near(w,hay))});close=rows.length>0}
+    if(words.length){const inName=k=>words.every(w=>k.n.toLowerCase().includes(w))?0:1;rows=rows.slice().sort((a,b)=>inName(a)-inName(b))}
+    renderCards(rows);
+    if(close)document.getElementById('count').textContent='Nothing spelled exactly like that. '+rows.length+' close matches';
+  }
   q.addEventListener('input',draw);c.addEventListener('change',()=>{type='';draw()});draw();
 }
 function roomView(){
