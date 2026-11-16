@@ -213,7 +213,7 @@ function guideFor(k){
 }
 const listItems = items => '<ul>'+items.map(s=>'<li>'+esc(s)+'</li>').join('')+'</ul>';
 function external(label,url){return '<a class="source-link" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">'+esc(label)+' ↗</a>'}
-function photoFor(k){return k.p||PHOTO.images?.[PHOTO.items?.[k.n]]}
+function photoFor(k){if(k.p&&k.p.none)return null;return k.p||PHOTO.images?.[PHOTO.items?.[k.n]]}
 function photoHtml(k){
   const photo=photoFor(k);
   if(!photo)return '<figure class="item-photo no-photo"><div class="no-photo-tile" aria-hidden="true"><span>'+esc(k.t)+'</span></div><figcaption><strong>No photo yet</strong><span>We would rather show nothing than a picture of the wrong thing. Ask at the desk to see it.</span></figcaption></figure>';
@@ -289,4 +289,4 @@ function route(){if(!DATA)return;const hash=decodeURIComponent(location.hash.sli
   if(k)itemView(k);else if(hash==='room')roomView();else if(hash.startsWith('t')){const [c,t]=hash.slice(1).split('/');listing(c,t)}else listing();
   window.scrollTo(0,0);
 }
-Promise.all([fetch('data.json?v=20261116a').then(r=>{if(!r.ok)throw Error('Inventory unavailable');return r.json()}),fetch('photos.json?v=20261116f').then(r=>r.ok?r.json():{}).catch(()=>({})),fetch('room.json?v=20261116a').then(r=>r.ok?r.json():{units:[]}).catch(()=>({units:[]}))]).then(([data,photos,room])=>{DATA=data;K=data.kinds;PHOTO=photos;ROOM=room;route();addEventListener('hashchange',route)}).catch(()=>{app.innerHTML='<h1>Item guide unavailable</h1><p>Please try reloading this page.</p>'});
+Promise.all([fetch('data.json?v=20261116a').then(r=>{if(!r.ok)throw Error('Inventory unavailable');return r.json()}),fetch('photos.json?v=20261116g').then(r=>r.ok?r.json():{}).catch(()=>({})),fetch('room.json?v=20261116a').then(r=>r.ok?r.json():{units:[]}).catch(()=>({units:[]}))]).then(([data,photos,room])=>{DATA=data;K=data.kinds;PHOTO=photos;ROOM=room;route();addEventListener('hashchange',route)}).catch(()=>{app.innerHTML='<h1>Item guide unavailable</h1><p>Please try reloading this page.</p>'});
