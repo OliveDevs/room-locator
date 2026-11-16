@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="stylesheet" href="styles.css?v=20261116d"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="stylesheet" href="styles.css?v=20261116g"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
 <main class="staff-main">
 <p class="eyebrow">For lending staff</p>
 <h1>Staff tools</h1>
@@ -8,6 +8,7 @@
 <button type="button" role="tab" id="tab-move" aria-controls="tool-move" aria-selected="true">Move a thing</button>
 <button type="button" role="tab" id="tab-shelf" aria-controls="tool-shelf" aria-selected="false">Move a shelf</button>
 <button type="button" role="tab" id="tab-add" aria-controls="tool-add" aria-selected="false">Add a new item</button>
+<button type="button" role="tab" id="tab-edit" aria-controls="tool-edit" aria-selected="false">Edit an item</button>
 <button type="button" role="tab" id="tab-sync" aria-controls="tool-sync" aria-selected="false">From the console</button>
 </div>
 
@@ -88,6 +89,34 @@
 </form>
 </section>
 
+<section id="tool-edit" class="tool" role="tabpanel" aria-labelledby="tab-edit" hidden>
+<form id="edit-form" class="staff-form">
+<p class="wide tool-note">Change the photo, the manual link or the description on an item's guide page. This only changes the website, not the console.</p>
+<label class="wide">Item<input name="thing" list="item-list" placeholder="Start typing the item name" autocomplete="off"></label>
+<div class="wide" id="edit-fields" hidden>
+<div class="edit-grid">
+<div class="wide edit-preview" id="edit-preview"></div>
+<label class="wide">New photo URL<input name="photo" placeholder="https://... or photos/name.jpg"><small class="field-help">Use a photo Lending took, or one you are allowed to use. Leave it blank to keep the photo it has now.</small></label>
+<label>Photo credit<input name="credit" placeholder="IDeATe Lending staff"></label>
+<label>Photo source or licence URL<input name="crediturl" type="url" placeholder="https://..."></label>
+<label class="wide check"><input type="checkbox" name="nophoto"> The photo it shows is wrong: show "No photo yet" instead</label>
+<label>Manual link name<input name="manualname" placeholder="Owner's manual (PDF)"></label>
+<label>Manual link<input name="manual" type="url" placeholder="https://..."></label>
+<label class="wide">Short description<textarea name="description" rows="2" placeholder="What this item is useful for"></textarea></label>
+<button type="button" id="edit-download" class="wide">Download the website file (data.json)</button>
+<div class="wide handoff" id="edit-handoff" hidden>
+<h3>Last step: hand the file over</h3>
+<ol>
+<li>Open <a href="https://github.com/OliveDevs/room-locator/upload/main" target="_blank" rel="noopener noreferrer">the upload page &#8599;</a></li>
+<li>Drag the <code>data.json</code> you just downloaded onto it</li>
+<li>Press <em>Commit changes</em>. The guide page updates in about a minute.</li>
+</ol>
+</div>
+</div>
+</div>
+</form>
+</section>
+
 <section id="tool-sync" class="tool" role="tabpanel" aria-labelledby="tab-sync" hidden>
 <div class="sync-box">
 <p class="tool-note">Bring the console's changes into this website. On the console: Home, Down past the last picture, Select, then "Send to website" near the end of the map. Scan every page it shows.</p>
@@ -135,5 +164,5 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-<script src="room3d.js?v=20261116e"></script>
-<script src="staff.js?v=20261116d" defer></script></body></html>
+<script src="room3d.js?v=20261116g"></script>
+<script src="staff.js?v=20261116g" defer></script></body></html>

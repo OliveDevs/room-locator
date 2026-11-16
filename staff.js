@@ -16,7 +16,7 @@ function nameCode(name) {                        // FNV-1a over the name's bytes
   return (h & 0xffffff).toString(16).padStart(6, '0');
 }
 
-Promise.all([fetch('data.json?v=20261116d').then(r => r.json()), fetch('room.json?v=20261116d').then(r => r.json())]).then(([data, room]) => {
+Promise.all([fetch('data.json?v=20261116g').then(r => r.json()), fetch('room.json?v=20261116g').then(r => r.json())]).then(([data, room]) => {
   const kinds = data.kinds, units = room.units, types = room.types || [];
   const unitBy = Object.fromEntries(units.map(u => [u.code, u]));
   const lit = units.filter(u => u.shelves > 0);
@@ -26,7 +26,7 @@ Promise.all([fetch('data.json?v=20261116d').then(r => r.json()), fetch('room.jso
   const placeName = (code, n) => { const u = unitBy[code]; if (!u) return code; return u.shelves ? u.name + ', shelf ' + n : u.name + ' (ask at the desk)'; };
 
   // ---- tabs
-  const tabs = ['move', 'shelf', 'add', 'sync'];
+  const tabs = ['move', 'shelf', 'add', 'edit', 'sync'];
   tabs.forEach(t => $('tab-' + t).addEventListener('click', () => {
     tabs.forEach(o => { $('tab-' + o).setAttribute('aria-selected', o === t); $('tool-' + o).hidden = o !== t; });
     $('code-out').hidden = true; status.textContent = '';
@@ -310,9 +310,37 @@ Promise.all([fetch('data.json?v=20261116d').then(r => r.json()), fetch('room.jso
   }
   if (view3d) {
     card.hidden = false; view3d.resize();
-    tabs.forEach(t => $('tab-' + t).addEventListener('click', () => { activeTab = t; shelfStep = 'from'; card.hidden = t === 'sync'; if (t !== 'sync') { view3d.resize(); refresh3d(); } }));
+    tabs.forEach(t => $('tab-' + t).addEventListener('click', () => { activeTab = t; shelfStep = 'from'; card.hidden = t === 'sync' || t === 'edit'; if (!card.hidden) { view3d.resize(); refresh3d(); } }));
     [mf, sf, af].forEach(f => { f.addEventListener('change', refresh3d); f.addEventListener('input', refresh3d); });
     refresh3d();
   }
+  // ---- edit an item that is already on the website: its photo, manual link and description
+  const ef = $('edit-form'), preview = $('edit-preview');
+  let photos = null; fetch('photos.json?v=20261116g').then(r => r.json()).then(p => { photos = p; }).catch(() => {});
+  const editItem = () => kinds.find(k => k.n.toLowerCase() === ef.elements.thing.value.trim().toLowerCase());
+  const showPreview = url => { preview.innerHTML = url ? '<img src="' + esc(url) + '" alt="" referrerpolicy="no-referrer"><span>This is the photo the page shows now.</span>' : '<span>This item has no photo yet.</span>'; };
+  ef.elements.thing.addEventListener('input', () => {
+    const k = editItem(); $('edit-fields').hidden = !k; $('edit-handoff').hidden = true; if (!k) return;
+    const shared = photos && photos.images[photos.items[k.n]];
+    ef.elements.photo.value = k.p ? k.p.url : ''; ef.elements.credit.value = k.p ? k.p.artist || '' : ''; ef.elements.crediturl.value = k.p && k.p.page !== '#' ? k.p.page || '' : '';
+    ef.elements.nophoto.checked = false;
+    ef.elements.manualname.value = k.r && k.r[0] ? k.r[0][0] : ''; ef.elements.manual.value = k.r && k.r[0] ? k.r[0][1] : '';
+    ef.elements.description.value = k.d || '';
+    showPreview(k.p ? k.p.url : shared ? shared.url : '');
+  });
+  ef.elements.photo.addEventListener('change', () => { if (ef.elements.photo.value.trim()) showPreview(ef.elements.photo.value.trim()); });
+  $('edit-download').addEventListener('click', () => {
+    const k = editItem(); if (!k) { status.textContent = 'Pick the item from the list first.'; return; }
+    const f = ef.elements, url = f.photo.value.trim(), link = f.manual.value.trim();
+    if (link && !/^https?:\/\//.test(link)) { status.textContent = 'The manual link has to start with https://'; return; }
+    const d = JSON.parse(JSON.stringify(data)), item = d.kinds.find(x => x.h === k.h);
+    if (f.nophoto.checked) item.p = { none: true };
+    else if (url) item.p = { url, page: f.crediturl.value.trim() || '#', artist: f.credit.value.trim() || 'IDeATe Lending', license: 'Photo source' };
+    else delete item.p;
+    if (link) item.r = [[f.manualname.value.trim() || 'Manual', link]].concat((item.r || []).slice(1)); else if (item.r && !f.manualname.value.trim()) delete item.r;
+    if (f.description.value.trim()) item.d = f.description.value.trim(); else item.d = '';
+    download(d, 'data.json'); status.textContent = '';
+    $('edit-handoff').hidden = false; $('edit-handoff').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
   window.__rlSync = { readPage, apply: lines => { apply(lines); return { data: outData, room: outRoom }; } };   // (for testing)
 }).catch(err => { console.error(err); status.textContent = 'Could not load the inventory. Open this page from the published site or a local web server.'; });
