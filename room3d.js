@@ -1,7 +1,8 @@
 // A small 3D copy of the Room Locator model. Click a shelf to pick it.
 // Room3D.init(holder, room, countOnShelf, onPick) -> { mark(list) }   list = [{unit, shelf, kind: 'pick' | 'from' | 'now'}]
 window.Room3D = {
-  init(holder, room, countOnShelf, onPick) {
+  init(holder, room, countOnShelf, onPick, opts) {
+    opts = opts || {};
     if (!window.THREE || !THREE.OrbitControls) return null;
     const W = 200, D = 150, STEP = 7, BOARD = 5;                    // room size (the same numbers the console's map uses), shelf spacing
     const COLOR = { wood: 0xdcbf94, woodDark: 0xc9a877, floor: 0x2444b8, rail: 0xf4f4f0, pick: 0x2f9e58, from: 0xe08a1e, now: 0xe08a1e, hover: 0xfff2c4 };
@@ -43,6 +44,7 @@ window.Room3D = {
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.target.set(-8, 16, -6); controls.enablePan = false; controls.minDistance = 90; controls.maxDistance = 520;
     controls.maxPolarAngle = Math.PI / 2 - 0.08; controls.enableDamping = true;
+    if (opts.spin) { controls.autoRotate = true; controls.autoRotateSpeed = 0.8; renderer.domElement.addEventListener('pointerdown', () => { controls.autoRotate = false; }); }
     camera.position.set(-40, 120, 205);
 
     const marks = new Map();
@@ -71,7 +73,7 @@ window.Room3D = {
     });
     tip.textContent = describe(null);
 
-    const size = () => { const w = holder.clientWidth, h = Math.round(Math.min(460, Math.max(260, w * 0.5))); renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); };
+    const size = () => { const w = holder.clientWidth, h = opts.fill ? window.innerHeight : Math.round(Math.min(460, Math.max(260, w * 0.5))); renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); };
     size(); window.addEventListener('resize', size);
     (function loop() { requestAnimationFrame(loop); if (holder.offsetParent !== null) { controls.update(); renderer.render(scene, camera); } })();
 

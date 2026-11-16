@@ -1,52 +1,126 @@
 /*
-  Room Locator
-  Diana Caballero and Gauri Sharma
-  60-223 Introduction to Physical Computing, Fall 2026, campus client project for IDeATe Lending
+ 60-223 Intro to Physical Computing, fall 2026
 
-  What it does
-  A desk console for the IDeATe Lending office. Find a thing by browsing categories, typing its name, or
-  scanning its barcode, and the shelf it lives on lights up green on a small model of the room. Staff can
-  also move a thing, a whole shelf, or swap two units, take shelf boards in and out, and add new items,
-  either with the buttons and keyboard or by scanning a QR code from the project website. Every change asks
-  for the staff PIN first and is saved on the SD card, so the laptop can collect it later. A QR code on each
-  item's screen opens its how-to page on the website.
+ Campus Client Project: Room Locator
 
-  Pin mapping (Arduino Mega 2560)
-    3.5 in ILI9486 TFT shield   plugs onto the Mega; its SD card slot uses SPI: 50 MISO, 51 MOSI, 52 SCK, 53 CS
-    81 WS2812 lights (model)    data on A13 through a 330 ohm resistor; 5 V and GND from their own 5 V supply
-    Buttons (to GND, no resistor, internal pull-ups)
-                                A8 Up, A9 Down, A10 Select, A11 Back
-    CardKB2 keyboard (I2C 0x5F) 20 SDA, 21 SCL, 5 V, GND
-    2D barcode scanner          Serial1, 9600 baud: scanner TX to pin 19 (RX1), 5 V, GND
-    Power                       two separate supplies, sharing one ground.
-                                1. The Mega: a 9 V 1 A adapter into its own barrel jack, OR a laptop over USB.
-                                   One at a time, never both. The wiring is left stock, so either works with
-                                   nothing to change.
-                                2. The lights: their own 5 V 3 A supply straight to the strip's 5 V and GND,
-                                   because 81 WS2812s draw far more than the Mega can pass. A 1000 uF capacitor
-                                   sits across that supply's 5 V and GND, and a 330 ohm resistor sits in the
-                                   data line from pin A13.
-                                The two grounds are tied together so the Mega and the strip agree on 0 V.
-    Laptop (not needed to run)  USB, 115200 baud: only for uploading code and sending the SD card files
+ OVERVIEW:
 
-  Code from others (libraries)
-    Adafruit GFX and Adafruit NeoPixel (Adafruit), MCUFRIEND_kbv (David Prentice), QRCode (Richard Moore),
-    and the Arduino SD, SPI and Wire libraries.
+ Our client was the IDeATe Lending office. It has hundreds of things packed into
+ one small room, and unless you already know the room you cannot find anything.
+ Even the managers forget where stuff is sometimes.
 
-  AI assistance
-    Model: Claude Opus 5.5 (Anthropic), used Oct 27 to Nov 15, 2026.
-    What Claude did: wrote some of this Arduino code and most of its comments, including most the screens, from our
-    descriptions, and helped us debug it. It helped with the QR code generation and the GITHUB pages. 
-    What we did: designed how the whole system works (a scale map of the real Lending office, which item lives on
-    which shelf, the lights, the console with its scanner, keyboard and buttons, and the staff features for moving
-    things), built and wired all the hardware, tested every version on it, found what did not work,
-    and asked for each change.
-    Prompts we used (in our own words), for example:
-      "delete on the keyboard doesnt work can you troubleshoot that please"
-      "Please help me design the Github pages so that staff can only access then with a PIN"
-      "Help me debug the lights in the VR shelf, they are not lighting up properly"
-    Earlier requests, summarized: make the list easier to reset, make the screens clearer and nicer to read,
-    blink patterns so colorblind users are not relying on color, let staff move items and shelves with a QR code behind a PIN.
+ So we built a little model of the room with a light on every shelf, and a
+ console that sits on the desk. You pick a category, type a name, or scan a
+ barcode, and the shelf that thing lives on lights up green on the model. The
+ screen also shows a QR code that opens a how-to page for that item on our
+ website.
+
+ Staff can change things too: move one thing, move a whole shelf, swap two
+ units, take a shelf board out, or add something new. They can do it with the
+ buttons and keyboard, or set it up on the website and just show the code to the
+ scanner. Every change asks for the staff PIN first and gets saved on the SD
+ card.
+
+ POWER:
+
+ There are two power supplies and they share a ground.
+ - The Arduino: a 9 V 1 A adapter in its barrel jack, OR a laptop over USB.
+   One at a time, never both. We left that wiring normal so either one works.
+ - The lights: their own 5 V 3 A supply, because 81 LEDs pull way more than the
+   Arduino can give them.
+
+ PIN MAPPING (Arduino Mega 2560):
+
+ Arduino pin | Role         | Details
+ ----------------------------------------------------------------
+ A8          | Button       | Up
+ A9          | Button       | Down
+ A10         | Button       | Select
+ A11         | Button       | Back
+               (each button goes to GND, no resistor, internal pull-ups)
+
+ A13         | Lights       | Data to the 81 WS2812 LEDs, through a 330 ohm resistor
+
+ 19 (RX1)    | Scanner      | Scanner TX, Serial1 at 9600 baud
+ 20 (SDA)    | Keyboard     | CardKB2, I2C address 0x5F
+ 21 (SCL)    | Keyboard     | CardKB2
+
+ 50 (MISO)   | SD card      | The slot on the screen shield
+ 51 (MOSI)   | SD card      |
+ 52 (SCK)    | SD card      |
+ 53 (CS)     | SD card      |
+
+ (shield)    | Screen       | 3.5 inch ILI9486 TFT, plugs straight onto the Mega
+
+ 5V          | Scanner, keyboard | Power
+ GND         | Everything   | Common ground, including the lights' supply
+
+ USB         | Laptop       | Not needed to run. Only for uploading code and
+                              sending the SD card files (115200 baud).
+
+ LIBRARIES:
+
+ Adafruit_GFX and MCUFRIEND_kbv:
+     Draw on the screen. MCUFRIEND_kbv is by David Prentice.
+
+ Adafruit_NeoPixel:
+     Runs the 81 lights.
+
+ SD and SPI:
+     Read and write the item list and the changes on the SD card.
+
+ Wire:
+     I2C, for the keyboard.
+
+ qrcode (Richard Moore):
+     Works out the QR code that gets drawn on the screen.
+
+ Disclosure:
+ This code was written and edited with the assistance of generative AI.
+ Model: Claude Opus 5.5 (Anthropic), used Oct 27 to Nov 15, 2026.
+
+ What Claude did: wrote some of this Arduino code and most of its comments, including most the screens, from our
+ descriptions, and helped us debug it. It helped with the QR code generation and the GITHUB pages.
+ What we did: designed how the whole system works (a scale map of the real Lending office, which item lives on
+ which shelf, the lights, the console with its scanner, keyboard and buttons, and the staff features for moving
+ things), built and wired all the hardware, tested every version on it, found what did not work,
+ and asked for each change.
+  _____
+ Some of the prompts we used:
+
+ Prompt 1
+ delete on the keyboard doesnt work can you troubleshoot that please
+
+ Prompt 2
+ Please help me design the Github pages so that staff can only access then with a PIN
+
+ Prompt 3
+ Help me debug the lights in the VR shelf, they are not lighting up properly
+
+ Prompt 4
+ for th ebuttons where do they go each one please tell me
+
+ Prompt 5
+ how does the keyboard go together btw and also how do i make it so that at some
+ point this only has one connector like the LED thing how do i do the wiring together
+
+ Prompt 6
+ so me a favor and light up all the lights so i can see that they work
+
+ Prompt 7
+ what do i use to power the arduino jsut by itself
+
+ Prompt 8
+ how do i change the pin on here and like where does that qr code appear on the console
+
+ Prompt 9
+ for the which unit part nothing shows on tat box next to it and the words kinda cut out
+
+ Earlier requests, summarized: make the list easier to reset, make the screens clearer and nicer to read,
+ blink patterns so colorblind users are not relying on color, let staff move items and shelves with a QR code behind a PIN.
+  _____
+
+ Diana Caballero and Gauri Sharma
 */
 
 // The file is in this order. Each part only uses the parts above it.
