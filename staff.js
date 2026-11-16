@@ -16,7 +16,7 @@ function nameCode(name) {                        // FNV-1a over the name's bytes
   return (h & 0xffffff).toString(16).padStart(6, '0');
 }
 
-Promise.all([fetch('data.json?v=20261116a').then(r => r.json()), fetch('room.json?v=20261116a').then(r => r.json())]).then(([data, room]) => {
+Promise.all([fetch('data.json?v=20261116c').then(r => r.json()), fetch('room.json?v=20261116c').then(r => r.json())]).then(([data, room]) => {
   const kinds = data.kinds, units = room.units, types = room.types || [];
   const unitBy = Object.fromEntries(units.map(u => [u.code, u]));
   const lit = units.filter(u => u.shelves > 0);
@@ -260,5 +260,42 @@ Promise.all([fetch('data.json?v=20261116a').then(r => r.json()), fetch('room.jso
   const download = (obj, name) => { const blob = new Blob([JSON.stringify(obj, null, 2) + '\n'], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
   $('sync-data').addEventListener('click', () => outData && download(outData, 'data.json'));
   $('sync-room').addEventListener('click', () => outRoom && download(outRoom, 'room.json'));
+  // ---- the 3D room: click a shelf instead of using the two menus
+  const card = $('room3d-card'), help = $('room3d-help');
+  let activeTab = 'move', shelfStep = 'from';
+  const fire = el => el.dispatchEvent(new Event('change', { bubbles: true }));
+  const setPlace = (unitSel, shelfSel, u, n) => { unitSel.value = u; fire(unitSel); shelfSel.value = String(n); fire(shelfSel); };
+  const view3d = window.Room3D && Room3D.init($('room3d'), room, (u, n) => onShelf(u, boardBelow(unitBy[u], n)).length, (u, n) => {
+    if (activeTab === 'move') setPlace(mf.elements.unit, mf.elements.shelf, u, n);
+    else if (activeTab === 'add') setPlace(af.elements.unit, af.elements.shelf, u, n);
+    else if (activeTab === 'shelf') {
+      if (shelfStep === 'from') { setPlace(sf.elements.fromUnit, sf.elements.fromShelf, u, n); shelfStep = 'to'; }
+      else { setPlace(sf.elements.toUnit, sf.elements.toShelf, u, n); shelfStep = 'from'; }
+    }
+    refresh3d();
+  });
+  function refresh3d() {
+    if (!view3d) return;
+    const marks = [];
+    if (activeTab === 'move') {
+      const k = pickedItem(); if (k && unitBy[k.u] && unitBy[k.u].shelves) marks.push({ unit: k.u, shelf: boardBelow(unitBy[k.u], k.s), kind: 'now' });
+      marks.push({ unit: mf.elements.unit.value, shelf: Number(mf.elements.shelf.value), kind: 'pick' });
+      help.textContent = k ? 'Orange is where ' + k.n + ' is now. Click the shelf it is moving to: it turns green.' : 'Type the item in the box below, then click the shelf it is moving to.';
+    } else if (activeTab === 'shelf') {
+      marks.push({ unit: sf.elements.fromUnit.value, shelf: Number(sf.elements.fromShelf.value), kind: 'from' });
+      marks.push({ unit: sf.elements.toUnit.value, shelf: Number(sf.elements.toShelf.value), kind: 'pick' });
+      help.textContent = shelfStep === 'from' ? 'Click the shelf you are emptying (orange), then the shelf its things go to (green).' : 'Now click the shelf its things go to (green).';
+    } else if (activeTab === 'add') {
+      marks.push({ unit: af.elements.unit.value, shelf: Number(af.elements.shelf.value), kind: 'pick' });
+      help.textContent = 'Click the shelf the new item will live on.';
+    }
+    view3d.mark(marks);
+  }
+  if (view3d) {
+    card.hidden = false; view3d.resize();
+    tabs.forEach(t => $('tab-' + t).addEventListener('click', () => { activeTab = t; shelfStep = 'from'; card.hidden = t === 'sync'; if (t !== 'sync') { view3d.resize(); refresh3d(); } }));
+    [mf, sf, af].forEach(f => { f.addEventListener('change', refresh3d); f.addEventListener('input', refresh3d); });
+    refresh3d();
+  }
   window.__rlSync = { readPage, apply: lines => { apply(lines); return { data: outData, room: outRoom }; } };   // (for testing)
 }).catch(err => { console.error(err); status.textContent = 'Could not load the inventory. Open this page from the published site or a local web server.'; });
