@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="stylesheet" href="styles.css?v=20261116g"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="stylesheet" href="styles.css?v=20261116m"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
 <main class="staff-main">
 <p class="eyebrow">For lending staff</p>
 <h1>Staff tools</h1>
@@ -103,7 +103,9 @@
 <label>Manual link name<input name="manualname" placeholder="Owner's manual (PDF)"></label>
 <label>Manual link<input name="manual" type="url" placeholder="https://..."></label>
 <label class="wide">Short description<textarea name="description" rows="2" placeholder="What this item is useful for"></textarea></label>
-<button type="button" id="edit-download" class="wide">Download the website file (data.json)</button>
+<label>How many Lending has<input name="copies" type="number" min="1" step="1" inputmode="numeric"></label>
+<button type="button" id="edit-publish" class="wide">Save to the website</button>
+<button type="button" id="edit-download" class="wide button-secondary">Or download the file instead (data.json)</button>
 <div class="wide handoff" id="edit-handoff" hidden>
 <h3>Last step: hand the file over</h3>
 <ol>
@@ -125,12 +127,28 @@
 <p id="sync-pages" class="sync-pages"></p>
 <details class="sync-paste"><summary>No camera? Paste instead</summary><label>The console's change list (type @MOVES in the Serial Monitor and copy what it prints)<textarea id="sync-paste" rows="5"></textarea></label><button type="button" id="sync-use-paste" class="button-secondary">Use the pasted list</button></details>
 <div id="sync-result" hidden><h2>What changes on the website</h2><ul id="sync-summary"></ul>
-<p class="tool-note">The website changes only after someone uploads these two files to the site repository.</p>
-<div class="sync-actions"><button type="button" id="sync-data">Download data.json</button><button type="button" id="sync-room" class="button-secondary">Download room.json</button></div></div>
+<div class="sync-actions"><button type="button" id="sync-publish">Save these changes to the website</button></div>
+<p class="tool-note" id="sync-saved" hidden>Saved. Item pages and this staff page show the new shelves in about a minute.</p>
+<details class="sync-paste"><summary>Or download the two files instead</summary><div class="sync-actions"><button type="button" id="sync-data" class="button-secondary">Download data.json</button><button type="button" id="sync-room" class="button-secondary">Download room.json</button></div></details></div>
+<details class="sync-paste"><summary>Start over: put the website back to the Nov 16 setup</summary><p class="tool-note">Use this together with "Start over" on the console (the last spot on its map), so the two match again. It takes off every change brought over from the console and every edit made on this page since Nov 16.</p><button type="button" id="web-reset" class="button-secondary">Put the website back to the Nov 16 setup</button></details>
 </div>
 </section>
 
 <p id="staff-status" class="tool-status" role="status"></p>
+
+<section id="connect" class="connect" hidden>
+<h2>Let this device save to the website</h2>
+<p id="connect-why" class="tool-note"></p>
+<ol>
+<li>Sign in to GitHub with an account that can edit the room-locator repository, then open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">New fine-grained token &#8599;</a></li>
+<li>Repository access: Only select repositories, then pick room-locator</li>
+<li>Permissions, Repository permissions, Contents: Read and write</li>
+<li>Generate it, copy it, paste it here</li>
+</ol>
+<label>Site key<input id="connect-key" type="password" autocomplete="off" placeholder="github_pat_..."></label>
+<div class="sync-actions"><button type="button" id="connect-save">Use this key on this device</button><button type="button" id="connect-forget" class="button-secondary">Forget the key</button></div>
+<p class="note">The key stays in this browser only. Anyone holding it can change the website, so treat it like the staff PIN.</p>
+</section>
 
 <section id="code-out" class="code-out" hidden aria-live="polite">
 <div id="qr" class="qr"></div>
@@ -153,8 +171,10 @@
 <li>The PIN is checked on the console, never on this page. It starts as 1234. Change it on the console: press Down past the last picture on Home, Select, then go to the last spot on the map, "Change staff PIN".</li>
 <li>Shelf numbers count grooves from the bottom. If a board was taken out for something tall, the console puts things on the board below.</li>
 <li>This page reads the website's copy of the room. Moves made at the console since the last update are not shown here, so the console's own screen is the one to trust.</li>
-<li>A new item added with a code exists on the console right away. Its guide page appears on this site after someone uploads the downloaded data.json, or after "From the console" brings it over.</li>
-<li>A mistake on the console can be taken back there: Recent changes, then Undo the last change. Adding a new item cannot be undone on the console.</li>
+<li>A new item added with a code exists on the console right away. Its guide page appears on this site after "From the console" brings it over and you press Save.</li>
+<li>How many Lending has: "Edit an item" changes the number on the website. The console's own number comes from the laptop's item list.</li>
+<li>A mistake on the console can be taken back there: Recent changes, then pick any change and press Select twice. Adding a new item cannot be undone one at a time, only with Start over.</li>
+<li>Start over (the last spot on the console's map, behind the PIN) takes back every change and every item added at the console. "From the console" on this page has the matching button for the website.</li>
 </ul>
 <p><a href="STAFF-GUIDE.md">Full maintenance instructions ↗</a></p>
 </section>
@@ -165,4 +185,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="room3d.js?v=20261116g"></script>
-<script src="staff.js?v=20261116j" defer></script></body></html>
+<script src="staff.js?v=20261116m" defer></script></body></html>

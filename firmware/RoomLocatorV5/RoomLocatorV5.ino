@@ -119,6 +119,8 @@
  the console print what the scanner reads (@SCAN) so scans can be checked from a laptop.
  (v5.9): testing on the real console showed the two other QR screens also made it wait, so the staff QR is now
  worked out once and kept, and the "To the website" screen says it is working.
+ (v5.10): we asked for any change on the Recent list to be undoable, not only the newest, and for a "Start over"
+ that puts the console back to the Nov 16 setup behind the PIN. Claude wrote undoLine() and startOver().
   _____
 
  Diana Caballero and Gauri Sharma
@@ -168,6 +170,7 @@
 //   @LIGHTS       light check: every light red, green, then blue, then all green until a button is pressed
 //   @LED 79 2     lights 2 lights green starting at light 79 and nothing else (to find a bad joint in the chain)
 //   (the console also prints  @SCAN text  for everything the scanner reads)
+//   @RESET        the same as "Start over" on the map: every change and added item goes (the laptop needs no PIN)
 //   @STATUS       how many changes are waiting, and whether the staff PIN is still the starting one (never the PIN itself)
 //   @MOVES        prints MOVES.TSV, then @END
 //   @CLEARMOVES   deletes MOVES.TSV (after the laptop has collected the changes)
@@ -188,7 +191,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.9";
+const char VERSION[] PROGMEM = "5.10";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -280,7 +283,7 @@ const unsigned long PIN_REST_MS = 60000UL;      // how long it rests: guessing a
 char staffPin[5] = "1234";
 unsigned long staffUntil = 0;
 enum { P_ENTER, P_NEW1, P_NEW2 };               // typing the PIN / a new PIN / the new PIN again
-enum { AFTER_ORGANIZE, AFTER_MOVE, AFTER_CODE, AFTER_DOMOVE, AFTER_NEWPIN, AFTER_NOTHING };   // what happens once the PIN is right
+enum { AFTER_ORGANIZE, AFTER_MOVE, AFTER_CODE, AFTER_DOMOVE, AFTER_NEWPIN, AFTER_RESET, AFTER_NOTHING };   // what happens once the PIN is right
 byte pinStep = P_ENTER, pinAfter = AFTER_NOTHING, pinLen = 0, pinDigit = 0;
 char pinIn[5], pinNew[5];
 bool pinWrong = false, pinMismatch = false;
@@ -762,8 +765,11 @@ enum { A_OPEN, A_MOVEALL, A_REMOVE, A_TOGETHER, A_SWAP };        // the choices 
 // rows on the side view of a unit: n = board n, 100 + n = empty groove n, 0 = "swap this whole unit"
 const byte ROW_SWAP_UNIT = 0, ROW_GROOVE = 100;
 // the last three spots on the map are not units
-const byte ROW_PHONE = 251, ROW_RECENT = 252, ROW_SYNC = 253, ROW_PIN = 254;
+const byte ROW_RESET = 250, ROW_PHONE = 251, ROW_RECENT = 252, ROW_SYNC = 253, ROW_PIN = 254;
+const char BACKUP_NAME[] PROGMEM = "Nov 16 setup";   // what "Start over" goes back to: the files the laptop last sent, with no changes
 const long ROW_UNDO = -1;                        // the first row of Recent changes
+long undoArmed = -2;                             // the change (its place in MOVES.TSV) that the next Select would take back. -2 = none
+void undoLine(long at);                          // (further down)
 void loadRecent(); byte countSyncPages(); void drawSync();      // (further down)
 void describeChange(long pos, char* top, byte topSize, char* under, byte underSize);
 bool mapListed(byte u) {                         // which units the map walks through right now
@@ -774,7 +780,7 @@ bool mapListed(byte u) {                         // which units the map walks th
 }
 void loadMapUnits() {
   rowCount = 0; for (byte u = 0; u < unitTotal && rowCount < MAX_ROWS; u++) if (mapListed(u)) row[rowCount++] = u;
-  if (stage == ST_FROM && rowCount + 4 <= MAX_ROWS) { row[rowCount++] = ROW_PHONE; row[rowCount++] = ROW_RECENT; row[rowCount++] = ROW_SYNC; row[rowCount++] = ROW_PIN; }
+  if (stage == ST_FROM && rowCount + 5 <= MAX_ROWS) { row[rowCount++] = ROW_PHONE; row[rowCount++] = ROW_RECENT; row[rowCount++] = ROW_SYNC; row[rowCount++] = ROW_PIN; row[rowCount++] = ROW_RESET; }
 }
 void countThings(byte u) {                       // how many kinds sit on each shelf of unit u
   memset(thingCount, 0, sizeof(thingCount));
@@ -800,7 +806,7 @@ void preview() {
   if (moving && moveWhat == W_SHELF) addSpace(fromUnit, fromLo, LIGHT_ITEM);
   if (moving && moveWhat == W_UNIT) addLights(unitFirst[fromUnit], unitCount[fromUnit], LIGHT_ITEM);
   if (moving && moveWhat == W_ITEM) { loadKind(currentKind); addPlace(field[K_UNIT], atoi(field[K_SHELF]), LIGHT_ITEM); }
-  if (mode == MAP && rowCount && row[cursor] < ROW_PHONE) { byte u = row[cursor]; addLights(unitFirst[u], unitCount[u], moving ? LIGHT_NEW_SPOT : LIGHT_UNIT); }
+  if (mode == MAP && rowCount && row[cursor] < ROW_RESET) { byte u = row[cursor]; addLights(unitFirst[u], unitCount[u], moving ? LIGHT_NEW_SPOT : LIGHT_UNIT); }
   if (mode == UNITVIEW && rowCount) {
     byte r = row[cursor];
     if (r == ROW_SWAP_UNIT) addLights(unitFirst[viewUnit], unitCount[viewUnit], LIGHT_UNIT);
@@ -904,8 +910,8 @@ void drawRows(int onlyA = -1, int onlyB = -1) {   // with two row numbers: just 
       }
       drawRow(s, i == cursor, top, under, -1);
     } else if (mode == RECENT) {
-      if (row[i] == ROW_UNDO) { strcpy_P(top, PSTR("Undo the last change")); strcpy_P(under, PSTR("takes back the newest one below")); }
-      else describeChange(row[i], top, sizeof(top), under, sizeof(under));
+      if (row[i] == ROW_UNDO) { strcpy_P(top, PSTR("Undo the last change")); strcpy_P(under, PSTR("or pick any change below to take just that one back")); }
+      else { describeChange(row[i], top, sizeof(top), under, sizeof(under)); if (undoArmed == row[i]) strcpy_P(under, PSTR("Select again = take this change back.  Up / Down = no")); }
       drawRow(s, i == cursor, top, under, -1);
     } else if (mode == ACTIONS) {
       byte a = row[i];
@@ -1068,7 +1074,7 @@ void drawMapBody(int was = -1) {                 // was = the row the cursor jus
   const uint16_t WOOD = RGB(205, 178, 130), OFF = RGB(80, 86, 100);
   int h = -1;                                                              // the unit shown green: where the thing being moved is now
   if (stage == ST_TO) { h = fromUnit; if (moveWhat == W_ITEM) { loadKind(currentKind); h = findUnit(field[K_UNIT]); } }
-  bool quick = was >= 0 && was < rowCount && row[was] < ROW_PHONE && rowCount && row[cursor] < ROW_PHONE;
+  bool quick = was >= 0 && was < rowCount && row[was] < ROW_RESET && rowCount && row[cursor] < ROW_RESET;
   for (byte u = 0; u < unitTotal; u++) {
     if (quick && u != row[was] && !(u > row[was] && boxesTouch(u, row[was]))) continue;
     if (!quick && u == 0) tft.fillRect(MAP_X, MAP_Y, 288, 216, RGB(36, 52, 98));   // the blue floor, 400 x 300 mm
@@ -1090,15 +1096,16 @@ void drawMapBody(int was = -1) {                 // was = the row the cursor jus
     textF(316, 208, F("Then scan its code"), DIM, SMALL); textF(316, 232, F("it makes, here."), DIM, SMALL);
     return;
   }
-  if (u >= ROW_RECENT) {                                        // the last three spots are not units: a card over the map says what Select does
+  if (u >= ROW_RECENT || u == ROW_RESET) {                      // the last spots are not units: a card over the map says what Select does
     tft.fillRect(MAP_X, MAP_Y, 288, 216, PANEL);
     const __FlashStringHelper *title, *l1, *l2, *l3;
-    if (u == ROW_RECENT) { title = F("Recent changes"); l1 = F("Every change made here,"); l2 = F("newest first."); l3 = F("Undo the last one here."); }
+    if (u == ROW_RECENT) { title = F("Recent changes"); l1 = F("Every change made here,"); l2 = F("newest first."); l3 = F("Undo any of them here."); }
+    else if (u == ROW_RESET) { title = F("Start over"); l1 = F("Takes back every change"); l2 = F("and every item added here."); l3 = F("Back to the Nov 16 setup."); }
     else if (u == ROW_SYNC) { title = F("Send to website"); l1 = F("Shows the changes as QR"); l2 = F("codes. Scan them on the"); l3 = F("website's staff page."); }
     else { title = F("Change staff PIN"); l1 = F("Pick a new 4-digit PIN."); l2 = F("It is asked before every"); l3 = F("change to the room."); }
     textF(MAP_X + 16, MAP_Y + 44, title, WHITE, BOLD);
     textF(MAP_X + 16, MAP_Y + 86, l1, DIM, SMALL); textF(MAP_X + 16, MAP_Y + 110, l2, DIM, SMALL); textF(MAP_X + 16, MAP_Y + 134, l3, DIM, SMALL);
-    textF(316, 72, F("Select:"), WHITE, BOLD); textF(316, 96, u == ROW_RECENT ? F("see the list") : u == ROW_SYNC ? F("show the codes") : F("set a new PIN"), DIM, SMALL);
+    textF(316, 72, F("Select:"), WHITE, BOLD); textF(316, 96, u == ROW_RECENT ? F("see the list") : u == ROW_SYNC ? F("show the codes") : u == ROW_RESET ? F("asks for the PIN") : F("set a new PIN"), DIM, SMALL);
     return;
   }
   mapBox(u, ACCENT, WHITE);
@@ -1214,7 +1221,7 @@ void drawPin();
 void drawPinStep() { if (pinNote) drawPin(); else drawPinBoxes(); }   // after one digit: only the boxes, unless a red line has to go away
 void drawPin() {
   header(pinStep == P_ENTER ? "Staff PIN" : pinStep == P_NEW1 ? "New staff PIN" : "New PIN again", NULL);
-  if (pinStep == P_ENTER) textF(14, 72, pinAfter == AFTER_NEWPIN ? F("First the PIN that is in use now.") : F("Changes to the room need the staff PIN."), DIM, SMALL);
+  if (pinStep == P_ENTER) textF(14, 72, pinAfter == AFTER_NEWPIN ? F("First the PIN that is in use now.") : pinAfter == AFTER_RESET ? F("The PIN takes back EVERY change. Back = cancel.") : F("Changes to the room need the staff PIN."), DIM, SMALL);
   else textF(14, 72, pinStep == P_NEW1 ? F("Pick 4 digits. Faculty can change it any time.") : F("Type the same 4 digits again."), DIM, SMALL);
   drawPinBoxes();
   pinNote = true;
@@ -1288,7 +1295,7 @@ void addToPutAway(long kind) {
 // ============================== Going between screens ==============================
 void go(byte next) {                            // open a screen, remembering where Back should return to
   if (backDepth < BACK_MAX) { backTo[backDepth] = mode; backCursor[backDepth] = cursor; backStage[backDepth] = stage; backView[backDepth] = viewUnit; backDepth++; }
-  mode = next; cursor = 0;
+  mode = next; cursor = 0; undoArmed = -2;
 }
 void goHome() { staffUntil = 0; homeMessage = false; mode = HOME; backDepth = 0; stage = ST_FROM; cursor = 0; queryLen = 0; query[0] = '\0'; live = false; livePending = false; lightsOff(); draw(); }
 void openItem(long kind, bool scanned) { queryLen = 0; live = false; livePending = false; currentKind = kind; itemWasScanned = scanned; go(ITEM); draw(); }
@@ -1296,6 +1303,7 @@ void openResults() { backDepth = 0; mode = HOME; go(RESULTS); }          // the 
 
 void back() {
   if (mode == HOME && backDepth == 0 && !queryLen && !live && !homeMessage && homeCursor == 0) return;   // already at the start: nothing to redraw
+  undoArmed = -2;
   if (live) { live = false; livePending = false; queryLen = 0; }            // leaving a live search: forget what was typed
   if (queryLen && mode != RESULTS) { queryLen = 0; query[0] = '\0'; draw(); return; }   // first Back just clears what was typed
   if (mode == PUTAWAY) { clearPutAway(); goHome(); return; }
@@ -1334,7 +1342,8 @@ void pickedUnit(byte u) {                       // Select on the map
   if (u == ROW_PHONE) return;                                                  // only a QR to look at
   if (u == ROW_RECENT) { go(RECENT); loadRecent(); draw(); lightsOff(); return; }
   if (u == ROW_SYNC) { go(SYNC); syncPage = 0; syncPages = countSyncPages(); draw(); lightsOff(); return; }
-  if (u == ROW_PIN) { askPin(AFTER_NEWPIN); return; }                           // the PIN that is in use now is always asked first, even if staff just typed it
+  if (u == ROW_PIN) { askPin(AFTER_NEWPIN); return; }
+  if (u == ROW_RESET) { askPin(AFTER_RESET); return; }                          // the PIN is the "are you sure"                           // the PIN that is in use now is always asked first, even if staff just typed it
   if (stage == ST_FROM) { openUnit(u); return; }
   moveToUnit = u; toNewBoard = false;
   if (moveWhat == W_UNIT) { go(MOVEOK); draw(); return; }
@@ -1428,7 +1437,7 @@ void popScreen() {                               // leave the PIN screen without
   if (backDepth) { backDepth--; mode = backTo[backDepth]; cursor = backCursor[backDepth]; stage = backStage[backDepth]; viewUnit = backView[backDepth]; }
   else mode = HOME;
 }
-void runCode(char* c);
+void runCode(char* c); void startOver();
 void askPinAgain() { pinStep = P_ENTER; pinLen = 0; pinDigit = 0; pinWrong = false; pinMismatch = false; draw(); }
 void pinDone() {                                 // 4 digits are in
   pinIn[4] = '\0';
@@ -1440,6 +1449,7 @@ void pinDone() {                                 // 4 digits are in
     }
     pinMisses = 0;
     staffUntil = millis() + STAFF_MS; if (!staffUntil) staffUntil = 1;
+    if (pinAfter == AFTER_RESET) { popScreen(); startOver(); return; }
     if (pinAfter == AFTER_NEWPIN) { pinStep = P_NEW1; pinLen = 0; pinDigit = 0; pinWrong = false; pinMismatch = false; draw(); return; }
     popScreen();
     if (pinAfter == AFTER_ORGANIZE) startOrganize();
@@ -1614,6 +1624,68 @@ bool copyFile(const char* from, const char* to, long upTo) {     // the first up
   a.close(); b.close(); return true;
 }
 void reloadData() { loadUnits(); loadBoards(); loadMoves(); }   // after an undo: everything as if the console had just started
+bool cutBytes(const char* name, long from, long to) {            // takes the letters from..to out of a file (through a spare file: the card cannot cut)
+  File a = cardOpen(name); cardRemove("CUT.TMP"); File b = cardOpen("CUT.TMP", FILE_WRITE);
+  if (!a || !b) { if (a) a.close(); if (b) b.close(); return false; }
+  long size = a.size();
+  for (long i = 0; i < size; i++) { byte c = a.read(); if (i < from || i >= to) b.write(c); }
+  a.close(); b.close();
+  bool ok = to - from >= size ? cardRemove(name) : copyFile("CUT.TMP", name, size - (to - from));
+  cardRemove("CUT.TMP");
+  return ok;
+}
+void couldNot(const __FlashStringHelper* why) { header("Can't undo this one", NULL); textF(18, 90, why, WHITE, SMALL); footer(F("Back")); }
+// takes back ANY change on the list, not only the newest: its line leaves MOVES.TSV and everything is worked out again
+// from the lines that are left, exactly as after a restart.
+void undoLine(long at) {
+  undoArmed = -2;
+  if (!staffOK()) { askPin(AFTER_NOTHING); return; }
+  File f = cardOpen("MOVES.TSV"); long pos = 0, next, before = -1, end = -1; char t = 0; char unit[5] = ""; byte groove = 0; bool was = false, withS = false, newer = false;
+  while (f && (next = readLine(f, pos)) >= 0) {
+    char lt = field[0][1] ? 'I' : toupper(field[0][0]);
+    if (pos == at) { t = lt; end = next; copyText(unit, field[1], sizeof(unit)); groove = atoi(field[2]); was = atoi(field[3]); withS = field[4][0]; }
+    else if (end < 0) before = pos;
+    else if (t == 'B' && lt == 'B' && strcasecmp(field[1], unit) == 0 && atoi(field[2]) == groove) newer = true;   // the same board was changed again later
+    pos = next;
+  }
+  if (f) f.close();
+  if (end < 0) { loadRecent(); cursor = 0; draw(); return; }                   // not there any more
+  if (t == 'A') { couldNot(F("A new item stays until the laptop removes it.")); return; }
+  if (t == 'B' && newer) { couldNot(F("This board was changed again later. Undo that one first.")); return; }
+  long from = at;
+  if (t == 'B') {
+    int u = findUnit(unit);
+    if (u >= 0) { if (was) unitBoards[u] &= ~(1 << (groove - 1)); else unitBoards[u] |= (1 << (groove - 1)); saveBoards(); }
+    if (withS && before >= 0) from = before;                       // the things that dropped down with the board go back up too
+  }
+  if (!cutBytes("MOVES.TSV", from, end)) { header("Could not save", NULL); textF(18, 90, F("The SD card would not write. Is it locked?"), WHITE, SMALL); footer(F("Back")); return; }
+  staffUntil = millis() + STAFF_MS;
+  reloadData(); loadRecent(); cursor = 0; justChanged = true; doneNote = 3; draw(); lightsOff();
+}
+// "Start over": back to the files the laptop last sent. Every change goes, every board is back in, and items added at
+// the console (the lines after the laptop's own in KINDS.TSV, and their barcodes) are taken out. The staff PIN stays.
+void startOver() {
+  header("Starting over", NULL); textF(18, 90, F("Putting everything back. A few seconds..."), WHITE, SMALL);
+  cardRemove("MOVES.TSV");
+  loadUnits();                                                     // unit names back in their own spots, every board in
+  for (byte u = 0; u < unitTotal; u++) unitBoards[u] = 0xFFFF;
+  saveBoards();
+  if (addedFrom > 0 && (long)kindsFile.size() > addedFrom) {
+    long size = kindsFile.size();
+    kindsFile.close(); cutBytes("KINDS.TSV", addedFrom, size); kindsFile = cardOpen("KINDS.TSV");
+    File c = cardOpen("CODES.TSV"); cardRemove("CUT.TMP"); File o = cardOpen("CUT.TMP", FILE_WRITE); long pos = 0, next, kept = 0;
+    while (c && o && (next = readLine(c, pos)) >= 0) {             // keep only the barcodes of items that are still there
+      if (atol(field[1]) < addedFrom) { c.seek(pos); for (long i = pos; i < next; i++) { o.write((byte)c.read()); kept++; } }
+      pos = next;
+    }
+    if (c) c.close(); if (o) o.close();
+    copyFile("CUT.TMP", "CODES.TSV", kept); cardRemove("CUT.TMP");
+  }
+  loadBoards(); loadMoves(); findAddedFrom();
+  clearPutAway(); homeCursor = 0; goHome();
+  char msg[40]; strcpy_P(msg, PSTR("Back to the ")); strcat_P(msg, BACKUP_NAME);
+  tft.fillRect(0, 294, 480, 26, PANEL); text(14, 312, msg, ACCENT, SMALL);
+}
 void undoLast() {                                // takes the last change back
   if (!staffOK()) { askPin(AFTER_NOTHING); return; }
   long before, last = lastLine(&before);
@@ -1740,12 +1812,16 @@ void pressed(byte b) {                          // Up, Down, Select or Back, fro
   if (mode == ITEM) { if (b == B_DOWN) { if (staffOK()) startMove(); else askPin(AFTER_MOVE); } return; }   // Down: move it (staff PIN first)
   if (mode == MOVEOK) { if (b == B_SELECT) { if (atMoveTarget()) back(); else doMove(); } return; }
   if (rowCount == 0) return;
-  if (b == B_UP || b == B_DOWN) { moveCursor(b); return; }
+  if (b == B_UP || b == B_DOWN) { if (undoArmed != -2) { undoArmed = -2; if (rowCount == 1) drawRows(cursor, cursor); } moveCursor(b); return; }
   if (mode == TYPES) { currentType = row[cursor]; go(KINDS); loadKinds(); draw(); }
   else if (mode == MAP) pickedUnit(row[cursor]);
   else if (mode == UNITVIEW) pickedRow(row[cursor]);
   else if (mode == ACTIONS) pickedAction(row[cursor]);
-  else if (mode == RECENT) { if (row[cursor] == ROW_UNDO) undoLast(); }
+  else if (mode == RECENT) {
+    if (row[cursor] == ROW_UNDO) undoLast();
+    else if (undoArmed == row[cursor]) undoLine(row[cursor]);                 // the second Select on the same change
+    else { undoArmed = row[cursor]; drawRows(cursor, cursor); }               // the first one only asks
+  }
   else if (mode == PUTAWAY) openItem(listKind[cursor], false);
   else openItem(row[cursor], false);
 }
@@ -1953,6 +2029,7 @@ void readLaptop() {                              // a line of text from the Seri
       strip.clear(); for (int i = first; i < first + count && i < NUM_LEDS; i++) if (i >= 0) strip.setPixelColor(i, 0x00FF00);
       strip.show(); Serial.println(F("@OK")); continue;
     }
+    if (strcasecmp_P(buf, PSTR("@RESET")) == 0) { startOver(); Serial.println(F("@OK")); continue; }
     if (strcasecmp_P(buf, PSTR("@STATUS")) == 0) {
       Serial.print(F("@STATUS changes=")); Serial.print(moveTotal);
       Serial.print(F(" pin=")); Serial.print(strcmp_P(staffPin, PSTR("1234")) == 0 ? F("starting") : F("changed"));

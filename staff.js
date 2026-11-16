@@ -16,7 +16,61 @@ function nameCode(name) {                        // FNV-1a over the name's bytes
   return (h & 0xffffff).toString(16).padStart(6, '0');
 }
 
-Promise.all([fetch('data.json?v=20261116j').then(r => r.json()), fetch('room.json?v=20261116j').then(r => r.json())]).then(([data, room]) => {
+// ---- saving straight to the website
+// The site is plain files on GitHub, so "saving" means writing data.json / room.json into the repository. GitHub only lets
+// someone do that with a key (a "fine-grained token" made for this one repository). The key is typed in once per phone or
+// laptop and stays in that browser; it is never put in the page or the repository.
+const REPO = 'OliveDevs/room-locator', BRANCH = 'main', API = 'https://api.github.com/repos/' + REPO;
+const keep = { get: k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }, set: (k, v) => { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} } };
+const gh = (path, opts = {}) => fetch(API + path, { ...opts, headers: { Authorization: 'Bearer ' + keep.get('rl-key'), Accept: 'application/vnd.github+json', ...(opts.headers || {}) } });
+const toBase64 = text => { const bytes = new TextEncoder().encode(text); let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(bin); };
+let afterKey = null;
+function askForKey(why) { const box = $('connect'); box.hidden = false; $('connect-why').textContent = why || ''; box.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+async function checkKey() {
+  const r = await gh('');
+  if (r.status === 401) return 'GitHub does not know this key. Copy it again, all of it.';
+  if (!r.ok) return 'GitHub answered ' + r.status + '. Check that the key is for the room-locator repository.';
+  const info = await r.json();
+  return info.permissions && info.permissions.push ? '' : 'This key can read the site but not change it. It needs Contents: Read and write.';
+}
+// files = { 'data.json': object, ... }. Returns true when every file is on the website.
+async function publish(files, message, button) {
+  if (!keep.get('rl-key')) { afterKey = () => button ? button.click() : publish(files, message, button); askForKey('Saving to the website needs the site key on this device, once.'); return false; }
+  const label = button ? button.textContent : ''; if (button) { button.disabled = true; button.textContent = 'Saving...'; }
+  try {
+    const stamp = new Date().toISOString();
+    for (const [path, value] of Object.entries(files)) {
+      if (path === 'data.json' || path === 'room.json') value.published = stamp;
+      const now = await gh('/contents/' + path + '?ref=' + BRANCH);
+      if (now.status === 401 || now.status === 403) { keep.set('rl-key', null); afterKey = () => button ? button.click() : publish(files, message, button); askForKey('The saved key no longer works. Paste a new one.'); return false; }
+      const sha = now.ok ? (await now.json()).sha : undefined;
+      const put = await gh('/contents/' + path, { method: 'PUT', body: JSON.stringify({ message, content: toBase64(JSON.stringify(value, null, 2) + '\n'), sha, branch: BRANCH }) });
+      if (!put.ok) throw Error('GitHub answered ' + put.status + ' for ' + path);
+    }
+    // the site itself takes about a minute to show new files; until then this browser uses the copy it just saved
+    const fresh = JSON.parse(keep.get('rl-fresh') || '{}'); fresh.at = Date.now(); Object.assign(fresh, Object.fromEntries(Object.entries(files).filter(([p]) => p === 'data.json' || p === 'room.json')));
+    keep.set('rl-fresh', JSON.stringify(fresh));
+    status.textContent = 'Saved to the website. Everyone sees it in about a minute.';
+    return true;
+  } catch (err) { status.textContent = 'Not saved: ' + err.message + '. Nothing on the website changed for that file. Try again, or use the download.'; return false; }
+  finally { if (button) { button.disabled = false; button.textContent = label; } }
+}
+$('connect-save').addEventListener('click', async () => {
+  const value = $('connect-key').value.trim(); if (!value) return;
+  keep.set('rl-key', value); $('connect-why').textContent = 'Checking...';
+  const problem = await checkKey().catch(() => 'Could not reach GitHub. Check the internet connection.');
+  if (problem) { keep.set('rl-key', null); $('connect-why').textContent = problem; return; }
+  $('connect').hidden = true; $('connect-key').value = ''; status.textContent = 'This device can now save to the website.';
+  if (afterKey) { const go = afterKey; afterKey = null; go(); }
+});
+$('connect-forget').addEventListener('click', () => { keep.set('rl-key', null); $('connect').hidden = true; status.textContent = 'The key was removed from this device.'; });
+
+Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room.json?v=' + Date.now()).then(r => r.json())]).then(([data, room]) => {
+  // just saved from this browser and the site has not caught up yet: use the saved copy (for a quarter of an hour at most)
+  try { const fresh = JSON.parse(keep.get('rl-fresh') || 'null');
+    if (fresh && Date.now() - fresh.at < 15 * 60 * 1000) { if (fresh['data.json'] && fresh['data.json'].published > (data.published || '')) data = fresh['data.json']; if (fresh['room.json'] && fresh['room.json'].published > (room.published || '')) room = fresh['room.json']; }
+    else if (fresh) keep.set('rl-fresh', null);
+  } catch (e) {}
   const kinds = data.kinds, units = room.units, types = room.types || [];
   const unitBy = Object.fromEntries(units.map(u => [u.code, u]));
   const lit = units.filter(u => u.shelves > 0);
@@ -224,7 +278,6 @@ Promise.all([fetch('data.json?v=20261116j').then(r => r.json()), fetch('room.jso
   });
 
   let outData = null, outRoom = null;
-  const openedFromConsole = location.hash.startsWith('#RLSYNC');
   function apply(lines) {
     const d = JSON.parse(JSON.stringify(data)), r = JSON.parse(JSON.stringify(room));
     const ub = Object.fromEntries(r.units.map(u => [u.code, u]));
@@ -268,6 +321,12 @@ Promise.all([fetch('data.json?v=20261116j').then(r => r.json()), fetch('room.jso
   }
   const boardBelowIn = (u, n) => { while (n > 1 && u.boards && u.boards.length && !u.boards.includes(n)) n--; return n; };
   const download = (obj, name) => { const blob = new Blob([JSON.stringify(obj, null, 2) + '\n'], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
+  $('sync-publish').addEventListener('click', async e => { if (!outData) return; if (await publish({ 'data.json': outData, 'room.json': outRoom }, 'Changes from the console (staff page)', e.target)) { $('sync-saved').hidden = false; } });
+  $('web-reset').addEventListener('click', async e => {
+    if (!confirm('Put the website back to the Nov 16 setup? Every change brought over from the console since then, and every edit made here, is taken off the website.')) return;
+    const [d, r] = await Promise.all([fetch('backup/2026-11-16/data.json?x=' + Date.now()).then(x => x.json()), fetch('backup/2026-11-16/room.json?x=' + Date.now()).then(x => x.json())]);
+    if (await publish({ 'data.json': d, 'room.json': r }, 'Website back to the Nov 16 setup (staff page)', e.target)) setTimeout(() => location.reload(), 1500);
+  });
   $('sync-data').addEventListener('click', () => outData && download(outData, 'data.json'));
   $('sync-room').addEventListener('click', () => outRoom && download(outRoom, 'room.json'));
   // ---- the 3D room: click a shelf instead of using the two menus
@@ -324,12 +383,14 @@ Promise.all([fetch('data.json?v=20261116j').then(r => r.json()), fetch('room.jso
     refresh3d();
   }
   // opened by pointing a phone camera at the console's "To the website" code: go straight to that tab and take the page in
-  if (openedFromConsole) {
+  const takeAddress = () => {
+    if (!location.hash.startsWith('#RLSYNC')) return;
     $('tab-sync').click();
     const ok = readPage(location.href);
     history.replaceState(null, '', location.pathname);
     if (ok && Object.keys(pages).length < pageCount) status.textContent = 'Got it. On the console press Down for the next page and point the camera at it.';
-  }
+  };
+  takeAddress(); addEventListener('hashchange', takeAddress);   // (hashchange: the camera reused a tab that already had this page open)
   // ---- edit an item that is already on the website: its photo, manual link and description
   const ef = $('edit-form'), preview = $('edit-preview');
   let photos = null; fetch('photos.json?v=20261116h').then(r => r.json()).then(p => { photos = p; }).catch(() => {});
@@ -341,12 +402,12 @@ Promise.all([fetch('data.json?v=20261116j').then(r => r.json()), fetch('room.jso
     ef.elements.photo.value = k.p ? k.p.url : ''; ef.elements.credit.value = k.p ? k.p.artist || '' : ''; ef.elements.crediturl.value = k.p && k.p.page !== '#' ? k.p.page || '' : '';
     ef.elements.nophoto.checked = false;
     ef.elements.manualname.value = k.r && k.r[0] ? k.r[0][0] : ''; ef.elements.manual.value = k.r && k.r[0] ? k.r[0][1] : '';
-    ef.elements.description.value = k.d || '';
+    ef.elements.description.value = k.d || ''; ef.elements.copies.value = k.x || 1;
     showPreview(k.p ? k.p.url : shared ? shared.url : '');
   });
   ef.elements.photo.addEventListener('change', () => { if (ef.elements.photo.value.trim()) showPreview(ef.elements.photo.value.trim()); });
-  $('edit-download').addEventListener('click', () => {
-    const k = editItem(); if (!k) { status.textContent = 'Pick the item from the list first.'; return; }
+  const editedData = () => {
+    const k = editItem(); if (!k) { status.textContent = 'Pick the item from the list first.'; return null; }
     const f = ef.elements, url = f.photo.value.trim(), link = f.manual.value.trim();
     if (link && !/^https?:\/\//.test(link)) { status.textContent = 'The manual link has to start with https://'; return; }
     const d = JSON.parse(JSON.stringify(data)), item = d.kinds.find(x => x.h === k.h);
@@ -355,8 +416,10 @@ Promise.all([fetch('data.json?v=20261116j').then(r => r.json()), fetch('room.jso
     else delete item.p;
     if (link) item.r = [[f.manualname.value.trim() || 'Manual', link]].concat((item.r || []).slice(1)); else if (item.r && !f.manualname.value.trim()) delete item.r;
     if (f.description.value.trim()) item.d = f.description.value.trim(); else item.d = '';
-    download(d, 'data.json'); status.textContent = '';
-    $('edit-handoff').hidden = false; $('edit-handoff').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  });
+    const copies = Number(f.copies.value); if (copies >= 1) item.x = Math.floor(copies);
+    return d;
+  };
+  $('edit-download').addEventListener('click', () => { const d = editedData(); if (!d) return; download(d, 'data.json'); status.textContent = ''; $('edit-handoff').hidden = false; $('edit-handoff').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); });
+  $('edit-publish').addEventListener('click', async e => { const d = editedData(); if (!d) return; const k = editItem(); if (await publish({ 'data.json': d }, 'Edit ' + k.n + ' (staff page)', e.target)) setTimeout(() => location.reload(), 1500); });
   window.__rlSync = { readPage, apply: lines => { apply(lines); return { data: outData, room: outRoom }; } };   // (for testing)
 }).catch(err => { console.error(err); status.textContent = 'Could not load the inventory. Open this page from the published site or a local web server.'; });
