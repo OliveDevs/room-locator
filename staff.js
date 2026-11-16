@@ -16,7 +16,7 @@ function nameCode(name) {                        // FNV-1a over the name's bytes
   return (h & 0xffffff).toString(16).padStart(6, '0');
 }
 
-Promise.all([fetch('data.json?v=20261113f').then(r => r.json()), fetch('room.json?v=20261113f').then(r => r.json())]).then(([data, room]) => {
+Promise.all([fetch('data.json?v=20261116a').then(r => r.json()), fetch('room.json?v=20261116a').then(r => r.json())]).then(([data, room]) => {
   const kinds = data.kinds, units = room.units, types = room.types || [];
   const unitBy = Object.fromEntries(units.map(u => [u.code, u]));
   const lit = units.filter(u => u.shelves > 0);
@@ -152,7 +152,20 @@ Promise.all([fetch('data.json?v=20261113f').then(r => r.json()), fetch('room.jso
     const out = { ...data, kinds: [...kinds, item].sort((a, b) => a.n.localeCompare(b.n)) };
     const blob = new Blob([JSON.stringify(out, null, 2) + '\n'], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a');
     a.href = url; a.download = 'data.json'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-    status.textContent = 'Downloaded data.json with ' + name + ' (page code ' + item.h + '). Upload it to the site repository after a check.';
+    status.textContent = 'Downloaded data.json with ' + name + '. Now hand the file over using the steps below.';
+    $('add-handoff').hidden = false;
+    $('add-handoff').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    lastNote = 'Please add this to the Room Locator website.\n\nItem: ' + name + '\nCategory: ' + CAT_ORDER[t[0]] + ' / ' + t[1] +
+      '\nGoes to: ' + item.w + '\nCopies: ' + item.x + '\nIts page code: ' + item.h +
+      '\n\nThe data.json file is attached. Put it in github.com/OliveDevs/room-locator (replace the one that is there) and commit.';
+  });
+  let lastNote = '';
+  $('copy-handoff').addEventListener('click', () => {
+    const note = $('handoff-note');
+    if (!lastNote) { note.textContent = 'Download the file first.'; return; }
+    navigator.clipboard.writeText(lastNote)
+      .then(() => { note.textContent = 'Copied. Paste it into an email or a message, and attach the data.json you downloaded.'; })
+      .catch(() => { note.textContent = lastNote; });
   });
 
   // ---- from the console: its change list (MOVES.TSV) as QR pages "RLSYNC|page|pages|total" + lines with | for tabs

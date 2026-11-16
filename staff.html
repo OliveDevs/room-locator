@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="stylesheet" href="styles.css?v=20261113g"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="stylesheet" href="styles.css?v=20261116a"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
 <main class="staff-main">
 <p class="eyebrow">For lending staff</p>
 <h1>Staff tools</h1>
@@ -37,23 +37,46 @@
 </section>
 
 <section id="tool-add" class="tool" role="tabpanel" aria-labelledby="tab-add" hidden>
+<ol class="add-steps">
+<li><strong>Fill in the five boxes below.</strong> That is all the console needs.</li>
+<li><strong>Make the code</strong> and scan it at the console. It asks for the PIN, then the item is live on the console straight away.</li>
+<li><strong>Want it on this website too?</strong> Open "Also put it on this website" and use the button at the bottom.</li>
+</ol>
 <form id="add-form" class="staff-form">
-<label class="wide">Item name<input name="name" required placeholder="As it appears in the inventory"><small id="name-room" class="field-help"></small></label>
+<label class="wide">Item name<input name="name" required placeholder="Exactly as it appears in the inventory"><small id="name-room" class="field-help"></small></label>
 <label>Category<select name="category" required></select></label>
 <label>Type<select name="type" required></select></label>
 <label>Room unit<select name="unit" required></select></label>
 <label>Shelf<select name="shelf" required></select></label>
-<label>Number of copies<input name="copies" required type="number" min="1" max="99" value="1"></label>
-<label>Short description<textarea name="description" rows="2" placeholder="What this item is useful for"></textarea></label>
-<label>What the borrower needs, one per line<textarea name="need" rows="4"></textarea></label>
-<label>First steps, one per line<textarea name="start" rows="4"></textarea></label>
-<label>Useful tips, one per line<textarea name="tips" rows="3"></textarea></label>
-<label>Official maker guide URL, if model verified<input name="manual" type="url" placeholder="https://..."></label>
-<label>Photo path or URL, if staff has usage rights<input name="photo" placeholder="photos/model-name.jpg"></label>
-<label>Photo credit or maker<input name="credit" placeholder="IDeATe Lending staff"></label>
-<label class="wide">Photo source or license URL<input name="crediturl" type="url" placeholder="https://..."></label>
+<label>How many copies<input name="copies" required type="number" min="1" max="99" value="1"></label>
 <button type="submit" class="wide">Make the console code</button>
-<button type="button" id="download-data" class="wide button-secondary">Download the updated site data (data.json)</button>
+
+<details class="wide add-extra">
+<summary>Also put it on this website <span class="add-extra-hint">(optional &mdash; everything below only changes the item's guide page)</span></summary>
+<div class="add-extra-grid">
+<p class="wide tool-note">Leave anything blank that you do not know. The page still works without it.</p>
+<label class="wide">Short description<textarea name="description" rows="2" placeholder="What this item is useful for"></textarea></label>
+<label class="wide">What the borrower needs, one per line<textarea name="need" rows="3"></textarea></label>
+<label class="wide">First steps, one per line<textarea name="start" rows="3"></textarea></label>
+<label class="wide">Useful tips, one per line<textarea name="tips" rows="2"></textarea></label>
+<label class="wide">Link to the maker's manual, only if you checked the model matches<input name="manual" type="url" placeholder="https://..."></label>
+<label class="wide">Photo URL, only if Lending is allowed to use it<input name="photo" placeholder="https://... or photos/name.jpg"><small class="field-help">No photo is better than the wrong photo. Leave it blank if you are not sure.</small></label>
+<label>Photo credit or maker<input name="credit" placeholder="IDeATe Lending staff"></label>
+<label>Photo source or licence URL<input name="crediturl" type="url" placeholder="https://..."></label>
+<button type="button" id="download-data" class="wide button-secondary">Download the website file (data.json)</button>
+<div class="wide handoff" id="add-handoff" hidden>
+<h3>Last step: hand the file over</h3>
+<p>The website is held on GitHub, so one person with access has to put the file in. Whoever that is:</p>
+<ol>
+<li>Open <a href="https://github.com/OliveDevs/room-locator/upload/main" target="_blank" rel="noopener noreferrer">the upload page &#8599;</a></li>
+<li>Drag the <code>data.json</code> you just downloaded onto it</li>
+<li>Press <em>Commit changes</em>. The guide page is live in about a minute.</li>
+</ol>
+<button type="button" id="copy-handoff" class="button-secondary">Copy a note to send with the file</button>
+<p class="tool-note" id="handoff-note"></p>
+</div>
+</div>
+</details>
 </form>
 </section>
 
@@ -102,4 +125,4 @@
 <datalist id="item-list"></datalist>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-<script src="staff.js?v=20261113g" defer></script></body></html>
+<script src="staff.js?v=20261116a" defer></script></body></html>
