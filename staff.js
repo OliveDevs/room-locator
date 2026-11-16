@@ -316,7 +316,7 @@ Promise.all([fetch('data.json?v=20261116g').then(r => r.json()), fetch('room.jso
   }
   // ---- edit an item that is already on the website: its photo, manual link and description
   const ef = $('edit-form'), preview = $('edit-preview');
-  let photos = null; fetch('photos.json?v=20261116g').then(r => r.json()).then(p => { photos = p; }).catch(() => {});
+  let photos = null; fetch('photos.json?v=20261116h').then(r => r.json()).then(p => { photos = p; }).catch(() => {});
   const editItem = () => kinds.find(k => k.n.toLowerCase() === ef.elements.thing.value.trim().toLowerCase());
   const showPreview = url => { preview.innerHTML = url ? '<img src="' + esc(url) + '" alt="" referrerpolicy="no-referrer"><span>This is the photo the page shows now.</span>' : '<span>This item has no photo yet.</span>'; };
   ef.elements.thing.addEventListener('input', () => {
