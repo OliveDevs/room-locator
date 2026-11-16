@@ -112,7 +112,7 @@ function attachCalendar(k,fromConsole){
     due.setDate(due.getDate()+3);
     due.setHours(18,0,0,0);
     input.value=localDateTime(due);
-    status.textContent='Filled in with the normal loan: three days, due at 6 p.m. Holidays or a different loan can change it, so check the date in your checkout email before adding it.';
+    status.textContent='Normal loan filled in: 3 days, due 6 p.m. Change it if your checkout email says otherwise.';
   };
   estimate.addEventListener('click',fillEstimate);
   if(fromConsole)fillEstimate();
@@ -275,8 +275,11 @@ function manualHtml(k,manual){
 // The return reminder. Scanned from the console's QR (address ends in ?i=...) the person is standing in Lending about
 // to borrow the thing, so the reminder is the first thing on the page with the normal 3-day due date already filled in.
 function reminderHtml(top,name){
-  return '<div class="side-block'+(top?' reminder-top':'')+'"><h2>'+(top?'Borrowing the '+esc(String(name).replace(/[\s.\/]+$/,''))+'? Set a return reminder':'Return reminder')+'</h2><p>'+(top?'Two taps now, and your phone tells you when it is due. ':'')+'Use the exact due date and time from your checkout email.</p><label for="return-date">Return date and time</label><input id="return-date" type="datetime-local" aria-describedby="calendar-status"><button id="estimate-button" class="button-secondary" type="button">Fill normal 3-day estimate</button><div class="reminder-buttons"><button id="ics-button" type="button">Add to my calendar (iPhone, Outlook, any)</button><button id="calendar-button" class="button-secondary" type="button">Add to Google Calendar ↗</button></div><p id="calendar-status" class="calendar-status" role="status">You get an alert the day before and 2 hours before it is due.</p></div>';
+  // one compact row at the top of a page opened from the console; the fuller box in the side column otherwise
+  if(top)return '<div class="reminder-top"><label for="return-date">Return reminder for '+esc(String(name).replace(/[\s.\/]+$/,''))+'</label><div class="reminder-row"><input id="return-date" type="datetime-local" aria-describedby="calendar-status"><button id="ics-button" type="button">Add to calendar</button><button id="calendar-button" class="button-secondary" type="button">Google Calendar ↗</button></div><button id="estimate-button" type="button" hidden></button><p id="calendar-status" class="calendar-status" role="status"></p></div>';
+  return '<div class="side-block"><h2>Return reminder</h2><p>Use the exact due date and time from your checkout email.</p><label for="return-date">Return date and time</label><input id="return-date" type="datetime-local" aria-describedby="calendar-status"><div class="reminder-buttons"><button id="estimate-button" class="button-secondary" type="button">Fill normal 3-day estimate</button><button id="ics-button" type="button">Add to calendar</button><button id="calendar-button" class="button-secondary" type="button">Google Calendar ↗</button></div><p id="calendar-status" class="calendar-status" role="status">Alerts the day before and 2 hours before it is due.</p></div>';
 }
+
 // The console's QR ends in &w=AUD-3: the unit and shelf the console has for the thing at that moment. The page trusts
 // that over its own list, which only catches up with a move after staff send the console's changes to the website.
 function consolePlace(){

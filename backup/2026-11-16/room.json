@@ -1,0 +1,692 @@
+{
+  "source": "Room Locator SD snapshot (run sync_room.py after changing the card)",
+  "units": [
+    {
+      "code": "TRN",
+      "name": "Transport",
+      "first": 0,
+      "shelves": 1,
+      "boards": [
+        1
+      ]
+    },
+    {
+      "code": "CBL",
+      "name": "Cables",
+      "first": 1,
+      "shelves": 4,
+      "boards": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "rect": [
+        25,
+        129,
+        53,
+        141
+      ]
+    },
+    {
+      "code": "UND",
+      "name": "Under the Desk",
+      "first": 5,
+      "shelves": 3,
+      "boards": [
+        1,
+        2,
+        3
+      ],
+      "rect": [
+        57,
+        129,
+        83,
+        141
+      ]
+    },
+    {
+      "code": "DOO",
+      "name": "Doodads",
+      "first": 8,
+      "shelves": 4,
+      "boards": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "rect": [
+        60,
+        132,
+        80,
+        141
+      ]
+    },
+    {
+      "code": "TRI",
+      "name": "Tripods",
+      "first": 12,
+      "shelves": 2,
+      "boards": [
+        1,
+        2
+      ],
+      "rect": [
+        74,
+        60,
+        126,
+        86
+      ]
+    },
+    {
+      "code": "PV",
+      "name": "Photo/Video",
+      "first": 14,
+      "shelves": 6,
+      "boards": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "rect": [
+        2,
+        74,
+        17,
+        107
+      ]
+    },
+    {
+      "code": "LP",
+      "name": "Lighting",
+      "first": 20,
+      "shelves": 5,
+      "boards": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "rect": [
+        2,
+        38,
+        17,
+        72
+      ]
+    },
+    {
+      "code": "AUDW",
+      "name": "Audio Rack",
+      "first": 25,
+      "shelves": 6,
+      "boards": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "rect": [
+        2,
+        3,
+        17,
+        36
+      ]
+    },
+    {
+      "code": "AUD",
+      "name": "Audio",
+      "first": 31,
+      "shelves": 8,
+      "boards": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "rect": [
+        20,
+        2,
+        46,
+        14
+      ]
+    },
+    {
+      "code": "CMP",
+      "name": "Computing",
+      "first": 39,
+      "shelves": 8,
+      "boards": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "rect": [
+        46,
+        2,
+        72,
+        14
+      ]
+    },
+    {
+      "code": "VR",
+      "name": "VR",
+      "first": 47,
+      "shelves": 8,
+      "boards": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "rect": [
+        72,
+        2,
+        98,
+        14
+      ]
+    },
+    {
+      "code": "ST1",
+      "name": "Soft Tech 1",
+      "first": 55,
+      "shelves": 8,
+      "boards": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "rect": [
+        98,
+        2,
+        124,
+        14
+      ]
+    },
+    {
+      "code": "ST2",
+      "name": "Soft Tech 2",
+      "first": 63,
+      "shelves": 8,
+      "boards": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "rect": [
+        124,
+        2,
+        150,
+        14
+      ]
+    },
+    {
+      "code": "SHOP",
+      "name": "Shop",
+      "first": 71,
+      "shelves": 8,
+      "boards": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "rect": [
+        150,
+        2,
+        176,
+        14
+      ]
+    },
+    {
+      "code": "DSK",
+      "name": "Desk Storage",
+      "first": 79,
+      "shelves": 2,
+      "boards": [
+        1,
+        2
+      ],
+      "rect": [
+        183,
+        55,
+        198,
+        88
+      ]
+    },
+    {
+      "code": "A3",
+      "name": "A3 Storage",
+      "first": 0,
+      "shelves": 0,
+      "boards": []
+    },
+    {
+      "code": "MGR",
+      "name": "Manager Office",
+      "first": 0,
+      "shelves": 0,
+      "boards": []
+    },
+    {
+      "code": "EVT",
+      "name": "Events",
+      "first": 0,
+      "shelves": 0,
+      "boards": []
+    },
+    {
+      "code": "DMG",
+      "name": "Damaged",
+      "first": 0,
+      "shelves": 0,
+      "boards": []
+    }
+  ],
+  "types": [
+    [
+      0,
+      "360 Cameras"
+    ],
+    [
+      0,
+      "Accessories"
+    ],
+    [
+      0,
+      "Camcorders"
+    ],
+    [
+      0,
+      "DSLR Cameras"
+    ],
+    [
+      0,
+      "DVD Players"
+    ],
+    [
+      0,
+      "Gimbals"
+    ],
+    [
+      0,
+      "Lenses"
+    ],
+    [
+      0,
+      "Mirrorless Cameras"
+    ],
+    [
+      0,
+      "Peripherals"
+    ],
+    [
+      0,
+      "Stands"
+    ],
+    [
+      0,
+      "Tripods"
+    ],
+    [
+      1,
+      "Accessories"
+    ],
+    [
+      1,
+      "Cables"
+    ],
+    [
+      1,
+      "Cassette Players"
+    ],
+    [
+      1,
+      "Field Recorders"
+    ],
+    [
+      1,
+      "Headphones"
+    ],
+    [
+      1,
+      "Instruments"
+    ],
+    [
+      1,
+      "Interfaces"
+    ],
+    [
+      1,
+      "Microphones"
+    ],
+    [
+      1,
+      "MIDI Controllers"
+    ],
+    [
+      1,
+      "Mixers"
+    ],
+    [
+      1,
+      "Other"
+    ],
+    [
+      1,
+      "Sound Blankets"
+    ],
+    [
+      1,
+      "Speakers"
+    ],
+    [
+      1,
+      "Stands"
+    ],
+    [
+      1,
+      "Tripods"
+    ],
+    [
+      2,
+      "Accessories"
+    ],
+    [
+      2,
+      "Augmented Reality Systems"
+    ],
+    [
+      2,
+      "DMX Lighting Control"
+    ],
+    [
+      2,
+      "Light Sticks"
+    ],
+    [
+      2,
+      "Lights"
+    ],
+    [
+      2,
+      "Other"
+    ],
+    [
+      2,
+      "Projector Screens"
+    ],
+    [
+      2,
+      "Projectors"
+    ],
+    [
+      2,
+      "Stands"
+    ],
+    [
+      3,
+      "Accessories"
+    ],
+    [
+      3,
+      "Cables"
+    ],
+    [
+      3,
+      "Laptops"
+    ],
+    [
+      3,
+      "Monitors"
+    ],
+    [
+      3,
+      "Other"
+    ],
+    [
+      3,
+      "Peripherals"
+    ],
+    [
+      3,
+      "Speakers"
+    ],
+    [
+      3,
+      "Tablets"
+    ],
+    [
+      3,
+      "Webcams"
+    ],
+    [
+      4,
+      "Other"
+    ],
+    [
+      4,
+      "VR Accessories"
+    ],
+    [
+      4,
+      "VR Headsets"
+    ],
+    [
+      5,
+      "Accessories"
+    ],
+    [
+      5,
+      "Cricut Accessories"
+    ],
+    [
+      5,
+      "Cricut Machines"
+    ],
+    [
+      5,
+      "Irons"
+    ],
+    [
+      5,
+      "Sewing Accessories"
+    ],
+    [
+      5,
+      "Sewing Machines"
+    ],
+    [
+      5,
+      "Steamers"
+    ],
+    [
+      6,
+      "Accessories"
+    ],
+    [
+      6,
+      "Digital Calipers"
+    ],
+    [
+      6,
+      "Drills"
+    ],
+    [
+      6,
+      "Glue Guns"
+    ],
+    [
+      6,
+      "Hammers"
+    ],
+    [
+      6,
+      "Hand Tools"
+    ],
+    [
+      6,
+      "Heat Guns"
+    ],
+    [
+      6,
+      "Impact Drivers"
+    ],
+    [
+      6,
+      "Levels"
+    ],
+    [
+      6,
+      "Measuring Tapes"
+    ],
+    [
+      6,
+      "Power Supplies"
+    ],
+    [
+      6,
+      "Rotary Tool Accessories"
+    ],
+    [
+      6,
+      "Rotary Tools"
+    ],
+    [
+      6,
+      "Screwdrivers"
+    ],
+    [
+      6,
+      "Socket Sets"
+    ],
+    [
+      7,
+      "Adapters"
+    ],
+    [
+      7,
+      "Audio Adapters"
+    ],
+    [
+      7,
+      "Audio Cables"
+    ],
+    [
+      7,
+      "Batteries"
+    ],
+    [
+      7,
+      "Ethernet Cables"
+    ],
+    [
+      7,
+      "Extension Cords"
+    ],
+    [
+      7,
+      "HDMI Adapters"
+    ],
+    [
+      7,
+      "HDMI Cables"
+    ],
+    [
+      7,
+      "Laser Pointers"
+    ],
+    [
+      7,
+      "MIDI Cables"
+    ],
+    [
+      7,
+      "Mini DisplayPort Adapters"
+    ],
+    [
+      7,
+      "Mini DisplayPort Cables"
+    ],
+    [
+      7,
+      "Other"
+    ],
+    [
+      7,
+      "Power Strips"
+    ],
+    [
+      7,
+      "RCA Cables"
+    ],
+    [
+      7,
+      "SD Card Readers"
+    ],
+    [
+      7,
+      "SD Cards"
+    ],
+    [
+      7,
+      "Thunderbolt Adapters"
+    ],
+    [
+      7,
+      "Thunderbolt Cables"
+    ],
+    [
+      7,
+      "USB Adapters"
+    ],
+    [
+      7,
+      "USB Cables"
+    ],
+    [
+      7,
+      "USB Power Supplies"
+    ],
+    [
+      7,
+      "Wagons"
+    ]
+  ],
+  "synced": {
+    "lines": 0,
+    "first": ""
+  }
+}
