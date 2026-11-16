@@ -27,8 +27,12 @@
       "s": 6,
       "r": [
         [
-          "Behringer S16 quick start guide",
-          "https://mediadl.musictribe.com/media/sys_master/h7b/h72/8850050744350.pdf"
+          "Behringer's own S16 walkthrough (video)",
+          "https://www.youtube.com/watch?v=eM4UzmvifzE"
+        ],
+        [
+          "Setting up an S16 with an X32 (video)",
+          "https://www.youtube.com/watch?v=RKfG6SKQttI"
         ]
       ]
     },
@@ -837,7 +841,7 @@
       "r": [
         [
           "Behringer X-TOUCH MINI quick start guide (PDF)",
-          "https://mediadl.musictribe.com/media/PLM/data/docs/P0B3M/QSG_BE_0808-AAF_X-TOUCH-MINI_WW.pdf"
+          "https://www.adorama.com/col/productManuals/BEXTOUCHMINK.pdf"
         ]
       ],
       "u": "AUDW",
@@ -1340,8 +1344,8 @@
       "h": "99bd8e",
       "r": [
         [
-          "Bose S1 Pro+ owner guide (PDF)",
-          "https://assets.bose.com/content/dam/Bose_DAM/Web/consumer_electronics/global/products/speakers/S1PROP-SPEAKERWIRELESS/pdf/872237_og_bose-s1-pro_plus_en.pdf"
+          "Bose S1 Pro+: connecting sources to the speaker",
+          "https://support.bose.com/article/connecting-sources-to-your-speaker-s1-pro-plus"
         ]
       ],
       "u": "AUDW",
