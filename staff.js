@@ -16,7 +16,7 @@ function nameCode(name) {                        // FNV-1a over the name's bytes
   return (h & 0xffffff).toString(16).padStart(6, '0');
 }
 
-Promise.all([fetch('data.json?v=20261116c').then(r => r.json()), fetch('room.json?v=20261116c').then(r => r.json())]).then(([data, room]) => {
+Promise.all([fetch('data.json?v=20261116d').then(r => r.json()), fetch('room.json?v=20261116d').then(r => r.json())]).then(([data, room]) => {
   const kinds = data.kinds, units = room.units, types = room.types || [];
   const unitBy = Object.fromEntries(units.map(u => [u.code, u]));
   const lit = units.filter(u => u.shelves > 0);
@@ -76,6 +76,7 @@ Promise.all([fetch('data.json?v=20261116c').then(r => r.json()), fetch('room.jso
     const k = pickedItem(); if (!k) { status.textContent = 'Pick the item from the list.'; return; }
     const u = mf.elements.unit.value, s = Number(mf.elements.shelf.value || 0);
     if (!unitBy[u]) { status.textContent = 'Choose where it goes.'; return; }
+    if (u === k.u && unitBy[u].shelves && boardBelow(unitBy[u], s) === boardBelow(unitBy[u], k.s)) { status.textContent = 'It is already on that shelf. Click the shelf it is moving to.'; $('code-out').hidden = true; return; }
     showCode('RL:MOVE:' + k.h + ':' + u + '-' + s, 'Move ' + k.n, 'From ' + placeName(k.u, k.s) + ' to ' + placeName(u, unitBy[u].shelves ? boardBelow(unitBy[u], s) : 0) + '.');
   });
 
@@ -272,7 +273,23 @@ Promise.all([fetch('data.json?v=20261116c').then(r => r.json()), fetch('room.jso
       if (shelfStep === 'from') { setPlace(sf.elements.fromUnit, sf.elements.fromShelf, u, n); shelfStep = 'to'; }
       else { setPlace(sf.elements.toUnit, sf.elements.toShelf, u, n); shelfStep = 'from'; }
     }
+    refresh3d(); showShelf(u, n);
+  });
+  // what is on the shelf that was clicked, with a button to start moving any of it
+  const contents = $('shelf-contents');
+  function showShelf(u, n) {
+    const unit = unitBy[u], board = boardBelow(unit, n), things = onShelf(u, board);
+    contents.innerHTML = '<h3>' + esc(placeName(u, board)) + '</h3>' + (things.length
+      ? '<ul>' + things.map(k => '<li><span>' + esc(k.n) + (k.x > 1 ? ' <small>× ' + k.x + '</small>' : '') + '</span><button type="button" data-move="' + esc(k.n) + '">Move this</button></li>').join('') + '</ul>'
+      : '<p>Nothing is on this shelf.</p>');
+    contents.hidden = false;
+  }
+  contents.addEventListener('click', e => {
+    const name = e.target && e.target.dataset && e.target.dataset.move; if (!name) return;
+    if (activeTab !== 'move') $('tab-move').click();
+    mf.elements.thing.value = name; mf.elements.thing.dispatchEvent(new Event('input', { bubbles: true }));
     refresh3d();
+    $('room3d-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
   function refresh3d() {
     if (!view3d) return;
@@ -280,7 +297,7 @@ Promise.all([fetch('data.json?v=20261116c').then(r => r.json()), fetch('room.jso
     if (activeTab === 'move') {
       const k = pickedItem(); if (k && unitBy[k.u] && unitBy[k.u].shelves) marks.push({ unit: k.u, shelf: boardBelow(unitBy[k.u], k.s), kind: 'now' });
       marks.push({ unit: mf.elements.unit.value, shelf: Number(mf.elements.shelf.value), kind: 'pick' });
-      help.textContent = k ? 'Orange is where ' + k.n + ' is now. Click the shelf it is moving to: it turns green.' : 'Type the item in the box below, then click the shelf it is moving to.';
+      help.textContent = k ? 'Orange is where ' + k.n + ' is now. Click the shelf it is moving to (it turns green), then press Make the console code.' : 'Click any shelf to see what is on it and move something from there. Or type the item in the box below.';
     } else if (activeTab === 'shelf') {
       marks.push({ unit: sf.elements.fromUnit.value, shelf: Number(sf.elements.fromShelf.value), kind: 'from' });
       marks.push({ unit: sf.elements.toUnit.value, shelf: Number(sf.elements.toShelf.value), kind: 'pick' });
