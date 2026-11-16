@@ -1243,7 +1243,17 @@
       "d": "",
       "h": "4121a0",
       "u": "AUDW",
-      "s": 4
+      "s": 4,
+      "r": [
+        [
+          "Alesis MultiMix 4 USB FX user guide (PDF)",
+          "https://www.alesis.com/rscdn/954/documents/MultiMix%204%20USB%20FX%20-%20User%20Guide%20-%20v1.6.pdf"
+        ],
+        [
+          "Alesis MultiMix 4 product page",
+          "https://www.alesis.com/products/view/multimix-4-usb-fx"
+        ]
+      ]
     },
     {
       "n": "Audio Mixer 402VLZ4",
@@ -3006,7 +3016,7 @@
       "r": [
         [
           "AAXA M6 user guide (PDF)",
-          "https://www.aaxatech.com/pdf/M6Manual.pdf"
+          "https://cdn.ecuad.ca/assets/media-resources-pdf/mr_manual_aaxaM6.pdf"
         ]
       ],
       "u": "LP",
@@ -4301,7 +4311,13 @@
       "d": "Full height, sturdy",
       "h": "adf263",
       "u": "TRI",
-      "s": 1
+      "s": 1,
+      "r": [
+        [
+          "Manfrotto 190X series instructions (PDF)",
+          "https://www.manfrotto.com/media/downloadable/manual/instruction-190XPROL.pdf"
+        ]
+      ]
     },
     {
       "n": "Mini Flex Tripod B",
@@ -4588,8 +4604,8 @@
       "h": "48aa81",
       "r": [
         [
-          "DeWalt DCF787 instruction manual (PDF)",
-          "https://www.dewalt.com/GLOBALBOM/QU/DCF787C2/1/Instruction_Manual/EN/NA384126_DCF787_T1_NA.pdf"
+          "DeWalt DCF787 product page and manual",
+          "https://www.dewalt.com/product/dcf787c2/20v-max-brushless-cordless-compact-14-in-impact-driver-kit"
         ]
       ],
       "u": "SHOP",
@@ -4607,8 +4623,8 @@
       "h": "7023aa",
       "r": [
         [
-          "DeWalt DCF885 instruction manual (PDF)",
-          "https://www.dewalt.com/GLOBALBOM/QU/DCF885B/1/Instruction_Manual/EN/N142687_DCF885.pdf"
+          "DeWalt DCF885 product page and manual",
+          "https://www.dewalt.com/product/dcf885b/20v-max-14-in-impact-driver-tool-only"
         ]
       ],
       "u": "SHOP",

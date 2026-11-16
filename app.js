@@ -216,18 +216,35 @@ function external(label,url){return '<a class="source-link" href="'+esc(url)+'" 
 function photoFor(k){return k.p||PHOTO.images?.[PHOTO.items?.[k.n]]}
 function photoHtml(k){
   const photo=photoFor(k);
-  if(!photo)return '';
+  if(!photo)return '<figure class="item-photo no-photo"><div class="no-photo-tile" aria-hidden="true"><span>'+esc(k.t)+'</span></div><figcaption><strong>No photo yet</strong><span>We would rather show nothing than a picture of the wrong thing. Ask at the desk to see it.</span></figcaption></figure>';
   const exact=!!k.p||PHOTO.exact?.includes(k.n),illustration=photo.kind==='illustration',alt=illustration?'Illustration of '+k.t:exact?'Photo showing '+k.n:'Representative photo for '+categoryName(k.c)+' / '+k.t;
   const license=photo.license||'',parts=license.match(/^CC (BY-SA|BY) (\d\.\d)$/),licenseUrl=parts?'https://creativecommons.org/licenses/'+parts[1].toLowerCase()+'/'+parts[2]+'/':license==='CC0'?'https://creativecommons.org/publicdomain/zero/1.0/':'';
   const credit=illustration?'Original site illustration':'Photo: '+esc(photo.artist||'Wikimedia Commons contributor')+(photo.page&&photo.page!=='#'?' · <a href="'+esc(photo.page)+'" target="_blank" rel="noopener noreferrer">Source ↗</a>':'')+(licenseUrl?' · <a href="'+licenseUrl+'" target="_blank" rel="noopener noreferrer">'+esc(license)+' ↗</a>':license?' · '+esc(license):'');
   return '<figure class="item-photo"><img src="'+esc(photo.url)+'" alt="'+esc(alt)+'" loading="eager" referrerpolicy="no-referrer"><figcaption><strong>'+(illustration?'Illustration':exact?'Model photo':'Representative photo')+'</strong><span>'+(exact?'Check the loaned unit for the exact version.':'The loaned item may look different.')+'</span><small>'+credit+'</small></figcaption></figure>';
 }
+const MAKER_SUPPORT=[['Canon','Canon','https://www.usa.canon.com/support'],['Sony','Sony','https://www.sony.com/electronics/support'],
+['Cricut','Cricut','https://help.cricut.com/hc/en-us'],['Zoom','Zoom','https://zoomcorp.com/en/us/support/'],
+['Panasonic','Panasonic','https://na.panasonic.com/us/support'],['Oculus|Meta Quest','Meta','https://www.meta.com/help/quest/'],
+['AKAI','Akai Professional','https://www.akaipro.com/support'],['Epson','Epson','https://epson.com/Support/sl/s'],
+['DeWalt','DeWalt','https://www.dewalt.com/support'],['Vive|HTC','HTC Vive','https://www.vive.com/us/support/'],
+['Shure','Shure','https://www.shure.com/en-US/support'],['Singer','Singer','https://www.singer.com/support'],
+['Sennheiser','Sennheiser','https://www.sennheiser.com/en-us/support'],['Tascam','Tascam','https://tascam.com/us/support/'],
+['M-Audio','M-Audio','https://m-audio.com/support'],['Beyerdynamic','beyerdynamic','https://www.beyerdynamic.com/service.html'],
+['Korg','Korg','https://www.korg.com/us/support/'],['Alesis','Alesis','https://www.alesis.com/support'],
+['Bose','Bose','https://www.bose.com/support'],['Apple','Apple','https://support.apple.com/manuals'],
+['Logitech','Logitech','https://support.logi.com/'],['Optoma','Optoma','https://www.optoma.com/us/support/'],
+['DJI','DJI','https://www.dji.com/support'],['Brother','Brother','https://support.brother.com/'],
+['Manfrotto','Manfrotto','https://www.manfrotto.com/'],['Rode|R\u00f8de','RODE','https://help.rode.com/hc/en-us'],
+['Novation','Novation','https://novationmusic.com/support'],['Focusrite','Focusrite','https://support.focusrite.com/'],
+['Elgato|Stream Deck','Elgato','https://help.elgato.com/']];
+function makerSupport(name){for(const [pat,label,url] of MAKER_SUPPORT){if(new RegExp('\\b('+pat+')\\b','i').test(name))return [label,url]}return null}
 function manualHtml(k,manual){
   const choice=MODEL_CHOICES[k.n];
   if(choice)return '<section class="guide-section"><h2>Find your exact manual</h2><p>'+esc(choice.hint)+'</p><label class="field-label" for="model-choice">Model printed on the item</label><select id="model-choice"><option value="">Choose the matching model</option>'+choice.options.map((option,i)=>'<option value="'+i+'">'+esc(option[0])+'</option>').join('')+'</select><div id="model-result" class="model-result" aria-live="polite">If none matches, ask staff for the model number before using a manual.</div></section>';
   if(manual.length)return '<section class="guide-section"><h2>Maker instructions</h2>'+manual.map(r=>external(r[0],r[1])).join('')+'<p class="note">Match the model name on the device before following a guide.</p></section>';
   if(/Cables|Adapters|Extension Cords|Power Strips|Measuring Tapes|Hammers|Hand Tools|Levels|Socket Sets|Screwdrivers|Stands|Tripods|Sewing Accessories|Cricut Accessories|Sound Blankets|Projector Screens/.test(k.t))return '';
-  return '<section class="guide-section"><h2>Find the right manual</h2><p>The inventory name does not identify one verified product model. Read the maker and model number on the item, then search for that exact guide.</p><label class="field-label" for="model-number">Maker and model from the label</label><input id="model-number" type="text" placeholder="For example, maker + model number"><a class="source-link" id="manual-search" href="'+esc(search(k.n+' manufacturer manual'))+'" target="_blank" rel="noopener noreferrer">Search for matching manual ↗</a><p class="note">For simple accessories with no electronic controls, the setup steps above may be all you need.</p></section>';
+  const maker=makerSupport(k.n);
+  return '<section class="guide-section"><h2>Find the right manual</h2><p>The inventory name does not identify one verified product model. Read the maker and model number on the item, then look that exact guide up.</p>'+(maker?'<p>'+external('Open '+maker[0]+'\u2019s own support site',maker[1])+'</p>':'')+'<label class="field-label" for="model-number">Maker and model from the label</label><input id="model-number" type="text" placeholder="For example, maker + model number"><a class="source-link" id="manual-search" href="'+esc(search(k.n+' manufacturer manual'))+'" target="_blank" rel="noopener noreferrer">Search for matching manual ↗</a><p class="note">For simple accessories with no electronic controls, the setup steps above may be all you need.</p></section>';
 }
 function itemView(k){
   const guide=guideFor(k), group=k.c+'/'+k.t, related=(DATA.goes[group]||[]).filter(g=>K.some(a=>a.c+'/'+a.t===g));
@@ -272,4 +289,4 @@ function route(){if(!DATA)return;const hash=decodeURIComponent(location.hash.sli
   if(k)itemView(k);else if(hash==='room')roomView();else if(hash.startsWith('t')){const [c,t]=hash.slice(1).split('/');listing(c,t)}else listing();
   window.scrollTo(0,0);
 }
-Promise.all([fetch('data.json?v=20261113d').then(r=>{if(!r.ok)throw Error('Inventory unavailable');return r.json()}),fetch('photos.json?v=20261113d').then(r=>r.ok?r.json():{}).catch(()=>({})),fetch('room.json?v=20261113d').then(r=>r.ok?r.json():{units:[]}).catch(()=>({units:[]}))]).then(([data,photos,room])=>{DATA=data;K=data.kinds;PHOTO=photos;ROOM=room;route();addEventListener('hashchange',route)}).catch(()=>{app.innerHTML='<h1>Item guide unavailable</h1><p>Please try reloading this page.</p>'});
+Promise.all([fetch('data.json?v=20261116a').then(r=>{if(!r.ok)throw Error('Inventory unavailable');return r.json()}),fetch('photos.json?v=20261116a').then(r=>r.ok?r.json():{}).catch(()=>({})),fetch('room.json?v=20261116a').then(r=>r.ok?r.json():{units:[]}).catch(()=>({units:[]}))]).then(([data,photos,room])=>{DATA=data;K=data.kinds;PHOTO=photos;ROOM=room;route();addEventListener('hashchange',route)}).catch(()=>{app.innerHTML='<h1>Item guide unavailable</h1><p>Please try reloading this page.</p>'});
