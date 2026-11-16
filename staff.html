@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="stylesheet" href="styles.css?v=20261116b"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="stylesheet" href="styles.css?v=20261116c"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
 <main class="staff-main">
 <p class="eyebrow">For lending staff</p>
 <h1>Staff tools</h1>
@@ -10,6 +10,13 @@
 <button type="button" role="tab" id="tab-add" aria-controls="tool-add" aria-selected="false">Add a new item</button>
 <button type="button" role="tab" id="tab-sync" aria-controls="tool-sync" aria-selected="false">From the console</button>
 </div>
+
+<section id="room3d-card" class="room3d-card" hidden>
+<h2>Pick the shelf on the model</h2>
+<p class="tool-note" id="room3d-help"></p>
+<div id="room3d" class="room3d"></div>
+<p class="room3d-key"><span class="key key-now"></span>where it is now<span class="key key-pick"></span>where it goes</p>
+</section>
 
 <section id="tool-move" class="tool" role="tabpanel" aria-labelledby="tab-move">
 <form id="move-form" class="staff-form">
@@ -125,4 +132,7 @@
 <datalist id="item-list"></datalist>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-<script src="staff.js?v=20261116b" defer></script></body></html>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="room3d.js?v=20261116c"></script>
+<script src="staff.js?v=20261116c" defer></script></body></html>
