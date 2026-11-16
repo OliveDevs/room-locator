@@ -93,23 +93,49 @@ const localDateTime = date => {
   return date.getFullYear()+'-'+pad(date.getMonth()+1)+'-'+pad(date.getDate())+'T'+pad(date.getHours())+':'+pad(date.getMinutes());
 };
 const calendarStamp = date => date.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
-function attachCalendar(k){
-  const input=document.getElementById('return-date'),button=document.getElementById('calendar-button'),estimate=document.getElementById('estimate-button'),status=document.getElementById('calendar-status');
+// one line of a calendar file: commas, semicolons and line breaks escaped, long lines folded at 73 letters (the .ics rules)
+const icsLine = (name,value) => { const text=name+':'+String(value).replace(/\\/g,'\\\\').replace(/([,;])/g,'\\$1').replace(/\r?\n/g,'\\n'); const parts=[]; for(let i=0;i<text.length;i+=73)parts.push((i?' ':'')+text.slice(i,i+73)); return parts.join('\r\n'); };
+function calendarFile(k,due){
+  const end=new Date(due.getTime()+30*60*1000), title='Return '+k.n+' to IDeATe Lending';
+  const alarm=(when,words)=>['BEGIN:VALARM','ACTION:DISPLAY',icsLine('DESCRIPTION',words),'TRIGGER:'+when,'END:VALARM'];
+  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Room Locator//IDeATe Lending return reminder//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH','BEGIN:VEVENT',
+    'UID:'+calendarStamp(new Date())+'-'+(k.h||'item')+'@olivedevs.github.io','DTSTAMP:'+calendarStamp(new Date()),'DTSTART:'+calendarStamp(due),'DTEND:'+calendarStamp(end),
+    icsLine('SUMMARY',title),icsLine('LOCATION','IDeATe Lending, Hunt Library A29, Carnegie Mellon University'),
+    icsLine('DESCRIPTION','Return the borrowed item by the date and time confirmed at checkout.\nItem guide: '+location.origin+location.pathname+'?i='+(k.h||'')),
+    ...alarm('-P1D',title+': due tomorrow'),...alarm('-PT2H',title+': due in 2 hours'),'END:VEVENT','END:VCALENDAR'].join('\r\n')+'\r\n';
+}
+function attachCalendar(k,fromConsole){
+  const input=document.getElementById('return-date'),button=document.getElementById('calendar-button'),ics=document.getElementById('ics-button'),estimate=document.getElementById('estimate-button'),status=document.getElementById('calendar-status');
   input.min=localDateTime(new Date());
-  estimate.addEventListener('click',()=>{
+  const fillEstimate=()=>{
     const due=new Date();
     due.setDate(due.getDate()+3);
     due.setHours(18,0,0,0);
     input.value=localDateTime(due);
-    status.textContent='Estimated normal loan: three days, due at 6 p.m. CMU may shift holidays or set a different due date. Use the date in your checkout email before adding the event.';
-  });
-  button.addEventListener('click',()=>{
+    status.textContent='Filled in with the normal loan: three days, due at 6 p.m. Holidays or a different loan can change it, so check the date in your checkout email before adding it.';
+  };
+  estimate.addEventListener('click',fillEstimate);
+  if(fromConsole)fillEstimate();
+  const dueOrAsk=()=>{
     const due=new Date(input.value);
     if(!input.value||Number.isNaN(due.getTime())||due<=new Date()){
       status.textContent='Enter the future return date and time staff gave you first.';
       input.focus();
-      return;
+      return null;
     }
+    return due;
+  };
+  ics.addEventListener('click',()=>{
+    const due=dueOrAsk(); if(!due)return;
+    const link=document.createElement('a');
+    link.href=URL.createObjectURL(new Blob([calendarFile(k,due)],{type:'text/calendar;charset=utf-8'}));
+    link.download='Return '+k.n.replace(/[^A-Za-z0-9 ._-]+/g,' ').trim().slice(0,60)+'.ics';
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(()=>URL.revokeObjectURL(link.href),60000);
+    status.textContent='A calendar file was made. Open it and choose Add: your calendar will alert you the day before and 2 hours before it is due.';
+  });
+  button.addEventListener('click',()=>{
+    const due=dueOrAsk(); if(!due)return;
     const end=new Date(due.getTime()+30*60*1000);
     const zone=Intl.DateTimeFormat().resolvedOptions().timeZone||'America/New_York';
     const params=new URLSearchParams({action:'TEMPLATE',text:'Return '+k.n+' to IDeATe Lending',dates:calendarStamp(due)+'/'+calendarStamp(end),stz:zone,etz:zone,details:'Return the borrowed item by the date and time confirmed at checkout. Check Google Calendar notifications after saving this event.',location:'IDeATe Lending, Hunt Library A29, Carnegie Mellon University'});
@@ -246,14 +272,19 @@ function manualHtml(k,manual){
   const maker=makerSupport(k.n);
   return '<section class="guide-section"><h2>Find the right manual</h2><p>The inventory name does not identify one verified product model. Read the maker and model number on the item, then look that exact guide up.</p>'+(maker?'<p>'+external('Open '+maker[0]+'\u2019s own support site',maker[1])+'</p>':'')+'<label class="field-label" for="model-number">Maker and model from the label</label><input id="model-number" type="text" placeholder="For example, maker + model number"><a class="source-link" id="manual-search" href="'+esc(search(k.n+' manufacturer manual'))+'" target="_blank" rel="noopener noreferrer">Search for matching manual ↗</a><p class="note">For simple accessories with no electronic controls, the setup steps above may be all you need.</p></section>';
 }
-function itemView(k){
+// The return reminder. Scanned from the console's QR (address ends in ?i=...) the person is standing in Lending about
+// to borrow the thing, so the reminder is the first thing on the page with the normal 3-day due date already filled in.
+function reminderHtml(top,name){
+  return '<div class="side-block'+(top?' reminder-top':'')+'"><h2>'+(top?'Borrowing the '+esc(name)+'? Set a return reminder':'Return reminder')+'</h2><p>'+(top?'Two taps now, and your phone tells you when it is due. ':'')+'Use the exact due date and time from your checkout email.</p><label for="return-date">Return date and time</label><input id="return-date" type="datetime-local" aria-describedby="calendar-status"><button id="estimate-button" class="button-secondary" type="button">Fill normal 3-day estimate</button><div class="reminder-buttons"><button id="ics-button" type="button">Add to my calendar (iPhone, Outlook, any)</button><button id="calendar-button" class="button-secondary" type="button">Add to Google Calendar ↗</button></div><p id="calendar-status" class="calendar-status" role="status">You get an alert the day before and 2 hours before it is due.</p></div>';
+}
+function itemView(k,fromConsole){
   const guide=guideFor(k), group=k.c+'/'+k.t, related=(DATA.goes[group]||[]).filter(g=>K.some(a=>a.c+'/'+a.t===g));
   const manual=(k.r||[]).filter(r=>Array.isArray(r)&&/^https:\/\//.test(r[1]));
   document.title=k.n+' · IDeATe Lending';
-  app.innerHTML='<a class="back" href="./">← All items</a><div class="item-lead"><div class="item-summary"><p class="eyebrow">'+esc(categoryName(k.c))+' / '+esc(k.t)+'</p><h1>'+esc(k.n)+'</h1><p class="intro">'+esc(introFor(k))+'</p><aside class="location"><small>Find it in Lending</small><strong>'+esc(k.in?k.w:'Ask at the desk · '+k.w)+'</strong><p>Shelf locations and availability can change. The desk has the current information.</p></aside></div>'+photoHtml(k)+'</div>'+
+  app.innerHTML='<a class="back" href="./">← All items</a>'+(fromConsole?reminderHtml(true,k.n):'')+'<div class="item-lead"><div class="item-summary"><p class="eyebrow">'+esc(categoryName(k.c))+' / '+esc(k.t)+'</p><h1>'+esc(k.n)+'</h1><p class="intro">'+esc(introFor(k))+'</p><aside class="location"><small>Find it in Lending</small><strong>'+esc(k.in?k.w:'Ask at the desk · '+k.w)+'</strong><p>Shelf locations and availability can change. The desk has the current information.</p></aside></div>'+photoHtml(k)+'</div>'+
   '<div class="guide-layout"><div class="guide-stack"><section class="guide-section"><h2>Before you start</h2>'+listItems(guide.need)+'<p class="note">This is a preparation list. Confirm what comes in the loan with staff; accessories and supplies may be separate.</p></section><section class="guide-section"><h2>First steps</h2><ol>'+guide.start.map(s=>'<li>'+esc(s)+'</li>').join('')+'</ol></section>'+
-  ((k.tips?.length||TIPS[k.n]||TIPS[group])?'<section class="guide-section"><h2>Useful tips</h2>'+listItems(k.tips||TIPS[k.n]||TIPS[group])+'</section>':'')+manualHtml(k,manual)+'</div><aside class="side-stack"><div class="side-block"><h2>Borrowing</h2><p>Visit IDeATe Lending in Hunt Library basement, room A29, across from the elevator. Bring your CMU ID. Check current lending hours and borrowing rules before visiting.</p><p>During the semester, the normal loan is three days with a 6 p.m. due time. Weekends count; university holidays may shift the due date. Renewals are no longer offered.</p>'+external('Official IDeATe Lending rules','https://ideate.cmu.edu/resources/lending/index.html')+external('Browse CMU’s '+categoryName(k.c)+' collection',collectionUrl(k.c))+'</div>'+(related.length?'<div class="side-block"><h2>Often used with</h2>'+related.map(g=>'<a class="source-link" href="#t'+encodeURIComponent(g)+'">'+esc(g.split('/')[1])+' →</a>').join('')+'<p>Compatibility and availability vary by model.</p></div>':'')+'<div class="side-block"><h2>Return reminder</h2><p>Use the exact due date and time from your checkout email.</p><label for="return-date">Return date and time</label><input id="return-date" type="datetime-local" aria-describedby="calendar-status"><button id="estimate-button" class="button-secondary" type="button">Fill normal 3-day estimate</button><button id="calendar-button" type="button">Add to Google Calendar ↗</button><p id="calendar-status" class="calendar-status" role="status">Review the date and notification in Google Calendar before saving.</p></div><div class="side-block"><h2>At checkout</h2><p>Confirm the exact model, included parts, condition, and return date with staff. For powered devices, test startup before leaving when possible.</p></div></aside></div>';
-  attachCalendar(k);
+  ((k.tips?.length||TIPS[k.n]||TIPS[group])?'<section class="guide-section"><h2>Useful tips</h2>'+listItems(k.tips||TIPS[k.n]||TIPS[group])+'</section>':'')+manualHtml(k,manual)+'</div><aside class="side-stack"><div class="side-block"><h2>Borrowing</h2><p>Visit IDeATe Lending in Hunt Library basement, room A29, across from the elevator. Bring your CMU ID. Check current lending hours and borrowing rules before visiting.</p><p>During the semester, the normal loan is three days with a 6 p.m. due time. Weekends count; university holidays may shift the due date. Renewals are no longer offered.</p>'+external('Official IDeATe Lending rules','https://ideate.cmu.edu/resources/lending/index.html')+external('Browse CMU’s '+categoryName(k.c)+' collection',collectionUrl(k.c))+'</div>'+(related.length?'<div class="side-block"><h2>Often used with</h2>'+related.map(g=>'<a class="source-link" href="#t'+encodeURIComponent(g)+'">'+esc(g.split('/')[1])+' →</a>').join('')+'<p>Compatibility and availability vary by model.</p></div>':'')+(fromConsole?'':reminderHtml(false))+'<div class="side-block"><h2>At checkout</h2><p>Confirm the exact model, included parts, condition, and return date with staff. For powered devices, test startup before leaving when possible.</p></div></aside></div>';
+  attachCalendar(k,fromConsole);
   const modelChoice=document.getElementById('model-choice');
   if(modelChoice)modelChoice.addEventListener('change',()=>{const result=document.getElementById('model-result'),selected=MODEL_CHOICES[k.n].options[Number(modelChoice.value)];result.innerHTML=modelChoice.value===''?'If none matches, ask staff for the model number before using a manual.':external('Open '+selected[0]+' maker guide',selected[1]);});
   const modelNumber=document.getElementById('model-number');
@@ -286,7 +317,7 @@ function roomView(){
 function route(){if(!DATA)return;const hash=decodeURIComponent(location.hash.slice(1));const query=new URLSearchParams(location.search).get('i');let k;
   if(/^k\d+$/.test(hash))k=K[Number(hash.slice(1))];
   else if(query&&!hash)k=K.find(x=>x.h===query.toLowerCase());
-  if(k)itemView(k);else if(hash==='room')roomView();else if(hash.startsWith('t')){const [c,t]=hash.slice(1).split('/');listing(c,t)}else listing();
+  if(k)itemView(k,!!(query&&!hash));else if(hash==='room')roomView();else if(hash.startsWith('t')){const [c,t]=hash.slice(1).split('/');listing(c,t)}else listing();
   window.scrollTo(0,0);
 }
-Promise.all([fetch('data.json?v=20261116a').then(r=>{if(!r.ok)throw Error('Inventory unavailable');return r.json()}),fetch('photos.json?v=20261116g').then(r=>r.ok?r.json():{}).catch(()=>({})),fetch('room.json?v=20261116a').then(r=>r.ok?r.json():{units:[]}).catch(()=>({units:[]}))]).then(([data,photos,room])=>{DATA=data;K=data.kinds;PHOTO=photos;ROOM=room;route();addEventListener('hashchange',route)}).catch(()=>{app.innerHTML='<h1>Item guide unavailable</h1><p>Please try reloading this page.</p>'});
+Promise.all([fetch('data.json?v=20261116a').then(r=>{if(!r.ok)throw Error('Inventory unavailable');return r.json()}),fetch('photos.json?v=20261116h').then(r=>r.ok?r.json():{}).catch(()=>({})),fetch('room.json?v=20261116a').then(r=>r.ok?r.json():{units:[]}).catch(()=>({units:[]}))]).then(([data,photos,room])=>{DATA=data;K=data.kinds;PHOTO=photos;ROOM=room;route();addEventListener('hashchange',route)}).catch(()=>{app.innerHTML='<h1>Item guide unavailable</h1><p>Please try reloading this page.</p>'});

@@ -247,40 +247,52 @@
       "license": "CC BY-SA 3.0"
     },
     "cutting-machine": {
-      "url": "cutting-machine.svg",
-      "kind": "illustration"
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1a/Factorf2_-_Cricut_in_action_%2820001992759%29.jpg/960px-Factorf2_-_Cricut_in_action_%2820001992759%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Factorf2_-_Cricut_in_action_(20001992759).jpg",
+      "artist": "factorf2",
+      "license": "CC BY-SA 2.0"
     },
     "camera-gimbal": {
-      "url": "camera-gimbal.svg",
-      "kind": "illustration"
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/80/DJI_Ronin_RSC2_Pro_1.jpg/960px-DJI_Ronin_RSC2_Pro_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:DJI_Ronin_RSC2_Pro_1.jpg",
+      "artist": "-stk",
+      "license": "CC BY-SA 4.0"
     },
     "sound-blanket": {
-      "url": "sound-blanket.svg",
-      "kind": "illustration"
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f5/Moving_Blanket_-_Blue.jpg/960px-Moving_Blanket_-_Blue.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Moving_Blanket_-_Blue.jpg",
+      "artist": "DustinMoving",
+      "license": "CC BY-SA 4.0"
     },
     "light-stand": {
-      "url": "light-stand.svg",
-      "kind": "illustration"
+      "url": "https://upload.wikimedia.org/wikipedia/commons/b/b9/C-stand_extended_and_light_P1101.jpeg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "page": "https://commons.wikimedia.org/wiki/File:C-stand_extended_and_light_P1101.jpeg",
+      "artist": "EncMstr",
+      "license": "CC BY-SA 3.0"
     },
     "sewing-machine": {
-      "url": "sewing-machine.svg",
-      "kind": "illustration"
-    },
-    "charger": {
-      "url": "charger.svg",
-      "kind": "illustration"
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d8/Sewing_machine_CPS5032_by_Brother_Industries%2C_Ltd._%282015-06-27%29.JPG/960px-Sewing_machine_CPS5032_by_Brother_Industries%2C_Ltd._%282015-06-27%29.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Sewing_machine_CPS5032_by_Brother_Industries,_Ltd._(2015-06-27).JPG",
+      "artist": "Lombroso",
+      "license": "CC0"
     },
     "laser-pointer": {
-      "url": "laser-pointer.svg",
-      "kind": "illustration"
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/02/Laser_pens.jpg/960px-Laser_pens.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Laser_pens.jpg",
+      "artist": "Netweb01",
+      "license": "CC BY-SA 3.0"
     },
     "wagon": {
-      "url": "wagon.svg",
-      "kind": "illustration"
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/53/Bollerwagen_der_Piraten_Bochum.jpg/960px-Bollerwagen_der_Piraten_Bochum.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Bollerwagen_der_Piraten_Bochum.jpg",
+      "artist": "Sebastian Martin Dicke",
+      "license": "CC BY-SA 4.0"
     },
     "hammer": {
-      "url": "hammer.svg",
-      "kind": "illustration"
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/16/Claw_hammer-1.jpg/960px-Claw_hammer-1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Claw_hammer-1.jpg",
+      "artist": "Shakespeare at en.wikipedia",
+      "license": "CC BY-SA 3.0"
     },
     "exact:Sony a7 III Camera": {
       "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2c/Sony_Alpha7_III_20_apr_2018f.jpg/960px-Sony_Alpha7_III_20_apr_2018f.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
@@ -761,6 +773,24 @@
       "page": "https://commons.wikimedia.org/wiki/File:Apple_Lightning_Cable_End_(48727307142).jpg",
       "artist": "brett jordan",
       "license": "CC BY 2.0"
+    },
+    "phone-gimbal": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7c/DJI_OSMO_mobile_%28with_iPhone_7%29.jpg/960px-DJI_OSMO_mobile_%28with_iPhone_7%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:DJI_OSMO_mobile_(with_iPhone_7).jpg",
+      "artist": "ubahnverleih",
+      "license": "CC0"
+    },
+    "usb-charger": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a8/Apple_5W_USB_Power_Adapter_%284935%29.jpg/960px-Apple_5W_USB_Power_Adapter_%284935%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Apple_5W_USB_Power_Adapter_(4935).jpg",
+      "artist": "Gregory Varnum",
+      "license": "CC BY-SA 4.0"
+    },
+    "ac-adapter": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7f/Wall-Wart-AC-Adapter.jpg/960px-Wall-Wart-AC-Adapter.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Wall-Wart-AC-Adapter.jpg",
+      "artist": "Evan-Amos",
+      "license": "Public domain"
     }
   },
   "items": {
@@ -823,7 +853,7 @@
     "Thunderbolt 3 Cable": "USB C cable",
     "USB C to A Cable": "USB C cable",
     "USB C to C Cable": "USB C cable",
-    "USB Power Supply": "charger",
+    "USB Power Supply": "usb-charger",
     "Collapsible Utility Wagon": "wagon",
     "Keyboard USB": "computer keyboard",
     "MOUSE USB-C": "computer mouse",
@@ -856,8 +886,8 @@
     "A-Mount to E-Mount Lens Adapter": "camera mount adapter",
     "Canon BP-727": "camera battery",
     "Canon EOS EF - EOS R Lens Mount Adapter": "camera mount adapter",
-    "Canon R800 Power Adapter": "charger",
-    "E6N AC Adapter": "charger",
+    "Canon R800 Power Adapter": "ac-adapter",
+    "E6N AC Adapter": "ac-adapter",
     "Mount Adapter EF-EOS R": "camera mount adapter",
     "Canon R800": "video camera camcorder",
     "Panasonic 4K Video Camcorder": "video camera camcorder",
@@ -874,7 +904,7 @@
     "DVD Player": "DVD player",
     "DJI RSC 2 Gimbal": "camera-gimbal",
     "Feiyu G5 Gimbal Kit for GoPro Hero 5": "camera-gimbal",
-    "Osmo Mobile 8 Phone Gimbal": "camera-gimbal",
+    "Osmo Mobile 8 Phone Gimbal": "phone-gimbal",
     "10-18mm Ultra Wide-Angle Contemporary Lens (Sony E-mount)": "camera lens",
     "100mm-400mm Telephoto Lens (Sony E-Mount)": "camera lens",
     "12mm f/2.0 wide-angle lens (Sony E-mount)": "camera lens",
@@ -910,7 +940,6 @@
     "Mini Tripod B": "camera tripod",
     "Mini Tripod C": "camera tripod",
     "Small Tripod": "camera tripod",
-    "DCB107 Battery Charger": "charger",
     "Digital Caliper (0-150mm)": "digital caliper",
     "Glue Gun": "glue gun",
     "Glue Gun - DT-280F": "glue gun",

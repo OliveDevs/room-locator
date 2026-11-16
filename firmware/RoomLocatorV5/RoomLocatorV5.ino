@@ -109,6 +109,11 @@
 
  Earlier requests, summarized: make the list easier to reset, make the screens clearer and nicer to read,
  blink patterns so colorblind users are not relying on color, let staff move items and shelves with a QR code behind a PIN.
+
+ After the documentation was posted (v5.7, Nov 16, 2026): with the console set up in Lending we noticed typing was
+ slow, and asked Claude (Fable 5.2 this time) to find out why, to check the staff PIN for ways around it, and to
+ add a way to test single lights. It changed how the card is read (256 letters at a time), added the key queue,
+ made the PIN lock again on the Home screen, and added @LED and @STATUS.
   _____
 
  Diana Caballero and Gauri Sharma
@@ -156,6 +161,8 @@
 //   !U !D !S !B   press Up, Down, Select or Back
 //   @             says hello (the laptop tools use this)
 //   @LIGHTS       light check: every light red, green, then blue, then all green until a button is pressed
+//   @LED 79 2     lights 2 lights green starting at light 79 and nothing else (to find a bad joint in the chain)
+//   @STATUS       how many changes are waiting, and whether the staff PIN is still the starting one (never the PIN itself)
 //   @MOVES        prints MOVES.TSV, then @END
 //   @CLEARMOVES   deletes MOVES.TSV (after the laptop has collected the changes)
 //   @ADDED        prints the items added at the console (and their barcodes), then @END
@@ -175,7 +182,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.6";
+const char VERSION[] PROGMEM = "5.7";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -209,7 +216,7 @@ const uint32_t LIGHT_ITEM = 0x00FF00;          // where an item lives
 const uint32_t LIGHT_SHELF = 0xFFFFFF;         // a scanned shelf label
 const uint32_t LIGHT_NEW_SPOT = 0x0050FF;      // where a moved item will go
 const uint32_t LIGHT_SWEEP = 0x8000FF;         // the start-up check
-const uint32_t LIGHT_UNIT = 0x303030;          // a whole unit, picked on the map
+const uint32_t LIGHT_UNIT = 0x909090;          // a whole unit, picked on the map (soft white, but bright enough to see on a 2-light unit)
 const uint32_t LIGHT_GROOVE = 0xFF8000;        // an empty groove where a board could go
 // one light colour and one blink per thing on the put-away list, so nobody has to tell colours apart
 const uint32_t LIST_RGB[6] = {0x00FF00, 0x0050FF, 0xFF8000, 0xFF00A0, 0x00E0E0, 0xFFE000};
@@ -237,6 +244,9 @@ char shelfUnit[5]; byte shelfNumber = 0;        // the shelf a scanned label poi
 
 // typing
 char query[32]; byte queryLen = 0;              // what is being typed
+volatile byte missedPress = 0;                   // buttons pressed while the console was busy, one bit each (see readButtons)
+byte keyQueue[16]; byte keyHead = 0, keyCount = 0;   // keys typed while the console was busy, oldest first
+bool qrWanted = false; unsigned long qrAt = 0;    // the item page is up, its QR is still to be drawn (see drawItem)
 bool live = false, livePending = false;         // live = the list on screen is a search that updates as you type
 unsigned long liveAt = 0;
 
@@ -257,14 +267,19 @@ byte doneNote = 0;                               // what the "Done" footer adds:
 byte syncPage = 0, syncPages = 1;                 // the QR pages for the website
 bool justMoved = false, justChanged = false, justAdded = false;    // the next screen says "Moved" / "Done" / "Added" once
 // the staff PIN
-const unsigned long STAFF_MS = 300000UL;        // once the PIN is right, changes are open for 5 minutes
+const unsigned long STAFF_MS = 300000UL;        // once the PIN is right, changes are open for 5 minutes at most...
+// ...and they lock again the moment the Home screen shows, or after 2 minutes with nobody touching the console
+const byte PIN_TRIES = 5;                       // this many wrong PINs in a row and the PIN screen rests for a while
+const unsigned long PIN_REST_MS = 60000UL;      // how long it rests: guessing all 10,000 PINs by hand would take days
 char staffPin[5] = "1234";
 unsigned long staffUntil = 0;
 enum { P_ENTER, P_NEW1, P_NEW2 };               // typing the PIN / a new PIN / the new PIN again
-enum { AFTER_ORGANIZE, AFTER_MOVE, AFTER_CODE, AFTER_DOMOVE, AFTER_NOTHING };   // what happens once the PIN is right
+enum { AFTER_ORGANIZE, AFTER_MOVE, AFTER_CODE, AFTER_DOMOVE, AFTER_NEWPIN, AFTER_NOTHING };   // what happens once the PIN is right
 byte pinStep = P_ENTER, pinAfter = AFTER_NOTHING, pinLen = 0, pinDigit = 0;
 char pinIn[5], pinNew[5];
 bool pinWrong = false, pinMismatch = false;
+byte pinMisses = 0;                             // wrong PINs in a row
+unsigned long pinRestUntil = 0;                 // 0 = the PIN screen is not resting
 char pendingCode[72];                           // a phone QR code waiting for the PIN
 bool homeMessage = false;                        // a message is on the screen in place of Home: the next button just shows Home
 // a new item from the phone (RL:ADD), set up in 3 steps
@@ -292,6 +307,7 @@ const byte SYNC_QR = 8;                         // the website QR: version 8 = 4
 uint8_t qrData[304];                            // room for a QR's dots: the item QR (33 x 33) and the website QR (49 x 49) share it
 
 // ============================== Drawing helpers ==============================
+void pollKeyboard();                             // (further down) keeps typed keys safe while a long job runs
 enum Font { SMALL, BOLD, TITLE, HUGE_FONT };
 void useFont(Font f) {
   tft.setFont(f == SMALL ? &FreeSans9pt7b : f == BOLD ? &FreeSansBold9pt7b : f == TITLE ? &FreeSansBold12pt7b : &FreeSansBold18pt7b);
@@ -303,6 +319,7 @@ void copyText(char* to, const char* from, size_t size) { strncpy(to, from, size 
 // draws text with its baseline at y. Cuts it with ".." if it is wider than maxW
 void text(int x, int y, const char* s, uint16_t color, Font f, int maxW = 460) {
   char buf[64];
+  pollKeyboard();
   copyText(buf, s, sizeof(buf));
   useFont(f);
   int n = strlen(buf);
@@ -451,22 +468,39 @@ void applyMove() {                               // play every change back over 
   if (u >= 0 && u < unitTotal) { strcpy(movedUnit, unitCode[u]); field[K_UNIT] = movedUnit; }
   itoa(s, movedShelf, 10); field[K_SHELF] = movedShelf;
 }
+// The card is slow when asked for one letter at a time (v5.6 did that: looking through the item list took over a
+// second, and keys typed meanwhile were lost). So the card is read 256 letters at a time into `block`, and lines are
+// cut out of that. `blockOf` remembers which file the block came from; anything that opens, writes or deletes a file
+// goes through cardOpen() / cardRemove(), which throw the block away so a stale one is never used.
+char block[256]; File* blockOf = NULL; long blockAt = 0; int blockLen = 0; unsigned long blockSize = 0;
+File cardOpen(const char* name, uint8_t how = FILE_READ) { blockOf = NULL; return SD.open(name, how); }
+bool cardRemove(const char* name) { blockOf = NULL; return SD.remove(name); }
 // reads one line starting at `pos` into `line`. Returns where the next line starts, or -1 at the end of the file
 bool searching = false;                          // true while the search reads every line: no need to replay changes
 long readLine(File& f, long pos) {
-  if (pos < 0 || (unsigned long)pos >= f.size()) return -1;
-  f.seek(pos);
-  int n = f.readBytesUntil('\n', line, sizeof(line) - 1);
+  if (blockOf != &f) { blockOf = &f; blockLen = 0; blockSize = f.size(); }
+  if (pos < 0 || (unsigned long)pos >= blockSize) return -1;
+  pollKeyboard();
+  byte n = 0;
+  for (;;) {
+    if (pos < blockAt || pos >= blockAt + blockLen) {            // this letter is not in the block: fetch the block that starts with it
+      f.seek(pos); blockAt = pos; blockLen = f.read(block, sizeof(block));
+      if (blockLen <= 0) { blockLen = 0; break; }
+    }
+    const char* from = block + (pos - blockAt); const char* stop = block + blockLen; const char* q = from;
+    while (q < stop && *q != '\n') { if (n < sizeof(line) - 1) line[n++] = *q; q++; }
+    pos += q - from;
+    if (q < stop) { pos++; break; }                              // found the end of the line (step over the \n)
+  }
   line[n] = '\0';
-  long next = f.position();
   splitLine();
   if (&f == &kindsFile && !searching) applyMove();
-  return next;
+  return pos;
 }
 bool loadKind(long pos) { return readLine(kindsFile, pos) >= 0; }
 
 void loadUnits() {
-  File f = SD.open("UNITS.TSV");
+  File f = cardOpen("UNITS.TSV");
   long pos = 0;
   unitTotal = 0;
   while (f && unitTotal < MAX_UNITS && (pos = readLine(f, pos)) >= 0) {
@@ -483,20 +517,20 @@ void loadUnits() {
 // the staff PIN: STAFF.TSV, one line with 4 digits
 void loadStaff() {
   strcpy_P(staffPin, PSTR("1234"));
-  File f = SD.open("STAFF.TSV");
+  File f = cardOpen("STAFF.TSV");
   if (!f) return;
   long pos = readLine(f, 0); f.close();
   if (pos >= 0 && strlen(field[0]) == 4) { bool digits = true; for (byte i = 0; i < 4; i++) if (!isdigit(field[0][i])) digits = false; if (digits) strcpy(staffPin, field[0]); }
 }
 bool saveStaff() {
-  File f = SD.open("STAFF.TSV", O_WRITE | O_CREAT | O_TRUNC);
+  File f = cardOpen("STAFF.TSV", O_WRITE | O_CREAT | O_TRUNC);
   if (!f) return false;
   f.println(staffPin); f.close(); return true;
 }
 bool staffOK() { return staffUntil != 0 && (long)(staffUntil - millis()) > 0; }
 // which grooves have a board: BOARDS.TSV, one line per unit like  AUD<tab>1,2,3,5
 void loadBoards() {
-  File f = SD.open("BOARDS.TSV");
+  File f = cardOpen("BOARDS.TSV");
   long pos = 0;
   while (f && (pos = readLine(f, pos)) >= 0) {
     int u = findUnit(field[0]);
@@ -507,7 +541,7 @@ void loadBoards() {
   if (f) f.close();
 }
 bool saveBoards() {                              // writes the whole file again (it is tiny)
-  File f = SD.open("BOARDS.TSV", O_WRITE | O_CREAT | O_TRUNC);
+  File f = cardOpen("BOARDS.TSV", O_WRITE | O_CREAT | O_TRUNC);
   if (!f) return false;
   for (byte u = 0; u < unitTotal; u++) {
     if (!unitCount[u]) continue;
@@ -543,7 +577,7 @@ void swapUnits(byte a, byte b) {                 // two units trade places in th
   }
 }
 void loadMoves() {
-  File f = SD.open("MOVES.TSV");
+  File f = cardOpen("MOVES.TSV");
   long pos = 0;
   moveTotal = 0;
   while (f && (pos = readLine(f, pos)) >= 0) {                     // first: units that traded places (everything else is by unit code)
@@ -565,7 +599,7 @@ void loadMoves() {
   if (f) f.close();
 }
 bool saveChange(char type, const byte* a) {     // adds one line to MOVES.TSV
-  File f = SD.open("MOVES.TSV", FILE_WRITE);                      // FILE_WRITE adds to the end
+  File f = cardOpen("MOVES.TSV", FILE_WRITE);                      // FILE_WRITE adds to the end
   if (!f) return false;
   char buf[48];
   if (type == 'I') snprintf_P(buf, sizeof(buf), PSTR("%02x%02x%02x\t%s\t%d"), a[0], a[1], a[2], unitCode[a[3]], a[4]);
@@ -589,7 +623,7 @@ byte spanFor(const char* code, int shelf) {      // how many lights that shelf h
 void addPlace(const char* code, int shelf, uint32_t color) { addLights(ledFor(code, shelf), spanFor(code, shelf), color); }
 void addSpace(byte u, byte lo, uint32_t color) { addLights(unitFirst[u] + lo - 1, spaceHi(u, lo) - lo + 1, color); }
 long findCode(const char* code) {               // looks a barcode up in CODES.TSV. -1 = not there
-  File f = SD.open("CODES.TSV");
+  File f = cardOpen("CODES.TSV");
   long pos = 0, found = -1;
   while (f && (pos = readLine(f, pos)) >= 0) if (strcasecmp(field[0], code) == 0) { found = atol(field[1]); break; }
   if (f) f.close();
@@ -606,14 +640,14 @@ void whereText(char* out, byte size) {
 // ============================== Lists and search ==============================
 // each loader fills row[] for its screen
 void loadTypes() {
-  File f = SD.open("TYPES.TSV");
+  File f = cardOpen("TYPES.TSV");
   long pos = 0, next;
   rowCount = 0;
   while (f && rowCount < MAX_ROWS && (next = readLine(f, pos)) >= 0) { if (atoi(field[0]) == currentCat && field[1][0]) row[rowCount++] = pos; pos = next; }
   if (f) f.close();
 }
 void loadKinds() {
-  File f = SD.open("TYPES.TSV"); readLine(f, currentType); f.close();
+  File f = cardOpen("TYPES.TSV"); readLine(f, currentType); f.close();
   copyText(typeName, field[1], sizeof(typeName));
   int cat = atoi(field[0]), n = atoi(field[2]); long pos = atol(field[3]);
   rowCount = 0;
@@ -625,7 +659,7 @@ void loadKinds() {
   }
 }
 void findAddedFrom() {                           // the end of the last type's block in KINDS.TSV = where added items start
-  File f = SD.open("TYPES.TSV");
+  File f = cardOpen("TYPES.TSV");
   long pos = 0, last = -1; int n = 0;
   while (f && (pos = readLine(f, pos)) >= 0) if (atol(field[3]) > last) { last = atol(field[3]); n = atoi(field[2]); }
   if (f) f.close();
@@ -698,6 +732,7 @@ void loadResults() {
   long pos = 0, next;
   searching = true;                                              // where things are does not matter for matching: skip the change replay
   while ((next = readLine(kindsFile, pos)) >= 0) {
+    if (live && keyCount) break;                                 // another letter was typed: stop, the search starts again with it
     byte sc = matchKind(words, count);
     if (sc) {
       if (rowCount < MAX_ROWS) { row[rowCount] = pos; score[rowCount++] = sc; }
@@ -808,18 +843,19 @@ void drawHomeBar() {                            // the grey bar; Down past the l
   tft.fillRect(0, 294, 480, 26, PICKED); tft.fillRect(0, 294, 5, 26, ACCENT);
   textF(14, 312, F("Select: move things or change shelves"), WHITE, SMALL);
 }
+void drawHomeTile(byte i) {                     // one of the 8 pictures
+  int x = 12 + (i % 4) * 116, y = 46 + (i / 4) * 120;
+  bool on = i == homeCursor;
+  tft.fillRect(x, y, 108, 112, on ? PICKED : PANEL);
+  tft.fillRect(x, y, 108, 6, CAT_COLOR[i]);
+  if (on) { tft.drawRect(x, y, 108, 112, ACCENT); tft.drawRect(x + 1, y + 1, 106, 110, ACCENT); }
+  icon(i, x + 54, y + 50, CAT_COLOR[i]);
+  char name[12]; strcpy_P(name, CAT_NAME[i]);
+  useFont(SMALL); text(x + 54 - textWidth(name) / 2, y + 98, name, WHITE, SMALL);
+}
 void drawHome() {
   header("IDeATe Lending", "What do you need?");
-  for (byte i = 0; i < 8; i++) {
-    int x = 12 + (i % 4) * 116, y = 46 + (i / 4) * 120;
-    bool on = i == homeCursor;
-    tft.fillRect(x, y, 108, 112, on ? PICKED : PANEL);
-    tft.fillRect(x, y, 108, 6, CAT_COLOR[i]);
-    if (on) { tft.drawRect(x, y, 108, 112, ACCENT); tft.drawRect(x + 1, y + 1, 106, 110, ACCENT); }
-    icon(i, x + 54, y + 50, CAT_COLOR[i]);
-    char name[12]; strcpy_P(name, CAT_NAME[i]);
-    useFont(SMALL); text(x + 54 - textWidth(name) / 2, y + 98, name, WHITE, SMALL);
-  }
+  for (byte i = 0; i < 8; i++) drawHomeTile(i);
   drawHomeBar();
 }
 
@@ -834,14 +870,16 @@ void drawRow(byte slot, bool on, const char* top, const char* under, int dotColo
   text(x, y + 40, under, DIM, SMALL, 470 - x);
 }
 // the rows of whichever list is showing, 5 at a time, keeping the cursor on screen
-void drawRows() {
+void drawRows(int onlyA = -1, int onlyB = -1) {   // with two row numbers: just those two (the cursor moved from one to the other)
   byte first = firstVisibleRow();
   for (byte s = 0; s < ROWS_ON_SCREEN; s++) {
     byte i = first + s;
+    if (onlyA >= 0 && i != onlyA && i != onlyB) continue;
+    if (live && keyCount) return;                                // typing carries on: this list is about to be replaced anyway
     if (i >= rowCount) { tft.fillRect(0, 44 + s * 50, 480, 48, BG); continue; }
     char top[60], under[60];
     if (mode == TYPES) {
-      File f = SD.open("TYPES.TSV"); readLine(f, row[i]); f.close();
+      File f = cardOpen("TYPES.TSV"); readLine(f, row[i]); f.close();
       copyText(top, field[1], sizeof(top));
       int n = atoi(field[2]); snprintf_P(under, sizeof(under), n == 1 ? PSTR("1 kind") : PSTR("%d kinds"), n);
       drawRow(s, i == cursor, top, under, -1);
@@ -948,10 +986,12 @@ void drawQR(int x, int y) {                     // the item's guide page
   char url[80]; strcpy_P(url, MANUAL_URL);
   byte n = strlen(url); snprintf_P(url + n, sizeof(url) - n, PSTR("%06lx"), nameCode(field[K_NAME]));
   if (!drawQRText(x, y, url)) { textF(x, y + 40, F("Ask at the desk"), WHITE, SMALL); return; }
-  textF(x + 6, y + 156 + 22, F("Scan for the guide"), DIM, SMALL);
+  textF(x + 2, y + 156 + 18, F("Scan: guide, and a"), DIM, SMALL);
+  textF(x + 2, y + 156 + 38, F("return reminder"), DIM, SMALL);
 }
 void drawItem() {
   loadKind(currentKind);
+  strip.clear(); addPlace(field[K_UNIT], atoi(field[K_SHELF]), LIGHT_ITEM); strip.show();   // the shelf lights up first: the screen takes a moment to draw
   char buf[64];
   byte cat = constrain(atoi(field[K_CAT]), 0, 7);
   const int LEFT_W = 286;                                         // the left column; the QR takes the right
@@ -978,11 +1018,12 @@ void drawItem() {
   int y = 180;                                                    // the two notes stack under the shelf, each as long as it needs
   if (field[K_WHAT][0]) { textF(14, y, F("What it is"), DIM, SMALL); y += 22; y += 20 * paragraph(14, y, field[K_WHAT], WHITE, LEFT_W, 3) + 16; }
   if (field[K_GOOD][0]) { textF(14, y, F("Good for"), DIM, SMALL); y += 22; paragraph(14, y, field[K_GOOD], WHITE, LEFT_W, (284 - y) / 20 + 1); }
-  drawQR(312, 82);
+  // Working out a QR takes the Mega over a second, and nothing else can happen meanwhile. So the page is drawn
+  // without it, and loop() adds the QR once nobody has pressed anything for a moment: flicking through items stays quick.
+  tft.fillRect(312, 82, 156, 156, PANEL); qrWanted = true; qrAt = millis();
   if (justMoved) { justMoved = false; footer(F("Moved. Its new spot is saved on the card.")); }
   else if (justAdded) { justAdded = false; footer(F("Added. It is saved on the card.")); }
   else footer(itemWasScanned ? F("Down: move it     Scan more: a list") : F("Down: move it     Back"));
-  strip.clear(); addPlace(field[K_UNIT], atoi(field[K_SHELF]), LIGHT_ITEM); strip.show();
 }
 
 // ---- the map: the room from above, the unit under the cursor filled in
@@ -996,15 +1037,21 @@ void mapBox(byte u, uint16_t fill, uint16_t edge) {
   tft.fillRect(x0, y0, w, h, fill);
   if (edge != fill) { tft.drawRect(x0, y0, w, h, edge); tft.drawRect(x0 + 1, y0 + 1, w - 2, h - 2, edge); }
 }
-void drawMapBody() {
-  tft.fillRect(MAP_X, MAP_Y, 288, 216, RGB(36, 52, 98));                   // the blue floor, 400 x 300 mm
+bool boxesTouch(byte a, byte b) {                // do two units overlap on the map? (Doodads sits inside Under the Desk)
+  if (unitMap[a][0] == 255 || unitMap[b][0] == 255) return false;
+  return unitMap[a][0] < unitMap[b][2] && unitMap[b][0] < unitMap[a][2] && unitMap[a][1] < unitMap[b][3] && unitMap[b][1] < unitMap[a][3];
+}
+void drawMapBody(int was = -1) {                 // was = the row the cursor just left: then only that unit and the new one are drawn again
   const uint16_t WOOD = RGB(205, 178, 130), OFF = RGB(80, 86, 100);
-  for (byte u = 0; u < unitTotal; u++) mapBox(u, mapListed(u) ? WOOD : OFF, RGB(120, 100, 70));
-  if (stage == ST_TO) {
-    int h = fromUnit;
-    if (moveWhat == W_ITEM) { loadKind(currentKind); h = findUnit(field[K_UNIT]); }
-    if (h >= 0) mapBox(h, GREEN, GREEN);
+  int h = -1;                                                              // the unit shown green: where the thing being moved is now
+  if (stage == ST_TO) { h = fromUnit; if (moveWhat == W_ITEM) { loadKind(currentKind); h = findUnit(field[K_UNIT]); } }
+  bool quick = was >= 0 && was < rowCount && row[was] < ROW_PHONE && rowCount && row[cursor] < ROW_PHONE;
+  for (byte u = 0; u < unitTotal; u++) {
+    if (quick && u != row[was] && !(u > row[was] && boxesTouch(u, row[was]))) continue;
+    if (!quick && u == 0) tft.fillRect(MAP_X, MAP_Y, 288, 216, RGB(36, 52, 98));   // the blue floor, 400 x 300 mm
+    if ((int)u == h) mapBox(u, GREEN, GREEN); else mapBox(u, mapListed(u) ? WOOD : OFF, RGB(120, 100, 70));
   }
+  if (!quick && h >= 0) mapBox(h, GREEN, GREEN);                           // on top of anything that overlaps it
   tft.fillRect(310, 44, 170, 240, BG);
   if (!rowCount) { textF(316, 72, F("No unit fits"), DIM, SMALL); return; }
   byte u = row[cursor];
@@ -1127,10 +1174,9 @@ void drawMoveOK() {
 }
 
 // ---- the staff PIN: 4 boxes. Type the digits, or Up / Down to change a digit and Select for the next one
-void drawPin() {
-  header(pinStep == P_ENTER ? "Staff PIN" : pinStep == P_NEW1 ? "New staff PIN" : "New PIN again", NULL);
-  if (pinStep == P_ENTER) textF(14, 72, F("Changes to the room need the staff PIN."), DIM, SMALL);
-  else textF(14, 72, pinStep == P_NEW1 ? F("Pick 4 digits. Faculty can change it any time.") : F("Type the same 4 digits again."), DIM, SMALL);
+bool pinResting();                               // (further down)
+bool pinNote = false;                            // a red line ("Wrong PIN" ...) is on the PIN screen
+void drawPinBoxes() {                            // the 4 boxes: a dot for each digit typed, the digit being picked in the next one
   for (byte i = 0; i < 4; i++) {
     int x = 120 + i * 64;
     bool now = i == pinLen;
@@ -1140,8 +1186,19 @@ void drawPin() {
     if (i < pinLen) { tft.fillCircle(x + 26, 132, 8, WHITE); }
     else if (now) { d[0] = '0' + pinDigit; text(x + 18, 144, d, ACCENT, BOLD); }
   }
-  if (pinWrong) textF(14, 200, F("Wrong PIN. Try again."), RGB(255, 110, 100), BOLD);
+}
+void drawPin();
+void drawPinStep() { if (pinNote) drawPin(); else drawPinBoxes(); }   // after one digit: only the boxes, unless a red line has to go away
+void drawPin() {
+  header(pinStep == P_ENTER ? "Staff PIN" : pinStep == P_NEW1 ? "New staff PIN" : "New PIN again", NULL);
+  if (pinStep == P_ENTER) textF(14, 72, pinAfter == AFTER_NEWPIN ? F("First the PIN that is in use now.") : F("Changes to the room need the staff PIN."), DIM, SMALL);
+  else textF(14, 72, pinStep == P_NEW1 ? F("Pick 4 digits. Faculty can change it any time.") : F("Type the same 4 digits again."), DIM, SMALL);
+  drawPinBoxes();
+  pinNote = true;
+  if (pinStep == P_ENTER && pinResting()) textF(14, 200, F("Too many wrong tries. Wait a minute."), RGB(255, 110, 100), BOLD);
+  else if (pinWrong) textF(14, 200, F("Wrong PIN. Try again."), RGB(255, 110, 100), BOLD);
   else if (pinMismatch) textF(14, 200, F("Those were not the same. Start again."), RGB(255, 110, 100), BOLD);
+  else pinNote = false;
   textF(14, 240, F("Keyboard: type the digits.  Buttons: Up / Down"), DIM, SMALL);
   textF(14, 262, F("change the digit, Select takes it."), DIM, SMALL);
   footer(F("Back = cancel"));
@@ -1210,7 +1267,7 @@ void go(byte next) {                            // open a screen, remembering wh
   if (backDepth < BACK_MAX) { backTo[backDepth] = mode; backCursor[backDepth] = cursor; backStage[backDepth] = stage; backView[backDepth] = viewUnit; backDepth++; }
   mode = next; cursor = 0;
 }
-void goHome() { homeMessage = false; mode = HOME; backDepth = 0; stage = ST_FROM; cursor = 0; queryLen = 0; query[0] = '\0'; live = false; livePending = false; lightsOff(); draw(); }
+void goHome() { staffUntil = 0; homeMessage = false; mode = HOME; backDepth = 0; stage = ST_FROM; cursor = 0; queryLen = 0; query[0] = '\0'; live = false; livePending = false; lightsOff(); draw(); }
 void openItem(long kind, bool scanned) { queryLen = 0; live = false; livePending = false; currentKind = kind; itemWasScanned = scanned; go(ITEM); draw(); }
 void openResults() { backDepth = 0; mode = HOME; go(RESULTS); }          // the search screen, as the first screen after Home
 
@@ -1254,7 +1311,7 @@ void pickedUnit(byte u) {                       // Select on the map
   if (u == ROW_PHONE) return;                                                  // only a QR to look at
   if (u == ROW_RECENT) { go(RECENT); loadRecent(); draw(); lightsOff(); return; }
   if (u == ROW_SYNC) { go(SYNC); syncPage = 0; syncPages = countSyncPages(); draw(); lightsOff(); return; }
-  if (u == ROW_PIN) { pinAfter = AFTER_NOTHING; pinStep = P_NEW1; pinLen = 0; pinDigit = 0; pinWrong = false; pinMismatch = false; go(PIN); draw(); lightsOff(); return; }
+  if (u == ROW_PIN) { askPin(AFTER_NEWPIN); return; }                           // the PIN that is in use now is always asked first, even if staff just typed it
   if (stage == ST_FROM) { openUnit(u); return; }
   moveToUnit = u; toNewBoard = false;
   if (moveWhat == W_UNIT) { go(MOVEOK); draw(); return; }
@@ -1349,11 +1406,18 @@ void popScreen() {                               // leave the PIN screen without
   else mode = HOME;
 }
 void runCode(char* c);
+void askPinAgain() { pinStep = P_ENTER; pinLen = 0; pinDigit = 0; pinWrong = false; pinMismatch = false; draw(); }
 void pinDone() {                                 // 4 digits are in
   pinIn[4] = '\0';
   if (pinStep == P_ENTER) {
-    if (strcmp(pinIn, staffPin) != 0) { pinWrong = true; pinLen = 0; pinDigit = 0; draw(); return; }
-    staffUntil = millis() + STAFF_MS;
+    if (strcmp(pinIn, staffPin) != 0) {
+      pinWrong = true; pinLen = 0; pinDigit = 0;
+      if (++pinMisses >= PIN_TRIES) { pinMisses = 0; pinRestUntil = millis() + PIN_REST_MS; if (!pinRestUntil) pinRestUntil = 1; }
+      draw(); return;
+    }
+    pinMisses = 0;
+    staffUntil = millis() + STAFF_MS; if (!staffUntil) staffUntil = 1;
+    if (pinAfter == AFTER_NEWPIN) { pinStep = P_NEW1; pinLen = 0; pinDigit = 0; pinWrong = false; pinMismatch = false; draw(); return; }
     popScreen();
     if (pinAfter == AFTER_ORGANIZE) startOrganize();
     else if (pinAfter == AFTER_MOVE) startMove();
@@ -1362,17 +1426,23 @@ void pinDone() {                                 // 4 digits are in
     else draw();
     return;
   }
+  if (!staffOK()) { askPinAgain(); return; }                                   // the 5 minutes ran out half way: start over with the PIN in use
   if (pinStep == P_NEW1) { strcpy(pinNew, pinIn); pinStep = P_NEW2; pinLen = 0; pinDigit = 0; pinMismatch = false; draw(); return; }
   if (strcmp(pinIn, pinNew) != 0) { pinStep = P_NEW1; pinLen = 0; pinDigit = 0; pinMismatch = true; draw(); return; }
   char was[5]; strcpy(was, staffPin); strcpy(staffPin, pinNew);
   if (!saveStaff()) { strcpy(staffPin, was); header("Could not save", NULL); textF(18, 90, F("The SD card would not write. Is it locked?"), WHITE, SMALL); footer(F("Back")); return; }
   popScreen(); justChanged = true; reload(); draw(); preview();
 }
+bool pinResting() {                              // too many wrong PINs: no digits are taken for a minute
+  if (!pinRestUntil) return false;
+  if ((long)(pinRestUntil - millis()) > 0) return true;
+  pinRestUntil = 0; return false;
+}
 void pinKey(char d) {                            // one digit, from the keyboard or from Select
-  if (pinLen >= 4) return;
+  if (pinLen >= 4 || pinResting()) return;
   pinWrong = false;
   pinIn[pinLen++] = d; pinDigit = 0;
-  if (pinLen == 4) pinDone(); else draw();
+  if (pinLen == 4) pinDone(); else drawPinStep();
 }
 // "AUD-3" -> unit and shelf. false = not a real place
 bool parsePlace(const char* t, byte* u, byte* shelf) {
@@ -1422,7 +1492,7 @@ void runCode(char* c) {
     while (n < 4) { part[n++] = p; if (n == 4) break; p = strchr(p, '|'); if (!p) break; *p++ = '\0'; }
     if (n < 4 || !part[3][0]) { codeProblem(F("The code is not complete.")); return; }
     int t = atoi(part[0]);
-    File f = SD.open("TYPES.TSV"); long pos = 0; bool found = false;
+    File f = cardOpen("TYPES.TSV"); long pos = 0; bool found = false;
     for (int i = 0; f && (pos = readLine(f, pos)) >= 0; i++) if (i == t) { found = true; break; }
     if (f) f.close();
     if (!found || !field[1][0]) { codeProblem(F("That type is not in this console's list.")); return; }
@@ -1451,7 +1521,7 @@ void addScanned(char* t) {                       // a scan while a new item is b
 void saveNewItem() {                             // adds one line to the end of KINDS.TSV (and its barcode to CODES.TSV)
   if (!staffOK()) { askPin(AFTER_NOTHING); return; }
   kindsFile.close();
-  File f = SD.open("KINDS.TSV", FILE_WRITE);
+  File f = cardOpen("KINDS.TSV", FILE_WRITE);
   long pos = f ? (long)f.size() : -1;
   bool ok = f;
   if (f) {
@@ -1460,13 +1530,13 @@ void saveNewItem() {                             // adds one line to the end of 
     for (char* q = buf; *q; q++) f.write((byte)*q);
     f.write((byte)'\n'); f.close();
   }
-  kindsFile = SD.open("KINDS.TSV");
+  kindsFile = cardOpen("KINDS.TSV");
   if (ok && addCode[0]) {
-    File c = SD.open("CODES.TSV", FILE_WRITE);
+    File c = cardOpen("CODES.TSV", FILE_WRITE);
     if (c) { char buf[56]; snprintf_P(buf, sizeof(buf), PSTR("%s\t%ld"), addCode, pos); for (char* q = buf; *q; q++) c.write((byte)*q); c.write((byte)'\n'); c.close(); } else ok = false;
   }
   if (!ok) { header("Could not save", NULL); textF(18, 90, F("The SD card would not write. Is it locked?"), WHITE, SMALL); footer(F("Back")); return; }
-  File m = SD.open("MOVES.TSV", FILE_WRITE);                                   // history line: shows in Recent changes and goes to the website
+  File m = cardOpen("MOVES.TSV", FILE_WRITE);                                   // history line: shows in Recent changes and goes to the website
   if (m) { char buf[110]; snprintf_P(buf, sizeof(buf), PSTR("A\t%d\t%s\t%s\t%s\t%d\t%d"), addCat, addType, addName, unitCode[addUnit], addShelf, addCopies); m.println(buf); m.close(); }
   staffUntil = millis() + STAFF_MS;
   backDepth = 0; mode = HOME; justAdded = true; openItem(pos, false);
@@ -1477,7 +1547,7 @@ void saveNewItem() {                             // adds one line to the end of 
 // ============================== Recent changes, Undo, and the website QR pages ==============================
 // every change is one line of MOVES.TSV (see the top). Recent changes lists them newest first; Undo takes the last line back.
 long lastLine(long* before) {                    // where the last line of MOVES.TSV starts (-1 = empty); *before = the one before it
-  File f = SD.open("MOVES.TSV"); long pos = 0, next, last = -1; *before = -1;
+  File f = cardOpen("MOVES.TSV"); long pos = 0, next, last = -1; *before = -1;
   while (f && (next = readLine(f, pos)) >= 0) { if (field[0][0]) { *before = last; last = pos; } pos = next; }
   if (f) f.close();
   return last;
@@ -1486,7 +1556,7 @@ void loadRecent() {                              // newest first, after the Undo
   rowCount = 0;
   long before, last = lastLine(&before);
   if (last >= 0) row[rowCount++] = ROW_UNDO;
-  File f = SD.open("MOVES.TSV"); long pos = 0, next; byte n = 0;
+  File f = cardOpen("MOVES.TSV"); long pos = 0, next; byte n = 0;
   long ring[MAX_ROWS - 1];
   while (f && (next = readLine(f, pos)) >= 0) { if (field[0][0]) { ring[n % (MAX_ROWS - 1)] = pos; n++; } pos = next; }
   if (f) f.close();
@@ -1494,7 +1564,7 @@ void loadRecent() {                              // newest first, after the Undo
   for (byte i = 0; i < have; i++) row[rowCount++] = ring[(n - 1 - i) % (MAX_ROWS - 1)];
 }
 void describeChange(long pos, char* top, byte topSize, char* under, byte underSize) {   // one MOVES.TSV line in plain words
-  File f = SD.open("MOVES.TSV"); readLine(f, pos); f.close();
+  File f = cardOpen("MOVES.TSV"); readLine(f, pos); f.close();
   char t = field[0][1] ? 'I' : toupper(field[0][0]);
   int u1 = findUnit(field[1]);
   const char* n1 = u1 >= 0 ? unitName[u1] : field[1];
@@ -1515,7 +1585,7 @@ void describeChange(long pos, char* top, byte topSize, char* under, byte underSi
   }
 }
 bool copyFile(const char* from, const char* to, long upTo) {     // the first upTo bytes of one file into another (Arduino SD has no rename)
-  File a = SD.open(from); SD.remove(to); File b = SD.open(to, FILE_WRITE);
+  File a = cardOpen(from); cardRemove(to); File b = cardOpen(to, FILE_WRITE);
   if (!a || !b) { if (a) a.close(); if (b) b.close(); return false; }
   for (long i = 0; i < upTo && a.available(); i++) b.write((byte)a.read());
   a.close(); b.close(); return true;
@@ -1525,7 +1595,7 @@ void undoLast() {                                // takes the last change back
   if (!staffOK()) { askPin(AFTER_NOTHING); return; }
   long before, last = lastLine(&before);
   if (last < 0) return;
-  File f = SD.open("MOVES.TSV"); readLine(f, last); f.close();
+  File f = cardOpen("MOVES.TSV"); readLine(f, last); f.close();
   char t = field[0][1] ? 'I' : toupper(field[0][0]);
   if (t == 'A') { header("Can't undo adding", NULL); textF(18, 90, F("A new item stays until the laptop removes it."), WHITE, SMALL); textF(18, 114, F("Move it, or ask the laptop to take it out."), DIM, SMALL); footer(F("Back")); return; }
   long cut = last;
@@ -1534,8 +1604,8 @@ void undoLast() {                                // takes the last change back
     if (u >= 0) { if (was) unitBoards[u] &= ~(1 << (n - 1)); else unitBoards[u] |= (1 << (n - 1)); saveBoards(); }
     if (withS && before >= 0) cut = before;                        // the things that dropped down go back up too
   }
-  bool ok = cut == 0 ? SD.remove("MOVES.TSV") : (copyFile("MOVES.TSV", "MOVES.TMP", cut) && copyFile("MOVES.TMP", "MOVES.TSV", cut));
-  SD.remove("MOVES.TMP");
+  bool ok = cut == 0 ? cardRemove("MOVES.TSV") : (copyFile("MOVES.TSV", "MOVES.TMP", cut) && copyFile("MOVES.TMP", "MOVES.TSV", cut));
+  cardRemove("MOVES.TMP");
   if (!ok) { header("Could not save", NULL); textF(18, 90, F("The SD card would not write. Is it locked?"), WHITE, SMALL); footer(F("Back")); return; }
   staffUntil = millis() + STAFF_MS;
   reloadData(); loadRecent(); cursor = 0; justChanged = true; doneNote = 3; draw(); lightsOff();
@@ -1543,7 +1613,7 @@ void undoLast() {                                // takes the last change back
 // ---- the website QR pages: MOVES.TSV, a few lines per QR, tabs written as |
 const byte SYNC_BYTES = 150;                    // letters of the change list per QR page (plus the page header)
 byte countSyncPages() {
-  File f = SD.open("MOVES.TSV"); long pos = 0, next; int used = 0; byte pages = 1;
+  File f = cardOpen("MOVES.TSV"); long pos = 0, next; int used = 0; byte pages = 1;
   while (f && (next = readLine(f, pos)) >= 0) { int len = next - pos; if (used + len > SYNC_BYTES) { pages++; used = 0; } used += len; pos = next; }
   if (f) f.close();
   return pages;
@@ -1552,7 +1622,7 @@ void drawSync() {
   char right[16]; snprintf_P(right, sizeof(right), PSTR("%d of %d"), syncPage + 1, syncPages);
   header("To the website", right);
   char qtext[SYNC_BYTES + 40]; int len = 0, lines = 0, first = -1, total = 0, used = 0; byte page = 0;
-  File f = SD.open("MOVES.TSV"); long pos = 0, next;
+  File f = cardOpen("MOVES.TSV"); long pos = 0, next;
   while (f && (next = readLine(f, pos)) >= 0) total++, pos = next;                // how many lines, all pages
   pos = 0;
   len = snprintf_P(qtext, sizeof(qtext), PSTR("RLSYNC|%d|%d|%d\n"), syncPage + 1, syncPages, total);
@@ -1585,34 +1655,39 @@ void drawSync() {
 
 // ============================== Buttons ==============================
 void moveCursor(byte b) {                       // Up or Down in a list
-  byte firstBefore = firstVisibleRow();
+  byte firstBefore = firstVisibleRow(), was = cursor;
   cursor = b == B_UP ? (cursor + rowCount - 1) % rowCount : (cursor + 1) % rowCount;
-  if (mode == MAP) { drawMapBody(); preview(); return; }
-  if (firstVisibleRow() != firstBefore) { draw(); preview(); return; }
+  if (mode == MAP) { preview(); drawMapBody(was); return; }    // lights first: they are what people look at
+  if (firstVisibleRow() != firstBefore) { preview(); draw(); return; }
   preview();
-  drawRows();                                                  // same page: only the rows change, no flicker
+  drawRows(was, cursor);                                       // same page: only the two rows that changed are drawn again
   char right[16]; snprintf_P(right, sizeof(right), PSTR("%d of %d"), cursor + 1, rowCount);
   tft.fillRect(360, 8, 120, 30, BG); rightText(right);
 }
 void pressed(byte b) {                          // Up, Down, Select or Back, from a button, the keyboard or the laptop
   lastActivity = millis();
   if (mode == ADDNEW && b == B_BACK && addStep > 1) { addStep--; addProblem[0] = '\0'; draw(); return; }
-  if (mode == PIN && b == B_BACK && pinLen > 0) { pinLen--; pinDigit = 0; draw(); return; }
+  if (mode == PIN && b == B_BACK && pinLen > 0) { pinLen--; pinDigit = 0; drawPinStep(); return; }
   if (b == B_BACK) { back(); return; }
   if (mode == PIN) {
     if (b == B_UP) pinDigit = (pinDigit + 1) % 10;
     if (b == B_DOWN) pinDigit = (pinDigit + 9) % 10;
     if (b == B_SELECT) { pinKey('0' + pinDigit); return; }
-    draw(); return;
+    drawPinStep(); return;
   }
   if (mode == SYNC) { if (b == B_DOWN && syncPage + 1 < syncPages) syncPage++; else if (b == B_UP && syncPage > 0) syncPage--; else return; draw(); return; }
   if (mode == ADDNEW) { if (b == B_SELECT) { if (addStep < 3) { addStep++; addProblem[0] = '\0'; draw(); } else saveNewItem(); } return; }
   if (mode == HOME) {
-    if (homeMessage) { homeMessage = false; draw(); return; }
+    if (homeMessage) { homeMessage = false; staffUntil = 0; draw(); return; }
+    byte was = homeCursor;
     if (b == B_UP) homeCursor = (homeCursor + 8) % 9;              // 9 spots: the 8 pictures, then the grey bar
     if (b == B_DOWN) homeCursor = (homeCursor + 1) % 9;
-    if (b == B_SELECT) { if (homeCursor == 8) { if (staffOK()) startOrganize(); else askPin(AFTER_ORGANIZE); return; } currentCat = homeCursor; go(TYPES); loadTypes(); }
-    draw(); return;
+    if (b == B_SELECT) { if (homeCursor == 8) { if (staffOK()) startOrganize(); else askPin(AFTER_ORGANIZE); return; } currentCat = homeCursor; go(TYPES); loadTypes(); draw(); return; }
+    if (was < 8) drawHomeTile(was);                                // only the two spots that changed are drawn again: no flicker, no wait
+    if (homeCursor < 8) drawHomeTile(homeCursor);
+    if (was == 8 || homeCursor == 8) drawHomeBar();
+    if (queryLen) drawTyping();
+    return;
   }
   if (mode == ITEM) { if (b == B_DOWN) { if (staffOK()) startMove(); else askPin(AFTER_MOVE); } return; }   // Down: move it (staff PIN first)
   if (mode == MOVEOK) { if (b == B_SELECT) { if (atMoveTarget()) back(); else doMove(); } return; }
@@ -1680,7 +1755,10 @@ void entered(char* textIn) {
 void liveSearch() {                              // show what matches the letters typed so far
   if (mode == PUTAWAY) clearPutAway();
   if (!live) { openResults(); live = true; }
-  loadResults(); cursor = 0; draw();
+  loadResults();
+  if (keyCount) { livePending = true; liveAt = millis(); return; }   // more letters arrived while it searched: wait for them, then search once
+  cursor = 0; draw();
+  if (keyCount) { livePending = true; liveAt = millis(); }           // (same, if they arrived while the list was being drawn)
 }
 void typed(byte c) {                            // one key from the keyboard
   lastActivity = millis();
@@ -1694,7 +1772,7 @@ void typed(byte c) {                            // one key from the keyboard
   }
   if (c == 0x0D || c == 0x0A) {
     if (queryLen == 0) { pressed(B_SELECT); return; }
-    if (live && mode == RESULTS && rowCount > 0) { openItem(row[cursor], false); return; }   // Enter opens the highlighted result
+    if (live && !livePending && mode == RESULTS && rowCount > 0) { openItem(row[cursor], false); return; }   // Enter opens the highlighted result (if the list is up to date)
     char sent[32]; strcpy(sent, query); entered(sent); return;
   }
   if (c == 0x08) { if (!queryLen) { if (live) back(); return; }               // nothing typed: nothing to delete
@@ -1704,17 +1782,34 @@ void typed(byte c) {                            // one key from the keyboard
     query[queryLen++] = c; query[queryLen] = '\0'; liveAt = millis(); livePending = true;
   }
   else { Serial.print(F("Unknown key 0x")); Serial.println(c, HEX); return; }     // so a key's code can be looked up in the Serial Monitor
-  drawTyping();
+  if (!keyCount) drawTyping();                                   // several keys waiting: draw the bar once, after the last
 }
 
 // ============================== Reading the inputs ==============================
+// A button pressed AND let go while the console is busy (reading the card, drawing a QR) would never be seen by
+// readButtons(), because loop() is not running then. The timer that already ticks about 1000 times a second for
+// millis() gets a second job: every 8th tick it looks at the 4 buttons, and one that is down for 3 looks in a row
+// (about 25 ms, so a bounce does not count) is noted in missedPress. readButtons() uses the note only when it never
+// saw that press itself, so with this part taken out the buttons work exactly as before.
+#ifdef __AVR__
+ISR(TIMER0_COMPA_vect) {
+  static byte tick = 0, lows[BUTTON_COUNT];
+  if (++tick & 7) return;
+  for (byte b = 0; b < BUTTON_COUNT; b++) {
+    if (digitalRead(BUTTON_PIN[b]) == LOW) { if (lows[b] < 3 && ++lows[b] == 3) missedPress |= (1 << b); }
+    else lows[b] = 0;
+  }
+}
+#endif
 void readButtons() {
   static byte last[BUTTON_COUNT] = {HIGH, HIGH, HIGH, HIGH};
   static unsigned long repeatAt[BUTTON_COUNT];
   static byte heldOn[BUTTON_COUNT];                                          // the screen a button was first pressed on
+  noInterrupts(); byte missed = missedPress; missedPress = 0; interrupts();
   for (byte b = 0; b < BUTTON_COUNT; b++) {
     byte now = digitalRead(BUTTON_PIN[b]);
     if (now != last[b]) { delay(15); now = digitalRead(BUTTON_PIN[b]); }      // wait out the bounce
+    if (last[b] == HIGH && now == HIGH && (missed & (1 << b))) { pressed(b); continue; }   // pressed and let go while the console was busy
     if (last[b] == HIGH && now == LOW) { heldOn[b] = mode; repeatAt[b] = millis() + HOLD_DELAY; pressed(b); }
     else if (now == LOW && (b == B_UP || b == B_DOWN) && mode == heldOn[b] && millis() >= repeatAt[b]) {
       repeatAt[b] = millis() + HOLD_REPEAT; pressed(b);                       // held down: Up and Down keep scrolling
@@ -1738,13 +1833,19 @@ void readScanner() {
     entered(buf);
   }
 }
-void readKeyboard() {
+// The keyboard only remembers the last key pressed, so it has to be asked often. pollKeyboard() is also called from
+// inside the slow jobs (reading the card, drawing text): keys typed meanwhile wait in keyQueue and nothing is lost.
+void pollKeyboard() {
   static unsigned long lastPoll = 0;
-  if (millis() - lastPoll < 25) return;
+  if (millis() - lastPoll < 20) return;
   lastPoll = millis();
   if (Wire.requestFrom(KEYBOARD_ADDR, (byte)1) != 1) return;
   byte c = Wire.read();
-  if (c) typed(c);
+  if (c && keyCount < sizeof(keyQueue)) { keyQueue[(keyHead + keyCount) % sizeof(keyQueue)] = c; keyCount++; }
+}
+void readKeyboard() {
+  pollKeyboard();
+  while (keyCount) { byte c = keyQueue[keyHead]; keyHead = (keyHead + 1) % sizeof(keyQueue); keyCount--; typed(c); }
 }
 // the laptop can send a file for the SD card:  @PUT NAME SIZE  then the bytes, 60 at a time, waiting for K each time
 void receiveFile(char* args) {
@@ -1755,7 +1856,7 @@ void receiveFile(char* args) {
   bool wasKinds = strcasecmp_P(args, PSTR("KINDS.TSV")) == 0;
   if (wasKinds) kindsFile.close();
   header("Receiving from laptop", NULL); text(18, 90, args, WHITE, BOLD);
-  File f = SD.open(args, O_WRITE | O_CREAT | O_TRUNC);
+  File f = cardOpen(args, O_WRITE | O_CREAT | O_TRUNC);
   if (!f) { Serial.println(F("@ERR cannot write")); return; }
   long got = 0; byte sinceAck = 0; unsigned long lastByte = millis();
   Serial.println(F("K"));
@@ -1765,7 +1866,7 @@ void receiveFile(char* args) {
     if (++sinceAck >= 60 && got < size) { sinceAck = 0; Serial.println(F("K")); }
   }
   f.close();
-  if (wasKinds) kindsFile = SD.open("KINDS.TSV");
+  if (wasKinds) kindsFile = cardOpen("KINDS.TSV");
   if (got == size) { Serial.print(F("@OK ")); Serial.println(got); } else Serial.println(F("@ERR timeout"));
   loadUnits(); loadBoards(); loadMoves(); loadStaff(); findAddedFrom(); goHome();
 }
@@ -1778,7 +1879,7 @@ void readLaptop() {                              // a line of text from the Seri
     if (!buf[0]) continue;
     if (strncasecmp_P(buf, PSTR("@PUT "), 5) == 0) { receiveFile(buf + 5); return; }
     if (strcasecmp_P(buf, PSTR("@MOVES")) == 0) {                    // print every move done at the desk, for the spreadsheet
-      File f = SD.open("MOVES.TSV"); while (f && f.available()) Serial.write(f.read()); if (f) f.close();
+      File f = cardOpen("MOVES.TSV"); while (f && f.available()) Serial.write(f.read()); if (f) f.close();
       Serial.println(F("@END")); continue;
     }
     if (strcasecmp_P(buf, PSTR("@ADDED")) == 0) {                    // items added at the console, then their barcodes
@@ -1787,16 +1888,27 @@ void readLaptop() {                              // a line of text from the Seri
         kindsFile.seek(pos); for (long i = pos; i < next; i++) Serial.write(kindsFile.read()); pos = next;
       }
       Serial.println(F("@CODES"));
-      File f = SD.open("CODES.TSV"); long p = 0;
+      File f = cardOpen("CODES.TSV"); long p = 0;
       while (f && (p = readLine(f, p)) >= 0) if (addedFrom > 0 && atol(field[1]) >= addedFrom) { Serial.print(field[0]); Serial.print('\t'); Serial.println(field[1]); }
       if (f) f.close();
       Serial.println(F("@END")); continue;
     }
-    if (strcasecmp_P(buf, PSTR("@CLEARMOVES")) == 0) { SD.remove("MOVES.TSV"); loadUnits(); loadBoards(); loadMoves(); Serial.println(F("@OK")); goHome(); continue; }   // units that traded places go back too
+    if (strcasecmp_P(buf, PSTR("@CLEARMOVES")) == 0) { cardRemove("MOVES.TSV"); loadUnits(); loadBoards(); loadMoves(); Serial.println(F("@OK")); goHome(); continue; }   // units that traded places go back too
     if (strcasecmp_P(buf, PSTR("@LIGHTS")) == 0) {                   // light check: every light red, then green, then blue, then all stay green until a button
       const uint32_t test[3] = {0xFF0000, 0x00FF00, 0x0000FF};
       for (byte t = 0; t < 3; t++) { strip.fill(test[t]); strip.show(); delay(1500); }
       strip.fill(0x00FF00); strip.show(); Serial.println(F("@OK")); continue;
+    }
+    if (strncasecmp_P(buf, PSTR("@LED "), 5) == 0) {                 // @LED first count: only those lights, green (finds a bad joint)
+      int first = atoi(buf + 5); const char* sp = strchr(buf + 5, ' '); int count = sp ? atoi(sp + 1) : 1;
+      strip.clear(); for (int i = first; i < first + count && i < NUM_LEDS; i++) if (i >= 0) strip.setPixelColor(i, 0x00FF00);
+      strip.show(); Serial.println(F("@OK")); continue;
+    }
+    if (strcasecmp_P(buf, PSTR("@STATUS")) == 0) {
+      Serial.print(F("@STATUS changes=")); Serial.print(moveTotal);
+      Serial.print(F(" pin=")); Serial.print(strcmp_P(staffPin, PSTR("1234")) == 0 ? F("starting") : F("changed"));
+      Serial.print(F(" staff=")); Serial.print(staffOK() ? F("open") : F("locked"));
+      Serial.print(F(" screen=")); Serial.println(mode); continue;
     }
     if (buf[0] == '@') { Serial.print(F("@ROOMLOCATOR ")); Serial.println((const __FlashStringHelper*)VERSION); continue; }
     if (buf[0] == '!' && buf[1] && !buf[2]) {                    // !U !D !S !B press a button from the laptop
@@ -1818,12 +1930,15 @@ void setup() {
   Wire.begin(); Wire.setWireTimeout(3000, true);
   for (byte i = 0; i < BUTTON_COUNT; i++) pinMode(BUTTON_PIN[i], INPUT_PULLUP);
   strip.begin(); strip.setBrightness(LED_BRIGHTNESS); lightsOff();
+#ifdef __AVR__
+  OCR0A = 0x80; TIMSK0 |= _BV(OCIE0A);                             // the extra job for timer 0: watch the buttons (see readButtons)
+#endif
   uint16_t id = tft.readID();                                      // ask the screen chip what it is
   if (id == 0 || id == 0xFFFF || id == 0xD3D3 || id == 0x0404) id = 0x9486;   // the read wire is not connected on this shield: it is an ILI9486
   tft.begin(id); tft.setRotation(3); tft.setTextWrap(false);
   pinMode(SD_CS_PIN, OUTPUT); digitalWrite(SD_CS_PIN, HIGH);
   if (!SD.begin(SD_CS_PIN)) { stopWith(F("No SD card"), F("Push the card in and press the reset button")); while (true) {} }
-  kindsFile = SD.open("KINDS.TSV");
+  kindsFile = cardOpen("KINDS.TSV");
   staffUntil = 0;                                                  // a restart locks changes again
   loadUnits(); loadBoards(); loadMoves(); loadStaff(); findAddedFrom();
   if (!kindsFile || unitTotal == 0) {                              // card without the v5 files: wait for the laptop to send them
@@ -1840,6 +1955,12 @@ void loop() {
   readKeyboard();
   readLaptop();
   blinkTick();
-  if (livePending && millis() - liveAt > 350 && !Serial1.available()) { livePending = false; if (queryLen >= 2) liveSearch(); }
+  if (mode != ITEM) qrWanted = false;
+  if (qrWanted && millis() - qrAt > 350 && !keyCount && !missedPress && !Serial1.available() && !Serial.available()) {
+    qrWanted = false; loadKind(currentKind); drawQR(312, 82);
+  }
+  if (livePending && millis() - liveAt > 250 && !Serial1.available()) { livePending = false; if (queryLen >= 2) liveSearch(); }
+  if (staffUntil && millis() - lastActivity > IDLE_MS) staffUntil = 0;          // nobody touched it for 2 minutes: changes lock again
+  if (mode == PIN && pinRestUntil && !pinResting()) draw();                     // the minute of rest is over: the message goes away
   if (millis() - lastActivity > IDLE_MS && (mode != HOME || homeCursor == 8)) { clearPutAway(); homeCursor = 0; goHome(); lastActivity = millis(); }
 }
