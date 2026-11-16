@@ -86,7 +86,7 @@
  things), built and wired all the hardware, tested every version on it, found what did not work,
  and asked for each change.
   _____
- Some of the prompts we used:
+ Some of the prompts we used (typos fixed):
 
  Prompt 1
  delete on the keyboard doesnt work can you troubleshoot that please
@@ -98,23 +98,14 @@
  Help me debug the lights in the VR shelf, they are not lighting up properly
 
  Prompt 4
- for th ebuttons where do they go each one please tell me
+ How does the keyboard go together, and how do I wire it so it only has one
+ connector like the LEDs?
 
  Prompt 5
- how does the keyboard go together btw and also how do i make it so that at some
- point this only has one connector like the LED thing how do i do the wiring together
+ What do I use to power the Arduino by itself?
 
  Prompt 6
- so me a favor and light up all the lights so i can see that they work
-
- Prompt 7
- what do i use to power the arduino jsut by itself
-
- Prompt 8
- how do i change the pin on here and like where does that qr code appear on the console
-
- Prompt 9
- for the which unit part nothing shows on tat box next to it and the words kinda cut out
+ How do I change the PIN, and where does that QR code appear on the console?
 
  Earlier requests, summarized: make the list easier to reset, make the screens clearer and nicer to read,
  blink patterns so colorblind users are not relying on color, let staff move items and shelves with a QR code behind a PIN.
