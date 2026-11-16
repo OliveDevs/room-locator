@@ -16,7 +16,7 @@ function nameCode(name) {                        // FNV-1a over the name's bytes
   return (h & 0xffffff).toString(16).padStart(6, '0');
 }
 
-Promise.all([fetch('data.json?v=20261116g').then(r => r.json()), fetch('room.json?v=20261116g').then(r => r.json())]).then(([data, room]) => {
+Promise.all([fetch('data.json?v=20261116j').then(r => r.json()), fetch('room.json?v=20261116j').then(r => r.json())]).then(([data, room]) => {
   const kinds = data.kinds, units = room.units, types = room.types || [];
   const unitBy = Object.fromEntries(units.map(u => [u.code, u]));
   const lit = units.filter(u => u.shelves > 0);
@@ -179,15 +179,23 @@ Promise.all([fetch('data.json?v=20261116g').then(r => r.json()), fetch('room.jso
     $('sync-pages').textContent = 'Pages scanned: ' + [...Array(pageCount).keys()].map(i => (pages[i + 1] ? '✓ ' : '– ') + (i + 1)).join('   ') + (got === pageCount ? '' : '   (show the console the next page: Down)');
   }
   function stopCamera() { scanning = false; if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; video.hidden = true; $('sync-stop').hidden = true; $('sync-start').hidden = false; }
+  // Since console v5.8 each QR page is a web address: this page, then #RLSYNC~page~pages~total!line!line with ~ for tab,
+  // ! for the end of a line and %20-style codes for anything else. A phone camera opens it and the page reads itself.
+  const fromAddress = text => { const at = text.indexOf('#RLSYNC'); if (at < 0) return text; try { return decodeURIComponent(text.slice(at + 1).replace(/~/g, '|').replace(/!/g, '\n')); } catch (e) { return text; } };
+  // Every scan with the camera opens this page afresh, so the pages scanned so far are kept on the phone for half an hour.
+  const KEEP = 'rl-sync-pages';
+  const remember = () => { try { localStorage.setItem(KEEP, JSON.stringify({ at: Date.now(), pageCount, pages })); } catch (e) {} };
+  try { const kept = JSON.parse(localStorage.getItem(KEEP) || 'null'); if (kept && Date.now() - kept.at < 30 * 60 * 1000) { pageCount = kept.pageCount; Object.assign(pages, kept.pages); } } catch (e) {}
   function readPage(text) {
-    const lines = text.replace(/\r/g, '').split('\n');
+    const lines = fromAddress(text).replace(/\r/g, '').split('\n');
     const head = lines[0].split('|');
     if (head[0] !== 'RLSYNC') return false;
-    const p = Number(head[1]), n = Number(head[2]);
-    if (pageCount && n !== pageCount) { Object.keys(pages).forEach(k => delete pages[k]); }
-    pageCount = n; pages[p] = { total: Number(head[3]), lines: lines.slice(1).filter(Boolean) };
+    const p = Number(head[1]), n = Number(head[2]), total = Number(head[3]);
+    if (pageCount && (n !== pageCount || Object.values(pages).some(x => x.total !== total))) { Object.keys(pages).forEach(k => delete pages[k]); }   // a different list: start over
+    pageCount = n; pages[p] = { total, lines: lines.slice(1).filter(Boolean) };
+    remember();
     showPages();
-    if (Object.keys(pages).length === pageCount) { stopCamera(); const all = []; for (let i = 1; i <= pageCount; i++) all.push(...pages[i].lines); apply(all.map(l => l.split('|'))); }
+    if (Object.keys(pages).length === pageCount) { stopCamera(); const all = []; for (let i = 1; i <= pageCount; i++) all.push(...pages[i].lines); apply(all.map(l => l.split('|'))); try { localStorage.removeItem(KEEP); } catch (e) {} }
     return true;
   }
   function tick() {
@@ -216,6 +224,7 @@ Promise.all([fetch('data.json?v=20261116g').then(r => r.json()), fetch('room.jso
   });
 
   let outData = null, outRoom = null;
+  const openedFromConsole = location.hash.startsWith('#RLSYNC');
   function apply(lines) {
     const d = JSON.parse(JSON.stringify(data)), r = JSON.parse(JSON.stringify(room));
     const ub = Object.fromEntries(r.units.map(u => [u.code, u]));
@@ -313,6 +322,13 @@ Promise.all([fetch('data.json?v=20261116g').then(r => r.json()), fetch('room.jso
     tabs.forEach(t => $('tab-' + t).addEventListener('click', () => { activeTab = t; shelfStep = 'from'; card.hidden = t === 'sync' || t === 'edit'; if (!card.hidden) { view3d.resize(); refresh3d(); } }));
     [mf, sf, af].forEach(f => { f.addEventListener('change', refresh3d); f.addEventListener('input', refresh3d); });
     refresh3d();
+  }
+  // opened by pointing a phone camera at the console's "To the website" code: go straight to that tab and take the page in
+  if (openedFromConsole) {
+    $('tab-sync').click();
+    const ok = readPage(location.href);
+    history.replaceState(null, '', location.pathname);
+    if (ok && Object.keys(pages).length < pageCount) status.textContent = 'Got it. On the console press Down for the next page and point the camera at it.';
   }
   // ---- edit an item that is already on the website: its photo, manual link and description
   const ef = $('edit-form'), preview = $('edit-preview');

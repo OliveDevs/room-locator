@@ -121,6 +121,7 @@
 //   @             says hello (the laptop tools use this)
 //   @LIGHTS       light check: every light red, green, then blue, then all green until a button is pressed
 //   @LED 79 2     lights 2 lights green starting at light 79 and nothing else (to find a bad joint in the chain)
+//   (the console also prints  @SCAN text  for everything the scanner reads)
 //   @STATUS       how many changes are waiting, and whether the staff PIN is still the starting one (never the PIN itself)
 //   @MOVES        prints MOVES.TSV, then @END
 //   @CLEARMOVES   deletes MOVES.TSV (after the laptop has collected the changes)
@@ -141,7 +142,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.7";
+const char VERSION[] PROGMEM = "5.8";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -943,7 +944,10 @@ bool drawQRText(int x, int y, const char* url) {   // a version-4 QR (up to 62 l
 }
 void drawQR(int x, int y) {                     // the item's guide page
   char url[80]; strcpy_P(url, MANUAL_URL);
-  byte n = strlen(url); snprintf_P(url + n, sizeof(url) - n, PSTR("%06lx"), nameCode(field[K_NAME]));
+  byte n = strlen(url);
+  // ...and "&w=AUD-3": where this console says the thing is right now, so the page shows the same shelf as the lights
+  // even when the website's own list has not caught up with a move yet (62 letters fit in this QR; this is 60 at most)
+  snprintf_P(url + n, sizeof(url) - n, PSTR("%06lx&w=%.4s-%d"), nameCode(field[K_NAME]), field[K_UNIT], atoi(field[K_SHELF]));
   if (!drawQRText(x, y, url)) { textF(x, y + 40, F("Ask at the desk"), WHITE, SMALL); return; }
   textF(x + 2, y + 156 + 18, F("Scan: guide, and a"), DIM, SMALL);
   textF(x + 2, y + 156 + 38, F("return reminder"), DIM, SMALL);
@@ -1569,36 +1573,58 @@ void undoLast() {                                // takes the last change back
   staffUntil = millis() + STAFF_MS;
   reloadData(); loadRecent(); cursor = 0; justChanged = true; doneNote = 3; draw(); lightsOff();
 }
-// ---- the website QR pages: MOVES.TSV, a few lines per QR, tabs written as |
-const byte SYNC_BYTES = 150;                    // letters of the change list per QR page (plus the page header)
+// ---- the website QR pages: the change list (MOVES.TSV), a few lines per QR.
+// Each QR is a web address: the staff page, then # and one page of changes. A phone's own camera opens it and the
+// staff page reads the changes straight out of the address, so nobody has to open the site first and scan from inside it.
+// Only letters, digits, - and . are safe everywhere in an address, so: tab is written ~, end of line is written !,
+// and anything else (a space in an item's name) as % and its two-digit code, like %20.
+const byte SYNC_BYTES = 120;                    // letters of the change list per QR page, counted the way they are written in the address
+bool syncPlain(char c) { return isalnum(c) || c == '-' || c == '.'; }
+int syncLen(File& f, long pos, long next) {      // how long the line from pos to next gets in the address
+  int n = 0; f.seek(pos);
+  for (long i = pos; i < next; i++) { char c = f.read(); if (c == '\r') continue; n += (c == '\t' || c == '\n' || syncPlain(c)) ? 1 : 3; }
+  return n;
+}
 byte countSyncPages() {
   File f = cardOpen("MOVES.TSV"); long pos = 0, next; int used = 0; byte pages = 1;
-  while (f && (next = readLine(f, pos)) >= 0) { int len = next - pos; if (used + len > SYNC_BYTES) { pages++; used = 0; } used += len; pos = next; }
+  while (f && (next = readLine(f, pos)) >= 0) { int len = syncLen(f, pos, next); if (used && used + len > SYNC_BYTES) { pages++; used = 0; } used += len; pos = next; }
   if (f) f.close();
   return pages;
 }
-void drawSync() {
-  char right[16]; snprintf_P(right, sizeof(right), PSTR("%d of %d"), syncPage + 1, syncPages);
-  header("To the website", right);
-  char qtext[SYNC_BYTES + 40]; int len = 0, lines = 0, first = -1, total = 0, used = 0; byte page = 0;
+// writes the address for page `page` (0 = the first) into out. Returns how many lines are in it; *first = the number of its first line, *total = all lines
+int syncText(char* out, int size, byte page, byte pages, int* first, int* total) {
+  int len = 0, lines = 0, used = 0, index = 0; byte at = 0; *first = -1; *total = 0;
   File f = cardOpen("MOVES.TSV"); long pos = 0, next;
-  while (f && (next = readLine(f, pos)) >= 0) total++, pos = next;                // how many lines, all pages
+  while (f && (next = readLine(f, pos)) >= 0) { (*total)++; pos = next; }
+  strcpy_P(out, STAFF_URL); len = strlen(out);
+  len += snprintf_P(out + len, size - len, PSTR("#RLSYNC~%d~%d~%d!"), page + 1, pages, *total);
   pos = 0;
-  len = snprintf_P(qtext, sizeof(qtext), PSTR("RLSYNC|%d|%d|%d\n"), syncPage + 1, syncPages, total);
-  int index = 0;
   while (f && (next = readLine(f, pos)) >= 0) {
-    int n = next - pos;
-    if (used + n > SYNC_BYTES) { page++; used = 0; }
+    int n = syncLen(f, pos, next);
+    if (used && used + n > SYNC_BYTES) { at++; used = 0; }
     used += n;
-    if (page == syncPage && len + n < (int)sizeof(qtext)) {
-      if (first < 0) first = index;
-      f.seek(pos); for (int i = 0; i < n; i++) { char c = f.read(); if (c == '\r') continue; qtext[len++] = c == '\t' ? '|' : c; }
+    if (at == page && len + n < size) {
+      if (*first < 0) *first = index;
+      f.seek(pos);
+      for (long i = pos; i < next; i++) {
+        char c = f.read();
+        if (c == '\r') continue;
+        if (c == '\t') out[len++] = '~'; else if (c == '\n') out[len++] = '!'; else if (syncPlain(c)) out[len++] = c;
+        else len += snprintf_P(out + len, 4, PSTR("%%%02X"), (byte)c);
+      }
       lines++;
     }
     pos = next; index++;
   }
   if (f) f.close();
-  qtext[len] = '\0';
+  out[len] = '\0';
+  return lines;
+}
+void drawSync() {
+  char right[16]; snprintf_P(right, sizeof(right), PSTR("%d of %d"), syncPage + 1, syncPages);
+  header("To the website", right);
+  char qtext[SYNC_BYTES + 80]; int first, total;
+  int lines = syncText(qtext, sizeof(qtext), syncPage, syncPages, &first, &total);
   if (!total) { textF(18, 90, F("No changes yet. Nothing to send."), WHITE, SMALL); footer(F("Back")); return; }
   QRCode qr;
   if (qrcode_initText(&qr, qrData, SYNC_QR, ECC_LOW, qtext) != 0) { textF(18, 90, F("Too much for one code."), WHITE, SMALL); footer(F("Back")); return; }
@@ -1606,9 +1632,9 @@ void drawSync() {
   tft.fillRect(X, Y, SIDE, SIDE, WHITE);
   for (byte dy = 0; dy < qr.size; dy++) { byte dx = 0; while (dx < qr.size) { if (!qrcode_getModule(&qr, dx, dy)) { dx++; continue; } byte r = dx; while (r < qr.size && qrcode_getModule(&qr, r, dy)) r++; tft.fillRect(X + (QUIET + dx) * PX, Y + (QUIET + dy) * PX, (r - dx) * PX, PX, BLACK); dx = r; } }
   char buf[40];
-  textF(276, 72, F("On the phone, open"), WHITE, SMALL); textF(276, 94, F("the staff page, tab"), WHITE, SMALL); textF(276, 116, F("\"From the console\"."), WHITE, SMALL);
-  snprintf_P(buf, sizeof(buf), PSTR("Changes %d to %d of %d"), first + 1, first + lines, total); text(276, 156, buf, DIM, SMALL, 196);
-  textF(276, 178, F("Scan every page."), DIM, SMALL);
+  textF(276, 72, F("Point a phone's"), WHITE, SMALL); textF(276, 94, F("camera at this."), WHITE, SMALL); textF(276, 116, F("The staff page opens"), WHITE, SMALL); textF(276, 138, F("with these changes."), WHITE, SMALL);
+  snprintf_P(buf, sizeof(buf), PSTR("Changes %d to %d of %d"), first + 1, first + lines, total); text(276, 178, buf, DIM, SMALL, 196);
+  if (syncPages > 1) textF(276, 200, F("Scan every page."), DIM, SMALL);
   footer(syncPages > 1 ? F("Up / Down = next page     Back") : F("Back"));
 }
 
@@ -1789,6 +1815,7 @@ void readScanner() {
     buf[len] = '\0'; len = 0;
     if (strcmp(buf, lastCode) == 0 && millis() - lastCodeAt < 2000) { lastCodeAt = millis(); return; }   // the same code held in view
     strcpy(lastCode, buf); lastCodeAt = millis();
+    Serial.print(F("@SCAN ")); Serial.println(buf);                // so a laptop on USB can see exactly what the scanner read
     entered(buf);
   }
 }
