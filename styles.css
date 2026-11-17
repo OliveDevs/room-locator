@@ -83,3 +83,5 @@
 .room-unit[data-unit="UND"] span{display:none}
 .item-card{display:flex!important;flex-direction:row!important;justify-content:flex-start!important;gap:14px!important;align-items:center;min-height:0!important}.item-card .arrow{margin-left:auto}.item-card>div{flex:1;min-width:0}
 .card-thumb{flex:0 0 64px;width:64px;height:64px;object-fit:cover;background:#ecebe6}.card-thumb-none{display:block}
+
+.parts{margin:0;display:grid;gap:12px}.parts div{display:grid;grid-template-columns:minmax(110px,30%) 1fr;gap:4px 18px}.parts dt{font-weight:700}.parts dd{margin:0}.howto-note{border-left:3px solid var(--red);padding-left:14px}@media(max-width:580px){.parts div{grid-template-columns:1fr}}
