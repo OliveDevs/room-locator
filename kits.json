@@ -1,0 +1,551 @@
+{
+ "kits": [
+  {
+   "id": "interview",
+   "name": "Record an interview or podcast",
+   "why": "Two people talking, recorded cleanly on separate microphones.",
+   "parts": [
+    {
+     "role": "Recorder",
+     "pick": [
+      "Zoom H4nPro Field Audio Recorder",
+      "H4essential Field Recorder",
+      "Zoom H6 Audio Recorder"
+     ]
+    },
+    {
+     "role": "Two microphones",
+     "pick": [
+      "Shure SM-58 Cardioid Dynamic Microphone",
+      "CAD 22 Handheld Cardioid Microphone"
+     ]
+    },
+    {
+     "role": "A cable for each microphone",
+     "pick": [
+      "XLR Cable"
+     ]
+    },
+    {
+     "role": "Something to hold the microphones",
+     "pick": [
+      "Desktop Microphone Stand",
+      "Mic Stand"
+     ]
+    },
+    {
+     "role": "Headphones, to hear what is being recorded",
+     "pick": [
+      "Sony Headphones",
+      "AKG Headphones"
+     ]
+    },
+    {
+     "role": "Memory card",
+     "pick": [
+      "128GB SD Card",
+      "128GB microSD"
+     ]
+    }
+   ],
+   "tip": "Record ten seconds and play it back before the real conversation starts."
+  },
+  {
+   "id": "video",
+   "name": "Film a short video with good sound",
+   "why": "A camcorder on a tripod, a microphone close to the person, and light on their face.",
+   "parts": [
+    {
+     "role": "Camera",
+     "pick": [
+      "Panasonic HC-VX981 Camcorder",
+      "Sony HXR-NX100 Camcorder",
+      "Canon R800"
+     ]
+    },
+    {
+     "role": "Tripod",
+     "pick": [
+      "Magnus VT-4000 Tripod",
+      "Manfrotto 190X Tripod",
+      "Large Tripod"
+     ]
+    },
+    {
+     "role": "Microphone",
+     "pick": [
+      "Rode Wireless PRO Microphone",
+      "Audio-Technica Condenser Shotgun Microphone",
+      "Rode VideoMic Pro+ Mountable Shotgun Microphone"
+     ]
+    },
+    {
+     "role": "Light",
+     "pick": [
+      "LED Light Kit",
+      "Lighting kit"
+     ]
+    },
+    {
+     "role": "Headphones",
+     "pick": [
+      "Sony Headphones",
+      "AKG Headphones"
+     ]
+    },
+    {
+     "role": "Memory card",
+     "pick": [
+      "128GB SD Card"
+     ]
+    }
+   ],
+   "tip": "Sound matters more than picture. Get the microphone within arm’s reach of whoever is talking."
+  },
+  {
+   "id": "phone",
+   "name": "Film with your phone",
+   "why": "Steady, well-lit phone video with clear voice.",
+   "parts": [
+    {
+     "role": "Stabiliser",
+     "pick": [
+      "Osmo Mobile 8 Phone Gimbal"
+     ]
+    },
+    {
+     "role": "Or a fixed stand",
+     "pick": [
+      "Tripod Phone Mount",
+      "Phone Tripod Mount",
+      "Phone Mount M"
+     ]
+    },
+    {
+     "role": "Tripod for the mount",
+     "pick": [
+      "Small Tripod",
+      "Compact Action Tripod",
+      "Mini Tripod A"
+     ]
+    },
+    {
+     "role": "Microphone",
+     "pick": [
+      "Wireless Phone Microphone"
+     ]
+    },
+    {
+     "role": "Light",
+     "pick": [
+      "Lume Cube 17-inch Ring Light Pro",
+      "Mini Tube Light",
+      "LED LC500 Light Stick"
+     ]
+    }
+   ],
+   "tip": "Check the microphone’s plug matches your phone before you leave the desk."
+  },
+  {
+   "id": "present",
+   "name": "Show slides or a film",
+   "why": "A projector, a screen, sound and enough cable to reach.",
+   "parts": [
+    {
+     "role": "Projector",
+     "pick": [
+      "Epson EF-11 Mini LCD Projector",
+      "Epson VS330 Projector",
+      "Optoma Projector"
+     ]
+    },
+    {
+     "role": "Screen",
+     "pick": [
+      "Projection Screen",
+      "60\" 16:9 Projection Screen"
+     ]
+    },
+    {
+     "role": "Cable from laptop to projector",
+     "pick": [
+      "HDMI Cable",
+      "HDMI Cable 40ft"
+     ]
+    },
+    {
+     "role": "Adapter, if your laptop only has USB-C",
+     "pick": [
+      "USB C to HDMI",
+      "USB-C Hub"
+     ]
+    },
+    {
+     "role": "Sound",
+     "pick": [
+      "PartyBox Bluetooth Speaker",
+      "Computer Speaker",
+      "USB Speakers"
+     ]
+    },
+    {
+     "role": "Power",
+     "pick": [
+      "Extension Cord",
+      "Power Strip"
+     ]
+    },
+    {
+     "role": "Pointer",
+     "pick": [
+      "Basic Laser Pointer"
+     ]
+    }
+   ],
+   "tip": "Set it up once in the real room beforehand. Most surprises are about which plug the laptop has."
+  },
+  {
+   "id": "event",
+   "name": "Sound for a small event",
+   "why": "One speaker loud enough for a room, a microphone for announcements, and music from a phone.",
+   "parts": [
+    {
+     "role": "Speaker",
+     "pick": [
+      "Bose S1 Pro+ PA System",
+      "PartyBox Bluetooth Speaker"
+     ]
+    },
+    {
+     "role": "Microphone",
+     "pick": [
+      "Shure SM-58 Cardioid Dynamic Microphone",
+      "CAD 22 Handheld Cardioid Microphone"
+     ]
+    },
+    {
+     "role": "Microphone cable",
+     "pick": [
+      "XLR Cable"
+     ]
+    },
+    {
+     "role": "Microphone stand",
+     "pick": [
+      "Mic Stand"
+     ]
+    },
+    {
+     "role": "Cable for music from a phone or laptop",
+     "pick": [
+      "1/8\" to 1/4\" AUX",
+      "1/8\" AUX"
+     ]
+    },
+    {
+     "role": "Power",
+     "pick": [
+      "Extension Cord"
+     ]
+    },
+    {
+     "role": "Something to carry it all",
+     "pick": [
+      "Collapsible Utility Wagon"
+     ]
+    }
+   ],
+   "tip": "Keep the microphone behind the speaker, not in front of it, to avoid squealing."
+  },
+  {
+   "id": "music",
+   "name": "Record music at a desk",
+   "why": "A microphone and an interface that plugs into your own laptop.",
+   "parts": [
+    {
+     "role": "Audio interface",
+     "pick": [
+      "Scarlett 2i2 Audio Interface",
+      "Motu M2 Audio Interface",
+      "U-PHORIA UMC202HD"
+     ]
+    },
+    {
+     "role": "Microphone",
+     "pick": [
+      "WA-87 Microphone",
+      "AKG P420 Microphone",
+      "SM-7B Microphone"
+     ]
+    },
+    {
+     "role": "Microphone cable",
+     "pick": [
+      "XLR Cable"
+     ]
+    },
+    {
+     "role": "Stand",
+     "pick": [
+      "Mic Stand",
+      "Desktop Microphone Stand"
+     ]
+    },
+    {
+     "role": "Pop filter, for vocals",
+     "pick": [
+      "Microphone Pop Filter"
+     ]
+    },
+    {
+     "role": "Headphones",
+     "pick": [
+      "Sony Headphones",
+      "AKG Headphones"
+     ]
+    },
+    {
+     "role": "Keyboard, if you want one",
+     "pick": [
+      "AKAI MPKmini Keyboard III",
+      "M-Audio Oxygen25 MIDI Keyboard"
+     ]
+    }
+   ],
+   "tip": "Condenser microphones need the 48V button on the interface switched on."
+  },
+  {
+   "id": "photo",
+   "name": "Portraits or product photos",
+   "why": "A camera, a plain background and soft light.",
+   "parts": [
+    {
+     "role": "Camera",
+     "pick": [
+      "Sony A6000 Camera",
+      "EOS R50 Camera",
+      "Canon EOS Rebel T8i Camera"
+     ]
+    },
+    {
+     "role": "Tripod",
+     "pick": [
+      "Manfrotto 190X Tripod",
+      "Large Tripod"
+     ]
+    },
+    {
+     "role": "Background",
+     "pick": [
+      "Backdrop Support Kit"
+     ]
+    },
+    {
+     "role": "Light",
+     "pick": [
+      "LED Light Kit",
+      "Lighting kit"
+     ]
+    },
+    {
+     "role": "Reflector, to soften shadows",
+     "pick": [
+      "5-in-1 43\" Light Reflector-Diffuser"
+     ]
+    },
+    {
+     "role": "Memory card",
+     "pick": [
+      "128GB SD Card"
+     ]
+    }
+   ],
+   "tip": "Ask at the desk which lens comes with the camera body."
+  },
+  {
+   "id": "stopmotion",
+   "name": "Stop-motion animation",
+   "why": "A camera that cannot move, steady light, and a keypad for taking frames.",
+   "parts": [
+    {
+     "role": "Camera",
+     "pick": [
+      "Canon EOS Rebel T7i Camera",
+      "Canon EOS Rebel T6i Camera",
+      "Canon EOS 6D Camera"
+     ]
+    },
+    {
+     "role": "Tripod",
+     "pick": [
+      "Manfrotto 190X Tripod",
+      "Large Tripod"
+     ]
+    },
+    {
+     "role": "Wall power for the camera, so the battery never dies mid-shot",
+     "pick": [
+      "E6N AC Adapter"
+     ]
+    },
+    {
+     "role": "Light",
+     "pick": [
+      "LED Light Kit",
+      "Lighting kit"
+     ]
+    },
+    {
+     "role": "Keypad for the Dragonframe program",
+     "pick": [
+      "DragonFrame Key Pad"
+     ]
+    }
+   ],
+   "tip": "Check the power adapter fits the camera you are given, and block out window light so it does not change between frames."
+  },
+  {
+   "id": "sew",
+   "name": "Sew or alter clothing",
+   "why": "A machine, the small tools, and something to press seams with.",
+   "parts": [
+    {
+     "role": "Sewing machine",
+     "pick": [
+      "Janome HD-3000 Sewing Machine",
+      "Brother XL2600i Sewing Machine",
+      "Singer HD Sewing Machine"
+     ]
+    },
+    {
+     "role": "Bobbins",
+     "pick": [
+      "Bobbin Set"
+     ]
+    },
+    {
+     "role": "Hand tools",
+     "pick": [
+      "Textile Tool Kit"
+     ]
+    },
+    {
+     "role": "For undoing mistakes",
+     "pick": [
+      "Seam Ripper"
+     ]
+    },
+    {
+     "role": "Iron",
+     "pick": [
+      "Steam Iron",
+      "Steam Iron - Travel"
+     ]
+    },
+    {
+     "role": "Ironing board",
+     "pick": [
+      "Ironing Board"
+     ]
+    },
+    {
+     "role": "Zipper foot, if there is a zipper",
+     "pick": [
+      "Zipper Foot"
+     ]
+    }
+   ],
+   "tip": "Bring your own thread, needles for your fabric, and pins."
+  },
+  {
+   "id": "cricut",
+   "name": "Cut vinyl or paper with a Cricut",
+   "why": "The machine and the pieces that go with it.",
+   "parts": [
+    {
+     "role": "Machine",
+     "pick": [
+      "Cricut Maker 3",
+      "Cricut Maker",
+      "Cricut Explore"
+     ]
+    },
+    {
+     "role": "Mat",
+     "pick": [
+      "Cricut Grip Mat"
+     ]
+    },
+    {
+     "role": "Blade",
+     "pick": [
+      "Cricut Fine Housing"
+     ]
+    },
+    {
+     "role": "Tools for lifting and weeding",
+     "pick": [
+      "Cricut Tool Set"
+     ]
+    },
+    {
+     "role": "Scraper",
+     "pick": [
+      "Cricut XL Scraper"
+     ]
+    },
+    {
+     "role": "Cable, if not using Bluetooth",
+     "pick": [
+      "Cricut USB Cable"
+     ]
+    }
+   ],
+   "tip": "Install Cricut Design Space on your laptop before you come, and bring your own vinyl or paper."
+  },
+  {
+   "id": "build",
+   "name": "Build or hang something",
+   "why": "The basic tools for putting things together and getting them straight.",
+   "parts": [
+    {
+     "role": "Drill",
+     "pick": [
+      "DeWalt Drill"
+     ]
+    },
+    {
+     "role": "Screwdrivers",
+     "pick": [
+      "Ratcheting Screwdriver Set - 26 pcs."
+     ]
+    },
+    {
+     "role": "Tape measure",
+     "pick": [
+      "Measuring Tape - 16'"
+     ]
+    },
+    {
+     "role": "Level",
+     "pick": [
+      "Magnetic Level and Ruler"
+     ]
+    },
+    {
+     "role": "Hammer",
+     "pick": [
+      "Hammer / Irwin."
+     ]
+    },
+    {
+     "role": "Wrench",
+     "pick": [
+      "Adjustable Wrench"
+     ]
+    }
+   ],
+   "tip": "Ask at the desk about drill bits and safety glasses."
+  }
+ ]
+}
