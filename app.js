@@ -1,7 +1,7 @@
 const app = document.getElementById('app');
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const search = query => 'https://www.google.com/search?q=' + encodeURIComponent(query);
-let DATA, K, PHOTO={}, ROOM={units:[]}, HOWTO={guides:{},items:{}};
+let DATA, K, PHOTO={}, ROOM={units:[]}, HOWTO={guides:{},items:{}}, KITS=[];
 const MODEL_CHOICES={
   'Scarlett 2i2 Audio Interface':{hint:'The generation is printed on the device or can be identified by the front panel and serial number.',options:[['1st generation','https://downloads.focusrite.com/focusrite/scarlett-1st-gen/scarlett-2i2-1st-gen'],['2nd generation','https://downloads.focusrite.com/focusrite/scarlett-2nd-gen/scarlett-2i2-2nd-gen'],['3rd generation','https://downloads.focusrite.com/focusrite/scarlett-3rd-gen/scarlett-2i2-3rd-gen'],['4th generation','https://userguides.focusrite.com/hc/en-gb/sections/19640363031570-Scarlett-2i2-4th-Gen-User-Guide']]},
   'Audio Mixer ProFX16':{hint:'Look for ProFX16v2 or ProFX16v3 on the mixer label.',options:[['ProFX16v2 (video walkthrough)','https://www.youtube.com/watch?v=AdtaAadMUl4'],['ProFX16v3','https://mackie.com/en/products/accessories/ProFX16v3.html']]},
@@ -307,6 +307,23 @@ function howtoHtml(h){
   '<section class="guide-section"><h2>How to use it</h2><ol>'+h.how.map(s=>'<li>'+esc(s)+'</li>').join('')+'</ol></section>'+
   '<section class="guide-section"><h2>Good to know</h2>'+listItems(h.watch)+'</section>';
 }
+// an email to IDeATe's contact address with the item already filled in
+function problemLink(k,live){
+  const where=live?live.text:k.w;
+  return 'mailto:help@ideate.cmu.edu?subject='+encodeURIComponent('Lending item problem: '+k.n)+'&body='+encodeURIComponent('Item: '+k.n+'\nShelf: '+where+'\nGuide page: '+location.origin+location.pathname+'?i='+(k.h||'')+'\n\nWhat is wrong (missing part, damage, wrong information on the page):\n\n\nWhen I borrowed it or noticed:\n');
+}
+function kitsFor(k){const mine=KITS.filter(x=>x.parts.some(p=>p.pick.includes(k.n)));return mine.length?'<div class="side-block"><h2>Part of a kit</h2>'+mine.map(x=>'<a class="source-link" href="#kit-'+esc(x.id)+'">'+esc(x.name)+' \u2192</a>').join('')+'</div>':''}
+// Counts how often each guide is opened, so staff can see what students look for. Only the item's code is sent, to a free
+// public counter (abacus.jasoncameron.dev): no names, no cookies. Once per item per visit, and never from a staff device.
+function countOpen(k,fromConsole){
+  try{
+    if(!k.h||!/^https?:$/.test(location.protocol)||/^(localhost|127\.)/.test(location.hostname))return;
+    if(localStorage.getItem('rl-key')||localStorage.getItem('rl-staff'))return;
+    const seen='rl-seen-'+k.h; if(sessionStorage.getItem(seen))return; sessionStorage.setItem(seen,'1');
+    const hit=key=>fetch('https://abacus.jasoncameron.dev/hit/roomlocator-ideate/'+key,{mode:'cors',keepalive:true}).catch(()=>{});
+    hit('i-'+k.h); hit(fromConsole?'from-console':'from-site');
+  }catch(e){}
+}
 function itemView(k,fromConsole){
   const live=fromConsole?consolePlace():null;
   const guide=guideFor(k), howto=howtoFor(k), group=k.c+'/'+k.t, related=(DATA.goes[group]||[]).filter(g=>K.some(a=>a.c+'/'+a.t===g));
@@ -314,8 +331,9 @@ function itemView(k,fromConsole){
   document.title=k.n+' · IDeATe Lending';
   app.innerHTML='<a class="back" href="./">← All items</a>'+(fromConsole?reminderHtml(true,k.n):'')+'<div class="item-lead"><div class="item-summary"><p class="eyebrow">'+esc(categoryName(k.c))+' / '+esc(k.t)+'</p><h1>'+esc(k.n)+'</h1><p class="intro">'+esc(introFor(k))+'</p><aside class="location"><small>Find it in Lending</small><strong>'+esc(live?live.text:k.in?k.w:'Ask at the desk · '+k.w)+'</strong><p>'+(live?'This is the shelf the console in Lending showed when you scanned it.':'Shelf locations and availability can change. The desk has the current information.')+'</p></aside></div>'+photoHtml(k)+'</div>'+
   '<div class="guide-layout"><div class="guide-stack">'+(howto?howtoHtml(howto):'<section class="guide-section"><h2>Before you start</h2>'+listItems(guide.need)+'<p class="note">This is a preparation list. Confirm what comes in the loan with staff; accessories and supplies may be separate.</p></section><section class="guide-section"><h2>First steps</h2><ol>'+guide.start.map(s=>'<li>'+esc(s)+'</li>').join('')+'</ol></section>')+
-  ((k.tips?.length||TIPS[k.n]||TIPS[group])?'<section class="guide-section"><h2>Useful tips</h2>'+listItems(k.tips||TIPS[k.n]||TIPS[group])+'</section>':'')+((howto&&!manual.length&&!MODEL_CHOICES[k.n])?(makerSupport(k.n)?'<section class="guide-section"><h2>Maker support</h2>'+external('Open '+makerSupport(k.n)[0]+'\u2019s own support site',makerSupport(k.n)[1])+'<p class="note">Read the model on the item to find its exact manual there.</p></section>':''):manualHtml(k,manual))+'</div><aside class="side-stack"><div class="side-block"><h2>Borrowing</h2><p>Visit IDeATe Lending in Hunt Library basement, room A29, across from the elevator. Bring your CMU ID. Check current lending hours and borrowing rules before visiting.</p><p>During the semester, the normal loan is three days with a 6 p.m. due time. Weekends count; university holidays may shift the due date. Renewals are no longer offered.</p>'+external('Official IDeATe Lending rules','https://ideate.cmu.edu/resources/lending/index.html')+external('Browse CMU’s '+categoryName(k.c)+' collection',collectionUrl(k.c))+'</div>'+(related.length?'<div class="side-block"><h2>Often used with</h2>'+related.map(g=>'<a class="source-link" href="#t'+encodeURIComponent(g)+'">'+esc(g.split('/')[1])+' →</a>').join('')+'<p>Compatibility and availability vary by model.</p></div>':'')+(fromConsole?'':reminderHtml(false))+'<div class="side-block"><h2>At checkout</h2><p>Confirm the exact model, included parts, condition, and return date with staff. For powered devices, test startup before leaving when possible.</p></div></aside></div>';
+  ((k.tips?.length||TIPS[k.n]||TIPS[group])?'<section class="guide-section"><h2>Useful tips</h2>'+listItems(k.tips||TIPS[k.n]||TIPS[group])+'</section>':'')+((howto&&!manual.length&&!MODEL_CHOICES[k.n])?(makerSupport(k.n)?'<section class="guide-section"><h2>Maker support</h2>'+external('Open '+makerSupport(k.n)[0]+'\u2019s own support site',makerSupport(k.n)[1])+'<p class="note">Read the model on the item to find its exact manual there.</p></section>':''):manualHtml(k,manual))+'</div><aside class="side-stack"><div class="side-block"><h2>Borrowing</h2><p>Visit IDeATe Lending in Hunt Library basement, room A29, across from the elevator. Bring your CMU ID. Check current lending hours and borrowing rules before visiting.</p><p>During the semester, the normal loan is three days with a 6 p.m. due time. Weekends count; university holidays may shift the due date. Renewals are no longer offered.</p>'+external('Official IDeATe Lending rules','https://ideate.cmu.edu/resources/lending/index.html')+external('Browse CMU’s '+categoryName(k.c)+' collection',collectionUrl(k.c))+'</div>'+(related.length?'<div class="side-block"><h2>Often used with</h2>'+related.map(g=>'<a class="source-link" href="#t'+encodeURIComponent(g)+'">'+esc(g.split('/')[1])+' →</a>').join('')+'<p>Compatibility and availability vary by model.</p></div>':'')+(fromConsole?'':reminderHtml(false))+kitsFor(k)+'<div class="side-block"><h2>Something wrong with it?</h2><p>Missing a part, broken, or this page is wrong? Tell the lending staff.</p><a class="source-link" href="'+esc(problemLink(k,live))+'">Report a problem by email \u2192</a></div><div class="side-block"><h2>At checkout</h2><p>Confirm the exact model, included parts, condition, and return date with staff. For powered devices, test startup before leaving when possible.</p></div></aside></div>';
   attachCalendar(k,fromConsole);
+  countOpen(k,fromConsole);
   const modelChoice=document.getElementById('model-choice');
   if(modelChoice)modelChoice.addEventListener('change',()=>{const result=document.getElementById('model-result'),selected=MODEL_CHOICES[k.n].options[Number(modelChoice.value)];result.innerHTML=modelChoice.value===''?'If none matches, ask staff for the model number before using a manual.':external('Open '+selected[0]+' maker guide',selected[1]);});
   const modelNumber=document.getElementById('model-number');
@@ -327,20 +345,43 @@ function renderCards(rows){const target=document.getElementById('results');docum
 function listing(category='',type=''){
   document.title='IDeATe Lending · Item guides';
   const categories=[...new Set(K.map(k=>k.c))].sort();
-  app.innerHTML='<p class="eyebrow">CMU / Hunt Library A29</p><h1>Equipment for what you make</h1><p class="intro">All '+K.length+' things you can borrow from IDeATe Lending. Search by name or by what you need to do, and each page shows the shelf, what to gather, first steps and a return reminder.</p><div class="search-tools"><input id="query" type="search" placeholder="Name or use: tripod, interviews..." aria-label="Search by name or by what you need it for" autocomplete="off"><select id="category" aria-label="Filter by category"><option value="">All categories</option>'+categories.map(c=>'<option value="'+esc(c)+'"'+(c===category?' selected':'')+'>'+esc(categoryName(c))+'</option>').join('')+'</select></div><p class="result-count" id="count"></p><div class="item-grid" id="results"></div>';
+  app.innerHTML='<p class="eyebrow">CMU / Hunt Library A29</p><h1>Equipment for what you make</h1><p class="intro">All '+K.length+' things you can borrow from IDeATe Lending. Search by name or by what you need to do. Each page shows the shelf, how to use the thing and a return reminder.</p><div class="search-mode" role="group" aria-label="How to search"><button type="button" data-mode="name" aria-pressed="true">Find an item</button><button type="button" data-mode="use" aria-pressed="false">What it is good for</button><a href="#kits">Kits for a whole project \u2192</a></div><div class="search-tools"><input id="query" type="search" placeholder="Item name: tripod, HDMI, Zoom..." aria-label="Search" autocomplete="off"><select id="category" aria-label="Filter by category"><option value="">All categories</option>'+categories.map(c=>'<option value="'+esc(c)+'"'+(c===category?' selected':'')+'>'+esc(categoryName(c))+'</option>').join('')+'</select></div><div id="kit-hits"></div><p class="result-count" id="count"></p><div class="item-grid" id="results"></div>';
   const q=document.getElementById('query'),c=document.getElementById('category');
-  // Search looks at the name, the type, what it is good for and what it is. Every typed word has to be there. If nothing
-  // fits, it tries again allowing one slip per word (a wrong, missing, extra or swapped letter), the same as the console.
-  const hayOf=k=>{const h=howtoFor(k);return (k.n+' '+k.c+' '+k.t+' '+(k.g||'')+' '+(k.d||'')+(h?' '+h.what+' '+h.note:'')).toLowerCase()};
-  const near=(word,hay)=>{if(word.length<4)return false;return hay.split(/[^a-z0-9]+/).some(h=>{if(!h||h[0]!==word[0])return false;let i=0;while(i<word.length&&i<h.length&&h[i]===word[i])i++;if(i===word.length)return true;if(i>=h.length)return false;const rest=(a,b)=>h.slice(a).startsWith(word.slice(b));return rest(i+1,i+1)||rest(i+1,i)||rest(i,i+1)||(i+1<word.length&&h[i]===word[i+1]&&h[i+1]===word[i]&&rest(i+2,i+2))})};
+  // Two ways to look. "Find an item" reads names and types only; a word nobody spelled that way gets one slip per word
+  // (a wrong, missing, extra or swapped letter) against names only. "What it is good for" reads what each thing is
+  // for and ranks by how many of the typed words fit, so a sentence like "record an interview outside" works.
+  const nameHay=k=>(k.n+' '+k.t).toLowerCase(), catHay=k=>(k.n+' '+k.t+' '+k.c).toLowerCase();
+  const useHay=k=>{const h=howtoFor(k);return (k.t+' '+(k.g||'')+' '+(k.d||'')+' '+introFor(k)+(h?' '+h.what+' '+h.note:'')).toLowerCase()};
+  const near=(word,hay)=>{if(word.length<4)return false;return hay.split(/[^a-z0-9]+/).some(h=>{if(!h||h[0]!==word[0]||Math.abs(h.length-word.length)>1)return false;let i=0;while(i<word.length&&i<h.length&&h[i]===word[i])i++;if(i===word.length)return true;if(i>=h.length)return i+1===word.length;const rest=(a,b)=>h.slice(a)===word.slice(b);return rest(i+1,i+1)||rest(i+1,i)||rest(i,i+1)||(i+1<word.length&&h[i]===word[i+1]&&h[i+1]===word[i]&&rest(i+2,i+2))})};
+  const FILLER=new Set('a an the to for of on in my i me it is and or with want need needs some something that this how do can make making use using good get myself me we our you your thing stuff'.split(' '));
+  const stem=w=>w.length>4?w.replace(/(ing|ers|er|ed|es|s)$/,''):w;
+  const useWords=new Map(), wordsOf=k=>{if(!useWords.has(k.h||k.n))useWords.set(k.h||k.n,[...new Set((useHay(k)+' '+k.n.toLowerCase()).split(/[^a-z0-9]+/).filter(Boolean))]);return useWords.get(k.h||k.n)};
+  const keysOf=words=>words.filter(w=>!FILLER.has(w)).map(stem).filter(w=>w.length>1);
+  const fits=(tokens,keys)=>keys.reduce((n,w)=>n+(tokens.some(t=>t.startsWith(w))?1:0),0);   // whole words only: "phone" is not in "microphone"
+  const byUse=(pool,words)=>{const keys=keysOf(words);if(!keys.length)return [];
+    const scored=pool.map(k=>[k,fits(wordsOf(k),keys)]).filter(x=>x[1]>0), best=Math.max(0,...scored.map(x=>x[1]));
+    return scored.filter(x=>x[1]>=(best>=3?best-1:best)).sort((a,b)=>b[1]-a[1]).map(x=>x[0])};
+  const kitsFor=words=>{const keys=keysOf(words);if(!keys.length)return [];
+    const scored=KITS.map(x=>[x,fits((x.name+' '+x.why+' '+x.parts.map(p=>p.role).join(' ')).toLowerCase().split(/[^a-z0-9]+/),keys)]).filter(x=>x[1]>0), best=Math.max(0,...scored.map(x=>x[1]));
+    return best>=Math.min(2,keys.length)?scored.filter(x=>x[1]===best).map(x=>x[0]).slice(0,3):[]};
+  let mode='name';
   function draw(){
     const words=q.value.trim().toLowerCase().split(/\s+/).filter(Boolean), pool=K.filter(k=>(!c.value||k.c===c.value)&&(!type||k.t===type));
-    let rows=pool.filter(k=>{const hay=hayOf(k);return words.every(w=>hay.includes(w))}), close=false;
-    if(!rows.length&&words.length){rows=pool.filter(k=>{const hay=hayOf(k);return words.every(w=>hay.includes(w)||near(w,hay))});close=rows.length>0}
-    if(words.length){const inName=k=>words.every(w=>k.n.toLowerCase().includes(w))?0:1;rows=rows.slice().sort((a,b)=>inName(a)-inName(b))}
+    let rows=pool, said='';
+    if(words.length&&mode==='use'){rows=byUse(pool,words);said=rows.length?rows.length+' things good for that':''}
+    else if(words.length){
+      rows=pool.filter(k=>{const hay=catHay(k);return words.every(w=>hay.includes(w))});
+      const inName=k=>words.every(w=>k.n.toLowerCase().includes(w))?0:1;rows=rows.slice().sort((a,b)=>inName(a)-inName(b));
+      if(!rows.length){rows=pool.filter(k=>{const hay=nameHay(k);return words.every(w=>hay.includes(w)||near(w,hay))});if(rows.length)said='Nothing spelled exactly like that. '+rows.length+(rows.length===1?' close match':' close matches')}
+      if(!rows.length){rows=byUse(pool,words);if(rows.length)said='No item has that name. '+rows.length+(rows.length===1?' thing is':' things are')+' good for it'}
+    }
     renderCards(rows);
-    if(close)document.getElementById('count').textContent='Nothing spelled exactly like that. '+rows.length+' close matches';
+    const kits=words.length&&(mode==='use'||/good for it/.test(said))?kitsFor(words):[];
+    document.getElementById('kit-hits').innerHTML=kits.length?'<p class="result-count">A kit for this</p><div class="item-grid">'+kits.map(x=>'<a class="item-card kit-card" href="#kit-'+esc(x.id)+'"><div><strong>'+esc(x.name)+'</strong><span class="card-where">'+x.parts.length+' pieces, with shelves</span></div><span class="arrow" aria-hidden="true">\u2197</span></a>').join('')+'</div>':'';
+    if(said)document.getElementById('count').textContent=said;
+    else if(words.length&&mode==='use'&&!rows.length)document.getElementById('count').textContent=kits.length?'':'Nothing matched. Try other words for what you want to do.';
   }
+  document.querySelectorAll('.search-mode button').forEach(b=>b.addEventListener('click',()=>{mode=b.dataset.mode;document.querySelectorAll('.search-mode button').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'));q.placeholder=mode==='use'?'What do you need to do? record an interview, hang a poster...':'Item name: tripod, HDMI, Zoom...';q.focus();draw()}));
   q.addEventListener('input',draw);c.addEventListener('change',()=>{type='';draw()});draw();
 }
 function roomView(){
@@ -356,11 +397,20 @@ function roomView(){
     detail.innerHTML='<h2>'+esc(unit.name)+'</h2><p>'+unit.boards.length+(unit.boards.length===1?' shelf':' shelves')+', top shelf first</p>'+[...shelves.entries()].sort((a,b)=>b[0]-a[0]).map(([s,items])=>'<div class="room-shelf"><h3>Shelf '+s+'</h3>'+(items.length?items.map(k=>'<a href="#i'+k.h+'">'+esc(k.n)+'</a>').join(''):'<p>No listed items</p>')+'</div>').join('');
   }));
 }
+// Kits: everything for one kind of project, each piece with its shelf. The first choice in each row is shown large; the others are alternatives.
+function kitsView(id){
+  const kit=KITS.find(x=>x.id===id), find=n=>K.find(k=>k.n===n);
+  if(!kit){document.title='Kits \u00b7 IDeATe Lending';
+    app.innerHTML='<a class="back" href="./">\u2190 All items</a><h1>Kits for a whole project</h1><p class="intro">Pick what you are trying to do and get the full list to ask for, with the shelf for each piece.</p><div class="item-grid">'+KITS.map(x=>'<a class="item-card kit-card" href="#kit-'+esc(x.id)+'"><div><strong>'+esc(x.name)+'</strong><span class="card-where">'+x.parts.length+' pieces</span></div><span class="arrow" aria-hidden="true">\u2197</span></a>').join('')+'</div>';return}
+  document.title=kit.name+' \u00b7 IDeATe Lending';
+  app.innerHTML='<a class="back" href="#kits">\u2190 All kits</a><h1>'+esc(kit.name)+'</h1><p class="intro">'+esc(kit.why)+'</p><div class="kit-list">'+kit.parts.map(p=>{const items=p.pick.map(find).filter(Boolean);if(!items.length)return '';const first=items[0];
+    return '<div class="kit-row"><p class="kit-role">'+esc(p.role)+'</p><a class="item-card" href="#i'+first.h+'">'+thumbHtml(first)+'<div><strong>'+esc(first.n)+'</strong><span class="card-where">'+esc(first.in?first.w:'Ask at the desk')+'</span></div><span class="arrow" aria-hidden="true">\u2197</span></a>'+(items.length>1?'<p class="kit-or">or '+items.slice(1).map(k=>'<a href="#i'+k.h+'">'+esc(k.n)+'</a> ('+esc(k.in?k.w:'ask at the desk')+')').join(', or ')+'</p>':'')+'</div>'}).join('')+'</div><div class="guide-section kit-tip"><h2>Before you go</h2><p>'+esc(kit.tip)+'</p><p class="note">Each piece is checked out separately and may already be on loan. The desk has what is in today.</p></div>';
+}
 function route(){if(!DATA)return;const hash=decodeURIComponent(location.hash.slice(1));const query=new URLSearchParams(location.search).get('i');let k;
   if(/^i[0-9a-f]{6}$/.test(hash))k=K.find(x=>x.h===hash.slice(1));   // links carry the item's own code, so they keep working when the list changes
   else if(/^k\d+$/.test(hash))k=K[Number(hash.slice(1))];             // (old links by position still open)
   else if(query&&!hash)k=K.find(x=>x.h===query.toLowerCase());
-  if(k)itemView(k,!!(query&&!hash));else if(hash==='room')roomView();else if(hash.startsWith('t')){const [c,t]=hash.slice(1).split('/');listing(c,t)}else listing();
+  if(k)itemView(k,!!(query&&!hash));else if(hash==='room')roomView();else if(hash==='kits'||hash.startsWith('kit-'))kitsView(hash.slice(4));else if(hash.startsWith('t')){const [c,t]=hash.slice(1).split('/');listing(c,t)}else listing();
   window.scrollTo(0,0);
 }
-Promise.all([fetch('data.json?v=20261116t').then(r=>{if(!r.ok)throw Error('Inventory unavailable');return r.json()}),fetch('photos.json?v=20261116k').then(r=>r.ok?r.json():{}).catch(()=>({})),fetch('room.json?v=20261116a').then(r=>r.ok?r.json():{units:[]}).catch(()=>({units:[]})),fetch('howto.json?v=20261116b').then(r=>r.ok?r.json():null).catch(()=>null)]).then(([data,photos,room,howto])=>{DATA=data;K=data.kinds;PHOTO=photos;ROOM=room;if(howto&&howto.guides&&howto.items)HOWTO=howto;route();addEventListener('hashchange',route)}).catch(()=>{app.innerHTML='<h1>Item guide unavailable</h1><p>Please try reloading this page.</p>'});
+Promise.all([fetch('data.json?v=20261116t').then(r=>{if(!r.ok)throw Error('Inventory unavailable');return r.json()}),fetch('photos.json?v=20261116k').then(r=>r.ok?r.json():{}).catch(()=>({})),fetch('room.json?v=20261116a').then(r=>r.ok?r.json():{units:[]}).catch(()=>({units:[]})),fetch('howto.json?v=20261116b').then(r=>r.ok?r.json():null).catch(()=>null),fetch('kits.json?v=20261116a').then(r=>r.ok?r.json():null).catch(()=>null)]).then(([data,photos,room,howto,kits])=>{if(kits&&Array.isArray(kits.kits))KITS=kits.kits;DATA=data;K=data.kinds;PHOTO=photos;ROOM=room;if(howto&&howto.guides&&howto.items)HOWTO=howto;route();addEventListener('hashchange',route)}).catch(()=>{app.innerHTML='<h1>Item guide unavailable</h1><p>Please try reloading this page.</p>'});
