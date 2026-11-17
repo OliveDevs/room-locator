@@ -129,17 +129,20 @@ function attachCalendar(k,fromConsole){
     const due=dueOrAsk(); if(!due)return;
     const link=document.createElement('a');
     link.href=URL.createObjectURL(new Blob([calendarFile(k,due)],{type:'text/calendar;charset=utf-8'}));
-    link.download='Return '+k.n.replace(/[^A-Za-z0-9 ._-]+/g,' ').trim().slice(0,60)+'.ics';
+    link.download='Return '+k.n.replace(/[^A-Za-z0-9 ._-]+/g,' ').replace(/\s+/g,' ').replace(/[ .]+$/,'').trim().slice(0,60)+'.ics';
     document.body.appendChild(link); link.click(); link.remove();
     setTimeout(()=>URL.revokeObjectURL(link.href),60000);
     status.textContent='A calendar file was made. Open it and choose Add: your calendar will alert you the day before and 2 hours before it is due.';
   });
   button.addEventListener('click',()=>{
     const due=dueOrAsk(); if(!due)return;
-    const end=new Date(due.getTime()+30*60*1000);
+    // a Google Calendar link cannot set its own alerts, so the event covers the 2 hours before the deadline:
+    // the person's usual Google alert then goes off before that window, and the block sits in their day
+    const start=new Date(Math.max(Date.now()+60000,due.getTime()-2*60*60*1000));
     const zone=Intl.DateTimeFormat().resolvedOptions().timeZone||'America/New_York';
-    const params=new URLSearchParams({action:'TEMPLATE',text:'Return '+k.n+' to IDeATe Lending',dates:calendarStamp(due)+'/'+calendarStamp(end),stz:zone,etz:zone,details:'Return the borrowed item by the date and time confirmed at checkout. Check Google Calendar notifications after saving this event.',location:'IDeATe Lending, Hunt Library A29, Carnegie Mellon University'});
-    status.textContent='Your event is ready in Google Calendar. Review the time and notification, then save it there.';
+    const by=due.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+    const params=new URLSearchParams({action:'TEMPLATE',text:'Return '+k.n+' to IDeATe Lending by '+by,dates:calendarStamp(start)+'/'+calendarStamp(due),stz:zone,etz:zone,details:'Due back at '+by+' on '+due.toLocaleDateString([], {weekday:'long',month:'long',day:'numeric'})+'. This event covers the last 2 hours before the deadline.\n\nFor a warning the day before, choose Add notification and set 1 day before you save.\n\nItem guide: '+location.origin+location.pathname+'?i='+(k.h||''),location:'IDeATe Lending, Hunt Library A29, Carnegie Mellon University'});
+    status.textContent='Google Calendar opened with the last 2 hours before the deadline blocked out. It uses your own alert setting, so add a 1 day notification there if you want one, then save.';
     window.open('https://calendar.google.com/calendar/r/eventedit?'+params.toString(),'_blank','noopener,noreferrer');
   });
 }
@@ -284,7 +287,7 @@ function manualHtml(k,manual){
 function reminderHtml(top,name){
   // one compact row at the top of a page opened from the console; the fuller box in the side column otherwise
   if(top)return '<div class="reminder-top"><label for="return-date">Return reminder for '+esc(String(name).replace(/[\s.\/]+$/,''))+'</label><div class="reminder-row"><input id="return-date" type="datetime-local" aria-describedby="calendar-status"><button id="ics-button" type="button">Add to calendar</button><button id="calendar-button" class="button-secondary" type="button">Google Calendar ↗</button></div><button id="estimate-button" type="button" hidden></button><p id="calendar-status" class="calendar-status" role="status"></p></div>';
-  return '<div class="side-block"><h2>Return reminder</h2><p>Use the exact due date and time from your checkout email.</p><label for="return-date">Return date and time</label><input id="return-date" type="datetime-local" aria-describedby="calendar-status"><div class="reminder-buttons"><button id="estimate-button" class="button-secondary" type="button">Fill normal 3-day estimate</button><button id="ics-button" type="button">Add to calendar</button><button id="calendar-button" class="button-secondary" type="button">Google Calendar ↗</button></div><p id="calendar-status" class="calendar-status" role="status">Alerts the day before and 2 hours before it is due.</p></div>';
+  return '<div class="side-block"><h2>Return reminder</h2><p>Use the exact due date and time from your checkout email.</p><label for="return-date">Return date and time</label><input id="return-date" type="datetime-local" aria-describedby="calendar-status"><div class="reminder-buttons"><button id="estimate-button" class="button-secondary" type="button">Fill normal 3-day estimate</button><button id="ics-button" type="button">Add to calendar</button><button id="calendar-button" class="button-secondary" type="button">Google Calendar ↗</button></div><p id="calendar-status" class="calendar-status" role="status">Add to calendar alerts you the day before and 2 hours before. Google Calendar uses your own alert setting.</p></div>';
 }
 
 // The console's QR ends in &w=AUD-3: the unit and shelf the console has for the thing at that moment. The page trusts
