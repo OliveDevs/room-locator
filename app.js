@@ -82,7 +82,9 @@ const INTRO={
 };
 function introFor(k){
   const named={'USB C to A Adapter':'An adapter for connecting a USB-A peripheral to a compatible USB-C host. Check data and power support before use.','Lighting Gel Kit':'Colored sheets for changing the look of a light. Keep them clear of hot surfaces and use suitable clamps.'};
-  return k.d||k.g||named[k.n]||INTRO[k.c+'/'+k.t]||'Equipment for '+categoryName(k.c).toLowerCase()+'. Check the exact model and included parts with staff before planning your setup.';
+  const how=howtoFor(k), lead=(how&&how.what)||named[k.n]||INTRO[k.c+'/'+k.t]||'Listed under '+k.t+' in the '+categoryName(k.c)+' collection.';
+  const note=k.d?String(k.d).trim().replace(/\.$/,''):'';          // the short note staff wrote ("Mounts on a camera, 2 XLR inputs") becomes its own sentence
+  return lead+(note?' '+note.charAt(0).toUpperCase()+note.slice(1)+'.':'');
 }
 const CATEGORY_NAME = {'Cables & More':'Cables & Accessories','Lighting':'Lighting & Projection','Soft Tech':'Soft Technologies'};
 const categoryName = c => CATEGORY_NAME[c] || c;
@@ -101,7 +103,7 @@ function calendarFile(k,due){
   return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Room Locator//IDeATe Lending return reminder//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH','BEGIN:VEVENT',
     'UID:'+calendarStamp(new Date())+'-'+(k.h||'item')+'@olivedevs.github.io','DTSTAMP:'+calendarStamp(new Date()),'DTSTART:'+calendarStamp(due),'DTEND:'+calendarStamp(end),
     icsLine('SUMMARY',title),icsLine('LOCATION','IDeATe Lending, Hunt Library A29, Carnegie Mellon University'),
-    icsLine('DESCRIPTION','Return the borrowed item by the date and time confirmed at checkout.\nItem guide: '+location.origin+location.pathname+'?i='+(k.h||'')),
+    icsLine('DESCRIPTION','Return the borrowed item by the date and time confirmed at checkout. Hand it to staff in Hunt Library A29.\nLoans cannot be renewed. For illness or an emergency, email help@ideate.cmu.edu before it is due. Late fees are charged by the day.\nItem guide: '+location.origin+location.pathname+'?i='+(k.h||'')),
     ...alarm('-P1D',title+': due tomorrow'),...alarm('-PT2H',title+': due in 2 hours'),'END:VEVENT','END:VCALENDAR'].join('\r\n')+'\r\n';
 }
 function attachCalendar(k,fromConsole){
@@ -114,8 +116,13 @@ function attachCalendar(k,fromConsole){
     input.value=localDateTime(due);
     status.textContent='Normal loan filled in: 3 days, due 6 p.m. Change it if your checkout email says otherwise.';
   };
-  estimate.addEventListener('click',fillEstimate);
+  const extend=document.getElementById('extend-link');
+  const setExtend=()=>{if(!extend)return;const due=new Date(input.value),when=input.value&&!Number.isNaN(due.getTime())?due.toLocaleString([], {weekday:'long',month:'long',day:'numeric',hour:'numeric',minute:'2-digit'}):'(fill in from your checkout email)';
+    extend.href='mailto:help@ideate.cmu.edu?subject='+encodeURIComponent('Extension request: '+k.n)+'&body='+encodeURIComponent('Hello,\n\nI borrowed this from IDeATe Lending and cannot return it by the due time.\n\nItem: '+k.n+'\nDue: '+when+'\nMy Andrew ID: \n\nWhy I need more time (illness, emergency):\n\nWhen I can return it:\n\nThank you')};
+  input.addEventListener('change',setExtend);
+  estimate.addEventListener('click',()=>{fillEstimate();setExtend()});
   if(fromConsole)fillEstimate();
+  setExtend();
   const dueOrAsk=()=>{
     const due=new Date(input.value);
     if(!input.value||Number.isNaN(due.getTime())||due<=new Date()){
@@ -141,7 +148,7 @@ function attachCalendar(k,fromConsole){
     const start=new Date(Math.max(Date.now()+60000,due.getTime()-2*60*60*1000));
     const zone=Intl.DateTimeFormat().resolvedOptions().timeZone||'America/New_York';
     const by=due.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
-    const params=new URLSearchParams({action:'TEMPLATE',text:'Return '+k.n+' to IDeATe Lending by '+by,dates:calendarStamp(start)+'/'+calendarStamp(due),stz:zone,etz:zone,details:'Due back at '+by+' on '+due.toLocaleDateString([], {weekday:'long',month:'long',day:'numeric'})+'. This event covers the last 2 hours before the deadline.\n\nFor a warning the day before, choose Add notification and set 1 day before you save.\n\nItem guide: '+location.origin+location.pathname+'?i='+(k.h||''),location:'IDeATe Lending, Hunt Library A29, Carnegie Mellon University'});
+    const params=new URLSearchParams({action:'TEMPLATE',text:'Return '+k.n+' to IDeATe Lending by '+by,dates:calendarStamp(start)+'/'+calendarStamp(due),stz:zone,etz:zone,details:'Due back at '+by+' on '+due.toLocaleDateString([], {weekday:'long',month:'long',day:'numeric'})+'. This event covers the last 2 hours before the deadline. Hand the item to staff in Hunt Library A29.\n\nLoans cannot be renewed. For illness or an emergency, email help@ideate.cmu.edu before it is due. Late fees are charged by the day.\n\nFor a warning the day before, choose Add notification and set 1 day before you save.\n\nItem guide: '+location.origin+location.pathname+'?i='+(k.h||''),location:'IDeATe Lending, Hunt Library A29, Carnegie Mellon University'});
     status.textContent='Google Calendar opened with the last 2 hours before the deadline blocked out. It uses your own alert setting, so add a 1 day notification there if you want one, then save.';
     window.open('https://calendar.google.com/calendar/r/eventedit?'+params.toString(),'_blank','noopener,noreferrer');
   });
@@ -252,7 +259,7 @@ function thumbHtml(k){
 function photoHtml(k){
   const photo=photoFor(k);
   if(!photo)return '<figure class="item-photo no-photo"><div class="no-photo-tile" aria-hidden="true"><span>'+esc(k.t)+'</span></div><figcaption><strong>No photo yet</strong><span>We would rather show nothing than a picture of the wrong thing. Ask at the desk to see it.</span></figcaption></figure>';
-  if(photo.kind==='lending')return '<figure class="item-photo item-photo-own"><img src="'+esc(photo.url)+'" alt="'+esc('Photo of '+k.n+' from the lending catalog')+'" style="width:'+Math.round(photo.w*Math.min(2,300/photo.h,480/photo.w))+'px" loading="eager" referrerpolicy="no-referrer" onerror="this.closest(\'figure\').classList.add(\'photo-unavailable\');this.remove()"><figcaption><strong>From the lending catalog</strong><span>The library\u2019s own picture of this item.</span><small>Photo: IDeATe Lending, Carnegie Mellon University Libraries \u00b7 <a href="'+esc(photo.page)+'" target="_blank" rel="noopener noreferrer">Catalog record \u2197</a></small></figcaption></figure>';
+  if(photo.kind==='lending')return '<figure class="item-photo item-photo-own"><img src="'+esc(photo.url)+'" alt="'+esc('Photo of '+k.n+' from the lending catalog')+'" style="width:'+Math.round(photo.w*Math.min(2,300/photo.h,480/photo.w))+'px" loading="eager" referrerpolicy="no-referrer" onerror="const f=this.closest(\'figure\');if(f)f.classList.add(\'photo-unavailable\');this.remove()"><figcaption><strong>From the lending catalog</strong><span>The library\u2019s own picture of this item.</span><small>Photo: IDeATe Lending, Carnegie Mellon University Libraries \u00b7 <a href="'+esc(photo.page)+'" target="_blank" rel="noopener noreferrer">Catalog record \u2197</a></small></figcaption></figure>';
   const exact=!!k.p||PHOTO.exact?.includes(k.n),illustration=photo.kind==='illustration',alt=illustration?'Illustration of '+k.t:exact?'Photo showing '+k.n:'Representative photo for '+categoryName(k.c)+' / '+k.t;
   const license=photo.license||'',parts=license.match(/^CC (BY-SA|BY) (\d\.\d)$/),licenseUrl=parts?'https://creativecommons.org/licenses/'+parts[1].toLowerCase()+'/'+parts[2]+'/':license==='CC0'?'https://creativecommons.org/publicdomain/zero/1.0/':'';
   const credit=illustration?'Original site illustration':'Photo: '+esc(photo.artist||'Wikimedia Commons contributor')+(photo.page&&photo.page!=='#'?' · <a href="'+esc(photo.page)+'" target="_blank" rel="noopener noreferrer">Source ↗</a>':'')+(licenseUrl?' · <a href="'+licenseUrl+'" target="_blank" rel="noopener noreferrer">'+esc(license)+' ↗</a>':license?' · '+esc(license):'');
@@ -286,8 +293,8 @@ function manualHtml(k,manual){
 // to borrow the thing, so the reminder is the first thing on the page with the normal 3-day due date already filled in.
 function reminderHtml(top,name){
   // one compact row at the top of a page opened from the console; the fuller box in the side column otherwise
-  if(top)return '<div class="reminder-top"><label for="return-date">Return reminder for '+esc(String(name).replace(/[\s.\/]+$/,''))+'</label><div class="reminder-row"><input id="return-date" type="datetime-local" aria-describedby="calendar-status"><button id="ics-button" type="button">Add to calendar</button><button id="calendar-button" class="button-secondary" type="button">Google Calendar ↗</button></div><button id="estimate-button" type="button" hidden></button><p id="calendar-status" class="calendar-status" role="status"></p></div>';
-  return '<div class="side-block"><h2>Return reminder</h2><p>Use the exact due date and time from your checkout email.</p><label for="return-date">Return date and time</label><input id="return-date" type="datetime-local" aria-describedby="calendar-status"><div class="reminder-buttons"><button id="estimate-button" class="button-secondary" type="button">Fill normal 3-day estimate</button><button id="ics-button" type="button">Add to calendar</button><button id="calendar-button" class="button-secondary" type="button">Google Calendar ↗</button></div><p id="calendar-status" class="calendar-status" role="status">Add to calendar alerts you the day before and 2 hours before. Google Calendar uses your own alert setting.</p></div>';
+  if(top)return '<div class="reminder-top"><label for="return-date">Return reminder for '+esc(String(name).replace(/[\s.\/]+$/,''))+'</label><div class="reminder-row"><input id="return-date" type="datetime-local" aria-describedby="calendar-status"><button id="ics-button" type="button">Add to calendar</button><button id="calendar-button" class="button-secondary" type="button">Google Calendar ↗</button></div><button id="estimate-button" type="button" hidden></button><p id="calendar-status" class="calendar-status" role="status"></p><p class="extend-note">No renewals. Illness or an emergency? <a id="extend-link" href="mailto:help@ideate.cmu.edu">Ask for an extension by email</a> before it is due.</p></div>';
+  return '<div class="side-block"><h2>Return reminder</h2><p>Use the exact due date and time from your checkout email.</p><label for="return-date">Return date and time</label><input id="return-date" type="datetime-local" aria-describedby="calendar-status"><div class="reminder-buttons"><button id="estimate-button" class="button-secondary" type="button">Fill normal 3-day estimate</button><button id="ics-button" type="button">Add to calendar</button><button id="calendar-button" class="button-secondary" type="button">Google Calendar ↗</button></div><p id="calendar-status" class="calendar-status" role="status">Add to calendar alerts you the day before and 2 hours before. Google Calendar uses your own alert setting.</p><p class="extend-note">Cannot make it back in time? Loans cannot be renewed, but for illness or an emergency you can ask for more time before it is due.</p><a class="source-link" id="extend-link" href="mailto:help@ideate.cmu.edu">Ask for an extension by email \u2192</a></div>';
 }
 
 // The console's QR ends in &w=AUD-3: the unit and shelf the console has for the thing at that moment. The page trusts
@@ -329,9 +336,9 @@ function itemView(k,fromConsole){
   const guide=guideFor(k), howto=howtoFor(k), group=k.c+'/'+k.t, related=(DATA.goes[group]||[]).filter(g=>K.some(a=>a.c+'/'+a.t===g));
   const manual=(k.r||[]).filter(r=>Array.isArray(r)&&/^https:\/\//.test(r[1]));
   document.title=k.n+' · IDeATe Lending';
-  app.innerHTML='<a class="back" href="./">← All items</a>'+(fromConsole?reminderHtml(true,k.n):'')+'<div class="item-lead"><div class="item-summary"><p class="eyebrow">'+esc(categoryName(k.c))+' / '+esc(k.t)+'</p><h1>'+esc(k.n)+'</h1><p class="intro">'+esc(introFor(k))+'</p><aside class="location"><small>Find it in Lending</small><strong>'+esc(live?live.text:k.in?k.w:'Ask at the desk · '+k.w)+'</strong><p>'+(live?'This is the shelf the console in Lending showed when you scanned it.':'Shelf locations and availability can change. The desk has the current information.')+'</p></aside></div>'+photoHtml(k)+'</div>'+
+  app.innerHTML='<a class="back" href="./">← All items</a>'+(fromConsole?reminderHtml(true,k.n):'')+'<div class="item-lead"><div class="item-summary"><p class="eyebrow">'+esc(categoryName(k.c))+' / '+esc(k.t)+'</p><h1>'+esc(k.n)+'</h1><p class="intro">'+esc(introFor(k))+'</p>'+(k.g?'<p class="good-for"><strong>Good for</strong> '+esc(k.g)+'</p>':'')+'<aside class="location"><small>Find it in Lending</small><strong>'+esc(live?live.text:k.in?k.w:'Ask at the desk · '+k.w)+'</strong><p>'+(live?'This is the shelf the console in Lending showed when you scanned it.':'Shelf locations and availability can change. The desk has the current information.')+'</p></aside></div>'+photoHtml(k)+'</div>'+
   '<div class="guide-layout"><div class="guide-stack">'+(howto?howtoHtml(howto):'<section class="guide-section"><h2>Before you start</h2>'+listItems(guide.need)+'<p class="note">This is a preparation list. Confirm what comes in the loan with staff; accessories and supplies may be separate.</p></section><section class="guide-section"><h2>First steps</h2><ol>'+guide.start.map(s=>'<li>'+esc(s)+'</li>').join('')+'</ol></section>')+
-  ((k.tips?.length||TIPS[k.n]||TIPS[group])?'<section class="guide-section"><h2>Useful tips</h2>'+listItems(k.tips||TIPS[k.n]||TIPS[group])+'</section>':'')+((howto&&!manual.length&&!MODEL_CHOICES[k.n])?(makerSupport(k.n)?'<section class="guide-section"><h2>Maker support</h2>'+external('Open '+makerSupport(k.n)[0]+'\u2019s own support site',makerSupport(k.n)[1])+'<p class="note">Read the model on the item to find its exact manual there.</p></section>':''):manualHtml(k,manual))+'</div><aside class="side-stack"><div class="side-block"><h2>Borrowing</h2><p>Visit IDeATe Lending in Hunt Library basement, room A29, across from the elevator. Bring your CMU ID. Check current lending hours and borrowing rules before visiting.</p><p>During the semester, the normal loan is three days with a 6 p.m. due time. Weekends count; university holidays may shift the due date. Renewals are no longer offered.</p>'+external('Official IDeATe Lending rules','https://ideate.cmu.edu/resources/lending/index.html')+external('Browse CMU’s '+categoryName(k.c)+' collection',collectionUrl(k.c))+'</div>'+(related.length?'<div class="side-block"><h2>Often used with</h2>'+related.map(g=>'<a class="source-link" href="#t'+encodeURIComponent(g)+'">'+esc(g.split('/')[1])+' →</a>').join('')+'<p>Compatibility and availability vary by model.</p></div>':'')+(fromConsole?'':reminderHtml(false))+kitsFor(k)+'<div class="side-block"><h2>Something wrong with it?</h2><p>Missing a part, broken, or this page is wrong? Tell the lending staff.</p><a class="source-link" href="'+esc(problemLink(k,live))+'">Report a problem by email \u2192</a></div><div class="side-block"><h2>At checkout</h2><p>Confirm the exact model, included parts, condition, and return date with staff. For powered devices, test startup before leaving when possible.</p></div></aside></div>';
+  ((k.tips?.length||TIPS[k.n]||TIPS[group])?'<section class="guide-section"><h2>Useful tips</h2>'+listItems(k.tips||TIPS[k.n]||TIPS[group])+'</section>':'')+((howto&&!manual.length&&!MODEL_CHOICES[k.n])?(makerSupport(k.n)?'<section class="guide-section"><h2>Maker support</h2>'+external('Open '+makerSupport(k.n)[0]+'\u2019s own support site',makerSupport(k.n)[1])+'<p class="note">Read the model on the item to find its exact manual there.</p></section>':''):manualHtml(k,manual))+'</div><aside class="side-stack"><div class="side-block"><h2>Borrowing</h2><p>Visit IDeATe Lending in Hunt Library basement, room A29, across from the elevator. Bring your CMU ID. Check current lending hours and borrowing rules before visiting.</p><p>During the semester, the normal loan is three days with a 6 p.m. due time. Weekends count; university holidays may shift the due date.</p><p>Loans cannot be renewed. Hand the item to staff in A29; drop boxes and other libraries do not count. Late fees run from $1 to $25 a day depending on what the item costs, and borrowing is blocked once fines reach $25.</p>'+external('Official IDeATe Lending rules','https://ideate.cmu.edu/resources/lending/index.html')+external('Full circulation policy','https://ideate.cmu.edu/resources/lending/ideate-circulation-policy.html')+external('Browse CMU’s '+categoryName(k.c)+' collection',collectionUrl(k.c))+'</div>'+(related.length?'<div class="side-block"><h2>Often used with</h2>'+related.map(g=>'<a class="source-link" href="#t'+encodeURIComponent(g)+'">'+esc(g.split('/')[1])+' →</a>').join('')+'<p>Compatibility and availability vary by model.</p></div>':'')+(fromConsole?'':reminderHtml(false))+kitsFor(k)+'<div class="side-block"><h2>Something wrong with it?</h2><p>Missing a part, broken, or this page is wrong? Tell the lending staff.</p><a class="source-link" href="'+esc(problemLink(k,live))+'">Report a problem by email \u2192</a></div><div class="side-block"><h2>At checkout</h2><p>Confirm the exact model, included parts, condition, and return date with staff. For powered devices, test startup before leaving when possible.</p></div></aside></div>';
   attachCalendar(k,fromConsole);
   countOpen(k,fromConsole);
   const modelChoice=document.getElementById('model-choice');
@@ -339,7 +346,7 @@ function itemView(k,fromConsole){
   const modelNumber=document.getElementById('model-number');
   if(modelNumber)modelNumber.addEventListener('input',()=>{const term=modelNumber.value.trim();document.getElementById('manual-search').href=search(term?term+' official manual':k.n+' manufacturer manual')});
   const img=app.querySelector('.item-photo img');
-  if(img)img.addEventListener('error',()=>{img.hidden=true;img.parentElement.classList.add('photo-unavailable')});
+  if(img)img.addEventListener('error',()=>{img.hidden=true;img.parentElement?.classList.add('photo-unavailable')});
 }
 function renderCards(rows){const target=document.getElementById('results');document.getElementById('count').textContent=rows.length+' of '+K.length+' items';target.innerHTML=rows.length?rows.map(k=>'<a class="item-card" href="#i'+k.h+'">'+thumbHtml(k)+'<div><small>'+esc(categoryName(k.c))+' / '+esc(k.t)+'</small><br><strong>'+esc(k.n)+'</strong><span class="card-where">'+esc(k.in?k.w:'Ask at the desk')+'</span></div><span class="arrow" aria-hidden="true">↗</span></a>').join(''):'<div class="empty-state">No matching items. Try a shorter name or another category.</div>'}
 function listing(category='',type=''){
@@ -353,24 +360,41 @@ function listing(category='',type=''){
   const nameHay=k=>(k.n+' '+k.t).toLowerCase(), catHay=k=>(k.n+' '+k.t+' '+k.c).toLowerCase();
   const useHay=k=>{const h=howtoFor(k);return (k.t+' '+(k.g||'')+' '+(k.d||'')+' '+introFor(k)+(h?' '+h.what+' '+h.note:'')).toLowerCase()};
   const near=(word,hay)=>{if(word.length<4)return false;return hay.split(/[^a-z0-9]+/).some(h=>{if(!h||h[0]!==word[0]||Math.abs(h.length-word.length)>1)return false;let i=0;while(i<word.length&&i<h.length&&h[i]===word[i])i++;if(i===word.length)return true;if(i>=h.length)return i+1===word.length;const rest=(a,b)=>h.slice(a)===word.slice(b);return rest(i+1,i+1)||rest(i+1,i)||rest(i,i+1)||(i+1<word.length&&h[i]===word[i+1]&&h[i+1]===word[i]&&rest(i+2,i+2))})};
-  const FILLER=new Set('a an the to for of on in my i me it is and or with want need needs some something that this how do can make making use using good get myself me we our you your thing stuff'.split(' '));
-  const stem=w=>w.length>4?w.replace(/(ing|ers|er|ed|es|s)$/,''):w;
+  const FILLER=new Set('a an the to for of on in my i me it is and or with want need needs some something that this how do can make making use using good get myself me we our you your thing stuff only has have at into from up out new better more less very really just also than then when where which who will would should could try'.split(' '));
+  const stem=w=>{let x=w.length>4?w.replace(/(ing|ed|es|s)$/,''):w; if(x.length>4)x=x.replace(/e$/,''); return x};   // measure, measuring, measured all become measur
+  // everyday words on the left; any of the words on the right also counts as a match for them
+  const ALSO={hang:'hammer level drill tape',poster:'level tape hammer',straight:'level',wall:'hammer drill level',shelf:'drill level screwdriver',nail:'hammer',screw:'screwdriver drill',bolt:'wrench socket',nut:'wrench socket',tighten:'wrench screwdriver socket',wire:'pliers cutters',cut:'cutters shears cricut pliers',glue:'glue',wood:'drill rotary hammer',length:'measuring tape caliper',size:'caliper measuring',
+    movie:'projector screen',film:'camcorder camera video',video:'camcorder camera',vlog:'camera gimbal phone',photo:'camera lens',picture:'camera',portrait:'camera lens light',selfie:'phone tripod ring',shaky:'gimbal tripod',steady:'gimbal tripod',timelapse:'tripod camera',
+    podcast:'microphone recorder interface',interview:'microphone recorder lavalier',voice:'microphone recorder',voiceover:'microphone',sing:'microphone interface',song:'microphone interface keyboard',band:'mixer microphone speaker',guitar:'interface cable amp',beat:'drum pad controller',dj:'mixer speaker controller',
+    loud:'speaker pa',party:'speaker partybox',announce:'microphone speaker pa',concert:'pa mixer speaker',listen:'headphones speaker',echo:'blanket',quiet:'blanket',
+    slide:'projector hdmi laser',presentation:'projector hdmi laser screen',present:'projector hdmi laser',tv:'hdmi monitor',screen:'monitor projector hdmi',laptop:'hdmi hub adapter monitor',zoom:'webcam microphone',call:'webcam microphone',meeting:'webcam microphone',stream:'webcam deck microphone',charge:'usb power',charger:'usb power',internet:'ethernet',wifi:'ethernet',
+    dark:'light led',bright:'light led',lamp:'light led',glow:'light tube stick',colour:'rgb gel light',color:'rgb gel light',
+    sew:'sewing',hem:'sewing hemmer foot',stitch:'sewing',clothes:'sewing iron steamer',costume:'sewing',wrinkle:'iron steamer',crease:'iron steamer',button:'buttonhole button',zipper:'zipper',sticker:'cricut',vinyl:'cricut',shirt:'cricut iron sewing',knit:'crochet',yarn:'crochet',
+    game:'vr quest headset',vr:'headset quest vive rift',carry:'wagon',move:'wagon',heavy:'wagon',memory:'sd card',storage:'sd card usb',disc:'dvd bluray',cd:'dvd drive',tape:'cassette measuring'};
   const useWords=new Map(), wordsOf=k=>{if(!useWords.has(k.h||k.n))useWords.set(k.h||k.n,[...new Set((useHay(k)+' '+k.n.toLowerCase()).split(/[^a-z0-9]+/).filter(Boolean))]);return useWords.get(k.h||k.n)};
   const keysOf=words=>words.filter(w=>!FILLER.has(w)).map(stem).filter(w=>w.length>1);
-  const fits=(tokens,keys)=>keys.reduce((n,w)=>n+(tokens.some(t=>t.startsWith(w))?1:0),0);   // whole words only: "phone" is not in "microphone"
-  const byUse=(pool,words)=>{const keys=keysOf(words);if(!keys.length)return [];
-    const scored=pool.map(k=>[k,fits(wordsOf(k),keys)]).filter(x=>x[1]>0), best=Math.max(0,...scored.map(x=>x[1]));
-    return scored.filter(x=>x[1]>=(best>=3?best-1:best)).sort((a,b)=>b[1]-a[1]).map(x=>x[0])};
-  const kitsFor=words=>{const keys=keysOf(words);if(!keys.length)return [];
-    const scored=KITS.map(x=>[x,fits((x.name+' '+x.why+' '+x.parts.map(p=>p.role).join(' ')).toLowerCase().split(/[^a-z0-9]+/),keys)]).filter(x=>x[1]>0), best=Math.max(0,...scored.map(x=>x[1]));
-    return best>=Math.min(2,keys.length)?scored.filter(x=>x[1]===best).map(x=>x[0]).slice(0,3):[]};
+  const has=(tokens,w)=>w.length<4?tokens.includes(w):tokens.some(t=>t.startsWith(w));       // whole words only: "phone" is not in "microphone"
+  const alsoOf=w=>(ALSO[w]||ALSO[w.replace(/e$/,'')]||ALSO[w+'e']||'').split(' ').filter(Boolean);
+  // A word that fits few things says more than one that fits many ("caliper" against "small"), so each word is worth
+  // more the rarer it is. An everyday word that only fits through the list above counts for a bit less.
+  const byUse=(pool,words)=>{const keys=[...new Set(keysOf(words))];if(!keys.length)return [];
+    const all=K.map(wordsOf), worth={};
+    for(const w of keys){const n=all.filter(t=>has(t,w)).length, also=alsoOf(w), m=also.length?all.filter(t=>also.some(a=>has(t,a))).length:0;
+      worth[w]=[n?Math.min(3,Math.log(1+K.length/n)):0, m?0.7*Math.min(3,Math.log(1+K.length/m)):0, also]}
+    const scored=pool.map(k=>{const t=wordsOf(k);let sum=0;for(const w of keys){if(worth[w][0]&&has(t,w))sum+=worth[w][0];else if(worth[w][1]&&worth[w][2].some(a=>has(t,a)))sum+=worth[w][1]}return [k,sum]}).filter(x=>x[1]>0);
+    const best=Math.max(0,...scored.map(x=>x[1]));
+    return scored.filter(x=>x[1]>=best*0.5).sort((a,b)=>b[1]-a[1]).slice(0,24).map(x=>x[0])};
+  const kitsFor=words=>{const keys=[...new Set(keysOf(words))];if(!keys.length)return [];
+    const scored=KITS.map(x=>{const t=(x.name+' '+x.why+' '+x.parts.map(p=>p.role).join(' ')).toLowerCase().split(/[^a-z0-9]+/);const direct=keys.filter(w=>has(t,w)).length, soft=keys.filter(w=>!has(t,w)&&alsoOf(w).some(a=>has(t,a))).length;return [x,direct,direct+soft*0.5]}).filter(x=>x[1]>=Math.min(2,keys.length));
+    const best=Math.max(0,...scored.map(x=>x[2]));
+    return scored.filter(x=>x[2]===best).map(x=>x[0]).slice(0,2)};
   let mode='name';
   function draw(){
     const words=q.value.trim().toLowerCase().split(/\s+/).filter(Boolean), pool=K.filter(k=>(!c.value||k.c===c.value)&&(!type||k.t===type));
     let rows=pool, said='';
     if(words.length&&mode==='use'){rows=byUse(pool,words);said=rows.length?rows.length+' things good for that':''}
     else if(words.length){
-      rows=pool.filter(k=>{const hay=catHay(k);return words.every(w=>hay.includes(w))});
+      rows=pool.filter(k=>{const hay=catHay(k),tight=k.n.toLowerCase().replace(/[^a-z0-9]+/g,'');return words.every(w=>hay.includes(w)||(w.length>2&&tight.includes(w)))});
       const inName=k=>words.every(w=>k.n.toLowerCase().includes(w))?0:1;rows=rows.slice().sort((a,b)=>inName(a)-inName(b));
       if(!rows.length){rows=pool.filter(k=>{const hay=nameHay(k);return words.every(w=>hay.includes(w)||near(w,hay))});if(rows.length)said='Nothing spelled exactly like that. '+rows.length+(rows.length===1?' close match':' close matches')}
       if(!rows.length){rows=byUse(pool,words);if(rows.length)said='No item has that name. '+rows.length+(rows.length===1?' thing is':' things are')+' good for it'}
