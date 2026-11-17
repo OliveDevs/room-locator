@@ -125,6 +125,8 @@
  what it does (and starts on No), and a misspelled search word ("lighy") shows close matches. Claude wrote those.
  (v5.12): the website can change an item's count with a new RL:COUNT code, Start over ends on a code that resets the
  website too, and the map says how many changes are waiting to be sent. Our design, Claude's code.
+ (v5.13): we wanted staff to need only the console PIN. The console now keeps a "website pass" and adds it to the two
+ staff codes it shows, so the phone that scans them can save. Claude proposed how; we chose it.
   _____
 
  Diana Caballero and Gauri Sharma
@@ -196,7 +198,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.12";
+const char VERSION[] PROGMEM = "5.13";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -1042,11 +1044,13 @@ bool drawQRText(int x, int y, const char* url) {   // works out a version-4 QR (
 const int MAP_X = 14, MAP_Y = 48;                 // where the map sits on the screen
 // The staff page's QR on the map is always the same, so it is worked out once and its dots are kept (137 bytes):
 // after the first time it appears at once instead of holding the map up for a second and a half.
+char webPass[24] = "";                             // the website pass (see "the website pass" further down). Empty = not linked
 uint8_t staffDots[137]; QRCode staffQR; bool staffQRReady = false;
 void drawStaffQR() {
   if (!staffQRReady) {
-    char url[56]; strcpy_P(url, STAFF_URL);
-    if (qrcode_initText(&staffQR, qrData, 4, ECC_MEDIUM, url) != 0) return;
+    char url[84]; strcpy_P(url, STAFF_URL);
+    if (webPass[0]) { strcat_P(url, PSTR("#k=")); strcat(url, webPass); }      // (74 letters at most: fits this size of QR at the lighter error correction, 78)
+    if (qrcode_initText(&staffQR, qrData, 4, webPass[0] ? ECC_LOW : ECC_MEDIUM, url) != 0) return;
     memcpy(staffDots, qrData, sizeof(staffDots)); staffQR.modules = staffDots; staffQRReady = true;
   }
   drawQRDots(&staffQR, MAP_X + 66, MAP_Y + 30);
@@ -1552,16 +1556,42 @@ bool parsePlace(const char* t, byte* u, byte* shelf) {
   if (n < 1 || n > unitCount[i]) return false;
   *u = i; *shelf = n; return true;
 }
+// ---- the website pass
+// So staff never type a key or a second passcode on a phone, the console carries a long random "website pass" on its
+// card (WEB.TSV). The staff page makes it up, locks the site's key with it, and hands it to the console once as an
+// RL:WEB code. From then on the console adds it to the two codes that open the staff page (the Staff page code on the
+// map and the "To the website" pages), both of which sit behind the staff PIN. Whoever scans one of those gets a staff
+// page that can already save. The item codes that borrowers scan never carry it.
+bool passLooksRight(const char* p) { byte n = strlen(p); if (n < 8 || n > 20) return false; for (byte i = 0; i < n; i++) if (!isalnum(p[i])) return false; return true; }
+void loadWeb() {
+  webPass[0] = '\0';
+  File f = cardOpen("WEB.TSV");
+  if (f) { if (readLine(f, 0) >= 0 && passLooksRight(field[0])) strcpy(webPass, field[0]); f.close(); }
+  staffQRReady = false;
+}
 void codeProblem(const __FlashStringHelper* what) {      // a phone code that cannot be used
   backDepth = 0; mode = HOME; homeMessage = true;
   header("Phone code not used", NULL); textF(18, 90, what, WHITE, SMALL);
   textF(18, 130, F("Nothing was changed. Make a new code on the"), DIM, SMALL); textF(18, 154, F("website and scan it again."), DIM, SMALL);
   footer(F("Any button = Home"));
 }
+// RL:WEB:<pass>               (made once by the website's "Link the console": see "the website pass" above)
 // RL:COUNT:<code6>:<copies>   (made by the website's "Edit an item" when the count changes)
 // RL:MOVE:<code6>:<UNIT>-<shelf>    RL:SHELF:<UNIT>-<shelf>:<UNIT>-<shelf>[:SWAP]    RL:ADD:<type>|<UNIT>-<shelf>|<copies>|<name>
 void runCode(char* c) {
   c += 3;
+  if (strncasecmp_P(c, PSTR("WEB:"), 4) == 0) {                  // the website pass, handed over once by the staff page
+    if (!passLooksRight(c + 4)) { codeProblem(F("That website pass is not the right shape.")); return; }
+    cardRemove("WEB.TSV"); File f = cardOpen("WEB.TSV", FILE_WRITE);
+    if (!f) { codeProblem(F("The SD card would not write. Is it locked?")); return; }
+    f.println(c + 4); f.close(); loadWeb();
+    backDepth = 0; mode = HOME; homeMessage = true;
+    header("Website linked", NULL);
+    textF(18, 90, F("From now on, a phone that scans the Staff page"), WHITE, SMALL); textF(18, 114, F("code or a To the website code on this console"), WHITE, SMALL);
+    textF(18, 138, F("can save to the website with nothing to type."), WHITE, SMALL);
+    textF(18, 178, F("Both codes sit behind the staff PIN."), DIM, SMALL);
+    footer(F("Any button = Home")); return;
+  }
   if (strncasecmp_P(c, PSTR("COUNT:"), 6) == 0) {
     char* num = strchr(c + 6, ':'); if (!num) { codeProblem(F("The code is not complete.")); return; }
     *num++ = '\0';
@@ -1793,7 +1823,7 @@ void undoLast() {                                // takes the last change back
 // staff page reads the changes straight out of the address, so nobody has to open the site first and scan from inside it.
 // Only letters, digits, - and . are safe everywhere in an address, so: tab is written ~, end of line is written !,
 // and anything else (a space in an item's name) as % and its two-digit code, like %20.
-const byte SYNC_BYTES = 120;                    // letters of the change list per QR page, counted the way they are written in the address
+const byte SYNC_BYTES = 96;                    // letters of the change list per QR page, counted the way they are written in the address
 bool syncPlain(char c) { return isalnum(c) || c == '-' || c == '.'; }
 int syncLen(File& f, long pos, long next) {      // how long the line from pos to next gets in the address
   int n = 0; f.seek(pos);
@@ -1812,7 +1842,9 @@ int syncText(char* out, int size, byte page, byte pages, int* first, int* total)
   File f = cardOpen("MOVES.TSV"); long pos = 0, next;
   while (f && (next = readLine(f, pos)) >= 0) { (*total)++; pos = next; }
   strcpy_P(out, STAFF_URL); len = strlen(out);
-  len += snprintf_P(out + len, size - len, PSTR("#RLSYNC~%d~%d~%d!"), page + 1, pages, *total);
+  out[len++] = '#'; out[len] = '\0';
+  if (webPass[0]) len += snprintf_P(out + len, size - len, PSTR("k=%s&"), webPass);   // the website pass first, so the page can save
+  len += snprintf_P(out + len, size - len, PSTR("RLSYNC~%d~%d~%d!"), page + 1, pages, *total);
   pos = 0;
   while (f && (next = readLine(f, pos)) >= 0) {
     int n = syncLen(f, pos, next);
@@ -1838,7 +1870,7 @@ int syncText(char* out, int size, byte page, byte pages, int* first, int* total)
 void drawSync() {
   char right[16]; snprintf_P(right, sizeof(right), PSTR("%d of %d"), syncPage + 1, syncPages);
   header("To the website", right);
-  char qtext[SYNC_BYTES + 80]; int first, total;
+  char qtext[SYNC_BYTES + 104]; int first, total;
   int lines = syncText(qtext, sizeof(qtext), syncPage, syncPages, &first, &total);
   textF(18, 90, F("Making the code. About 3 seconds..."), DIM, SMALL);     // this big QR takes the Mega a while: say so
   QRCode qr;
@@ -2079,7 +2111,7 @@ void receiveFile(char* args) {
   f.close();
   if (wasKinds) kindsFile = cardOpen("KINDS.TSV");
   if (got == size) { Serial.print(F("@OK ")); Serial.println(got); } else Serial.println(F("@ERR timeout"));
-  loadUnits(); loadBoards(); loadMoves(); loadStaff(); findAddedFrom(); goHome();
+  loadUnits(); loadBoards(); loadMoves(); loadStaff(); loadWeb(); findAddedFrom(); goHome();
 }
 void readLaptop() {                              // a line of text from the Serial Monitor or the laptop tools
   static char buf[64]; static byte len = 0;
@@ -2119,6 +2151,7 @@ void readLaptop() {                              // a line of text from the Seri
     if (strcasecmp_P(buf, PSTR("@STATUS")) == 0) {
       Serial.print(F("@STATUS changes=")); Serial.print(moveTotal);
       Serial.print(F(" pin=")); Serial.print(strcmp_P(staffPin, PSTR("1234")) == 0 ? F("starting") : F("changed"));
+      Serial.print(F(" web=")); Serial.print(webPass[0] ? F("linked") : F("no"));
       Serial.print(F(" staff=")); Serial.print(staffOK() ? F("open") : F("locked"));
       Serial.print(F(" screen=")); Serial.println(mode); continue;
     }
@@ -2152,7 +2185,7 @@ void setup() {
   if (!SD.begin(SD_CS_PIN)) { stopWith(F("No SD card"), F("Push the card in and press the reset button")); while (true) {} }
   kindsFile = cardOpen("KINDS.TSV");
   staffUntil = 0;                                                  // a restart locks changes again
-  loadUnits(); loadBoards(); loadMoves(); loadStaff(); findAddedFrom();
+  loadUnits(); loadBoards(); loadMoves(); loadStaff(); loadWeb(); findAddedFrom();
   if (!kindsFile || unitTotal == 0) {                              // card without the v5 files: wait for the laptop to send them
     stopWith(F("Waiting for the laptop"), F("The SD card needs the data files (push_card.py)"));
     while (!kindsFile || unitTotal == 0) readLaptop();

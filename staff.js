@@ -31,16 +31,23 @@ const toBase64 = text => { const bytes = new TextEncoder().encode(text); let bin
 // A 4-digit passcode can be guessed by trying all 10,000, so the locked copy is only as safe as the passcode is long.
 const lockBytes = async (pass, salt) => crypto.subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 600000 }, await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']), { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
 const b64 = bytes => btoa(String.fromCharCode(...new Uint8Array(bytes))), unb64 = text => Uint8Array.from(atob(text), c => c.charCodeAt(0));
-async function lockKey(pass) {
+// key.json holds up to two locked copies: "pass" opens with a passcode someone types, "console" opens with the long
+// website pass the console carries in its staff codes (so nobody types anything).
+const readLocked = () => fetch('key.json?x=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null);
+async function lockKey(pass, slot) {
   const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
   const box = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await lockBytes(pass, salt), new TextEncoder().encode(keep.get('rl-key')));
-  return { note: 'The site key, locked with the staff passcode. Made by the staff page.', salt: b64(salt), iv: b64(iv), box: b64(box) };
+  const all = (await readLocked()) || {}; const out = { note: 'The site key, locked. Made by the staff page.' };
+  if (all.salt) out.pass = { salt: all.salt, iv: all.iv, box: all.box };          // (the first version of this file had one copy at the top)
+  for (const name of ['pass', 'console']) if (all[name]) out[name] = all[name];
+  out[slot] = { salt: b64(salt), iv: b64(iv), box: b64(box) };
+  return out;
 }
-async function unlockKey(pass) {
-  const locked = await fetch('key.json?x=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null);
-  if (!locked) return 'No passcode has been set up for this site yet. Paste the key instead, then set one up.';
+async function unlockKey(pass, slot = 'pass') {
+  const all = await readLocked(), locked = all && (all[slot] || (slot === 'pass' && all.salt ? all : null));
+  if (!locked) return slot === 'pass' ? 'No passcode has been set up for this site yet. Paste the key instead, then set one up.' : 'This console is not linked to the website yet.';
   try { const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(locked.iv) }, await lockBytes(pass, unb64(locked.salt)), unb64(locked.box)); keep.set('rl-key', new TextDecoder().decode(plain)); return ''; }
-  catch (e) { return 'That passcode is not right.'; }
+  catch (e) { return slot === 'pass' ? 'That passcode is not right.' : 'The console\'s website pass does not match the website any more. Link the console again.'; }
 }
 let afterKey = null;
 function askForKey(why) { const box = $('connect'); box.hidden = false; $('connect-pass').focus({ preventScroll: true }); $('connect-why').textContent = why || ''; box.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
@@ -94,7 +101,16 @@ $('share-save').addEventListener('click', async e => {
   if (!keep.get('rl-key')) { $('share-why').textContent = 'This device needs the key first.'; return; }
   if (pass.length < 4) { $('share-why').textContent = 'Use at least 4 characters.'; return; }
   if (pass !== again) { $('share-why').textContent = 'The two do not match.'; return; }
-  if (await publish({ 'key.json': await lockKey(pass) }, 'Site key locked with the staff passcode (staff page)', e.target)) { $('share-pass').value = $('share-pass2').value = ''; $('share-why').textContent = 'Done. In about a minute any device can save by typing that passcode.'; }
+  if (await publish({ 'key.json': await lockKey(pass, 'pass') }, 'Site key locked with the staff passcode (staff page)', e.target)) { $('share-pass').value = $('share-pass2').value = ''; $('share-why').textContent = 'Done. In about a minute any device can save by typing that passcode.'; }
+});
+$('link-console').addEventListener('click', async e => {
+  if (!keep.get('rl-key')) { $('share-why').textContent = 'This device needs the key first.'; return; }
+  const letters = 'abcdefghjkmnpqrstuvwxyz23456789', pick = crypto.getRandomValues(new Uint8Array(20));
+  const pass = [...pick].map(n => letters[n % letters.length]).join('');
+  if (!(await publish({ 'key.json': await lockKey(pass, 'console') }, 'Site key locked with the console\'s website pass (staff page)', e.target))) return;
+  $('link-code').hidden = false;
+  const qr = qrcode(0, 'M'); qr.addData('RL:WEB:' + pass); qr.make(); $('link-qr').innerHTML = qr.createSvgTag({ cellSize: 8, margin: 4, scalable: true });
+  $('share-why').textContent = 'Saved. Now show this code to the console\'s scanner and type the staff PIN there.';
 });
 $('connect-forget').addEventListener('click', () => { keep.set('rl-key', null); $('connect').hidden = true; status.textContent = 'The key was removed from this device.'; dispatchEvent(new Event('rl-key-changed')); });
 
@@ -283,7 +299,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   function stopCamera() { scanning = false; if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; video.hidden = true; $('sync-stop').hidden = true; $('sync-start').hidden = false; }
   // Since console v5.8 each QR page is a web address: this page, then #RLSYNC~page~pages~total!line!line with ~ for tab,
   // ! for the end of a line and %20-style codes for anything else. A phone camera opens it and the page reads itself.
-  const fromAddress = text => { const at = text.indexOf('#RLSYNC'); if (at < 0) return text; try { return decodeURIComponent(text.slice(at + 1).replace(/~/g, '|').replace(/!/g, '\n')); } catch (e) { return text; } };
+  const fromAddress = text => { const at = text.indexOf('RLSYNC~'); if (at < 0 || text.indexOf('#') < 0) return text; try { return decodeURIComponent(text.slice(at).replace(/~/g, '|').replace(/!/g, '\n')); } catch (e) { return text; } };
   // Every scan with the camera opens this page afresh, so the pages scanned so far are kept on the phone for half an hour.
   const KEEP = 'rl-sync-pages';
   const remember = () => { try { localStorage.setItem(KEEP, JSON.stringify({ at: Date.now(), pageCount, pages })); } catch (e) {} };
@@ -463,6 +479,16 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   $('home-key-set').addEventListener('click', () => { if (keep.get('rl-key')) { keep.set('rl-key', null); drawHomeStatus(); } else askForKey('Type the staff passcode and this device can save.'); });
   $('home-share').addEventListener('click', () => { $('share').hidden = !$('share').hidden; });
   addEventListener('rl-key-changed', drawHomeStatus);
+  const unlockFromAddress = async () => {
+    const m = /(?:^#|&)k=([A-Za-z0-9]{8,20})(?:&|$)/.exec(location.hash); if (!m) return;
+    const rest = location.hash.slice(1).split('&').filter(part => !part.startsWith('k=')).join('&');
+    history.replaceState(null, '', location.pathname + (rest ? '#' + rest : ''));          // the pass does not stay in the address bar or the history
+    if (keep.get('rl-key')) return;
+    status.textContent = 'Opened from the console. Unlocking...';
+    const problem = await unlockKey(m[1], 'console') || await checkKey().catch(() => 'Could not reach GitHub. Check the internet connection.');
+    if (problem) { keep.set('rl-key', null); status.textContent = problem; return; }
+    status.textContent = 'Opened from the console: this phone can save to the website.'; dispatchEvent(new Event('rl-key-changed'));
+  };
   const takeAddress = () => {
     if (!location.hash.startsWith('#RLSYNC')) return;
     $('tab-sync').click(); cameFromConsole = true;
@@ -470,7 +496,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     history.replaceState(null, '', location.pathname);
     if (ok && Object.keys(pages).length < pageCount) status.textContent = 'Got it. On the console press Down for the next page and point the camera at it.';
   };
-  takeAddress(); addEventListener('hashchange', takeAddress);   // (hashchange: the camera reused a tab that already had this page open)
+  const fromConsoleCode = () => unlockFromAddress().then(takeAddress);
+  fromConsoleCode(); addEventListener('hashchange', fromConsoleCode);   // (hashchange: the camera reused a tab that already had this page open)
   // ---- edit an item that is already on the website: its photo, manual link and description
   const ef = $('edit-form'), preview = $('edit-preview');
   let photos = null; fetch('photos.json?v=20261116h').then(r => r.json()).then(p => { photos = p; }).catch(() => {});
