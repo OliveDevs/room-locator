@@ -242,7 +242,7 @@ function external(label,url){return '<a class="source-link" href="'+esc(url)+'" 
 function photoFor(k){if(k.p&&k.p.none)return null;return k.p||PHOTO.images?.[PHOTO.items?.[k.n]]}
 // a small picture for the list. Only Wikimedia thumbnails, which come in a 120-pixel size; each loads when it scrolls into view
 function thumbHtml(k){
-  const photo=photoFor(k), small=photo&&/\/\d+px-/.test(photo.url)?photo.url.replace(/\/\d+px-/,'/120px-'):'';
+  const photo=photoFor(k), small=!photo?'':/\/\d+px-/.test(photo.url)?photo.url.replace(/\/\d+px-/,'/120px-'):/Special:FilePath\/.*[?&]width=\d+/.test(photo.url)?photo.url.replace(/width=\d+/,'width=120'):'';
   return small?'<img class="card-thumb" src="'+esc(small)+'" alt="" loading="lazy" decoding="async" width="64" height="64" referrerpolicy="no-referrer" onerror="this.remove()">':'<span class="card-thumb card-thumb-none" aria-hidden="true"></span>';
 }
 function photoHtml(k){
