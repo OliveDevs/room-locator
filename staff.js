@@ -24,8 +24,26 @@ const REPO = 'OliveDevs/room-locator', BRANCH = 'main', API = 'https://api.githu
 const keep = { get: k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }, set: (k, v) => { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} } };
 const gh = (path, opts = {}) => fetch(API + path, { ...opts, headers: { Authorization: 'Bearer ' + keep.get('rl-key'), Accept: 'application/vnd.github+json', ...(opts.headers || {}) } });
 const toBase64 = text => { const bytes = new TextEncoder().encode(text); let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(bin); };
+// ---- the key, shared behind a website passcode
+// So that the key does not have to be pasted on every phone, a device that has it can lock it with a passcode (staff can
+// use the same digits as the console's PIN) and save the locked copy to the site as key.json. Any other device then
+// only needs the passcode. The key is locked with AES-GCM; the lock is made from the passcode with PBKDF2 (600,000 rounds).
+// A 4-digit passcode can be guessed by trying all 10,000, so the locked copy is only as safe as the passcode is long.
+const lockBytes = async (pass, salt) => crypto.subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 600000 }, await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']), { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+const b64 = bytes => btoa(String.fromCharCode(...new Uint8Array(bytes))), unb64 = text => Uint8Array.from(atob(text), c => c.charCodeAt(0));
+async function lockKey(pass) {
+  const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+  const box = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await lockBytes(pass, salt), new TextEncoder().encode(keep.get('rl-key')));
+  return { note: 'The site key, locked with the staff passcode. Made by the staff page.', salt: b64(salt), iv: b64(iv), box: b64(box) };
+}
+async function unlockKey(pass) {
+  const locked = await fetch('key.json?x=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null);
+  if (!locked) return 'No passcode has been set up for this site yet. Paste the key instead, then set one up.';
+  try { const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(locked.iv) }, await lockBytes(pass, unb64(locked.salt)), unb64(locked.box)); keep.set('rl-key', new TextDecoder().decode(plain)); return ''; }
+  catch (e) { return 'That passcode is not right.'; }
+}
 let afterKey = null;
-function askForKey(why) { const box = $('connect'); box.hidden = false; $('connect-why').textContent = why || ''; box.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+function askForKey(why) { const box = $('connect'); box.hidden = false; $('connect-pass').focus({ preventScroll: true }); $('connect-why').textContent = why || ''; box.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
 async function checkKey() {
   const r = await gh('');
   if (r.status === 401) return 'GitHub does not know this key. Copy it again, all of it.';
@@ -35,7 +53,7 @@ async function checkKey() {
 }
 // files = { 'data.json': object, ... }. Returns true when every file is on the website.
 async function publish(files, message, button) {
-  if (!keep.get('rl-key')) { afterKey = () => button ? button.click() : publish(files, message, button); askForKey('Saving to the website needs the site key on this device, once.'); return false; }
+  if (!keep.get('rl-key')) { afterKey = () => button ? button.click() : publish(files, message, button); askForKey('Saving to the website needs the staff passcode on this device, once.'); return false; }
   const label = button ? button.textContent : ''; if (button) { button.disabled = true; button.textContent = 'Saving...'; }
   try {
     const stamp = new Date().toISOString();
@@ -62,6 +80,21 @@ $('connect-save').addEventListener('click', async () => {
   if (problem) { keep.set('rl-key', null); $('connect-why').textContent = problem; return; }
   $('connect').hidden = true; $('connect-key').value = ''; status.textContent = 'This device can now save to the website.'; dispatchEvent(new Event('rl-key-changed'));
   if (afterKey) { const go = afterKey; afterKey = null; go(); }
+});
+const keyReady = () => { $('connect').hidden = true; status.textContent = 'This device can now save to the website.'; dispatchEvent(new Event('rl-key-changed')); if (afterKey) { const go = afterKey; afterKey = null; go(); } };
+$('connect-unlock').addEventListener('click', async () => {
+  const pass = $('connect-pass').value; if (!pass) return;
+  $('connect-why').textContent = 'Checking...';
+  const problem = await unlockKey(pass) || await checkKey().catch(() => 'Could not reach GitHub. Check the internet connection.');
+  if (problem) { keep.set('rl-key', null); $('connect-why').textContent = problem; return; }
+  $('connect-pass').value = ''; keyReady();
+});
+$('share-save').addEventListener('click', async e => {
+  const pass = $('share-pass').value, again = $('share-pass2').value;
+  if (!keep.get('rl-key')) { $('share-why').textContent = 'This device needs the key first.'; return; }
+  if (pass.length < 4) { $('share-why').textContent = 'Use at least 4 characters.'; return; }
+  if (pass !== again) { $('share-why').textContent = 'The two do not match.'; return; }
+  if (await publish({ 'key.json': await lockKey(pass) }, 'Site key locked with the staff passcode (staff page)', e.target)) { $('share-pass').value = $('share-pass2').value = ''; $('share-why').textContent = 'Done. In about a minute any device can save by typing that passcode.'; }
 });
 $('connect-forget').addEventListener('click', () => { keep.set('rl-key', null); $('connect').hidden = true; status.textContent = 'The key was removed from this device.'; dispatchEvent(new Event('rl-key-changed')); });
 
@@ -422,11 +455,13 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const sy = room.synced, when = sy && sy.at ? new Date(sy.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
     $('home-sync').textContent = sy && sy.at ? 'Website last matched the console ' + when + ', with ' + sy.lines + (sy.lines === 1 ? ' change' : ' changes') + ' since the Nov 16 setup.' : 'The website is at the Nov 16 setup. No console changes have been brought over yet.';
     $('home-key').textContent = keep.get('rl-key') ? 'This device can save to the website.' : 'This device cannot save to the website yet.';
-    $('home-key-set').textContent = keep.get('rl-key') ? 'Forget the key' : 'Set up saving';
+    $('home-key-set').textContent = keep.get('rl-key') ? 'Sign this device out' : 'Type the staff passcode';
+    $('home-share').hidden = !keep.get('rl-key'); if (!keep.get('rl-key')) $('share').hidden = true;
   };
   drawHomeStatus();
   $('home-sync-go').addEventListener('click', () => { $('tab-sync').click(); $('tool-sync').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
-  $('home-key-set').addEventListener('click', () => { if (keep.get('rl-key')) { keep.set('rl-key', null); drawHomeStatus(); } else askForKey('Paste the site key once and this device can save.'); });
+  $('home-key-set').addEventListener('click', () => { if (keep.get('rl-key')) { keep.set('rl-key', null); drawHomeStatus(); } else askForKey('Type the staff passcode and this device can save.'); });
+  $('home-share').addEventListener('click', () => { $('share').hidden = !$('share').hidden; });
   addEventListener('rl-key-changed', drawHomeStatus);
   const takeAddress = () => {
     if (!location.hash.startsWith('#RLSYNC')) return;
