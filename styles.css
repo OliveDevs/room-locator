@@ -76,3 +76,8 @@
 .home-status{margin:20px 0 4px;max-width:720px}.home-status p{margin:0 0 8px}.home-status .button-secondary{background:#fff;color:var(--red);border:1px solid var(--red);padding:10px 14px;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
 .link-button{background:none;border:0;padding:0;color:var(--red);font:inherit;text-decoration:underline;cursor:pointer}
 .code-many{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}.code-many button:not(.link-button){border:1px solid var(--red);background:var(--red);color:#fff;padding:10px 14px;font:inherit;font-size:14px;font-weight:700;cursor:pointer}.code-many .button-secondary{background:#fff!important;color:var(--red)!important}.code-many button:disabled{opacity:.4;cursor:default}
+.card-where{display:block;margin-top:6px;font-size:14px;color:var(--red);font-weight:600}
+.room-unit[data-tall] span{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap}
+.room-unit[data-unit="UND"]{align-items:flex-start}.room-unit[data-unit="DOO"]{z-index:1}
+@media(max-width:580px){.item-card{min-height:0!important;padding-top:16px!important;padding-bottom:16px!important}.room-unit{font-size:9px}}
+.room-unit[data-unit="UND"] span{display:none}
