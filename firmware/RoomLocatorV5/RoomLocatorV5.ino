@@ -129,6 +129,8 @@
  staff codes it shows, so the phone that scans them can save. Claude proposed how; we chose it.
  (v5.14): we wanted the console to light every shelf of a kit at once. A kit page on the website shows an RL:KIT
  code; scanning it fills the put-away list, so each piece gets its own colour. No PIN: it changes nothing. Claude's code.
+ Also v5.14: a small dog trots across an item's screen and sits, when there is room under the shelf box. The dog
+ pictures are Diana's (made with ChatGPT's image tool, in dog.h); Claude shrank them for the screen and wrote dogTick().
   _____
 
  Diana Caballero and Gauri Sharma
@@ -194,6 +196,7 @@
 #include <MCUFRIEND_kbv.h>
 #include <Adafruit_NeoPixel.h>
 #include <qrcode.h>
+#include "dog.h"                                // the dog's pictures (a second tab, next to this file)
 #include <Fonts/FreeSans9pt7b.h>
 #include <Fonts/FreeSansBold9pt7b.h>
 #include <Fonts/FreeSansBold12pt7b.h>
@@ -264,6 +267,8 @@ char shelfUnit[5]; byte shelfNumber = 0;        // the shelf a scanned label poi
 char query[32]; byte queryLen = 0;              // what is being typed
 volatile byte missedPress = 0;                   // buttons pressed while the console was busy, one bit each (see readButtons)
 byte keyQueue[16]; byte keyHead = 0, keyCount = 0;   // keys typed while the console was busy, oldest first
+bool dogFree = false; byte dogStep = 0; int dogX = 0; unsigned long dogAt = 0;   // the dog on the item screen: dogStep 0 = not moving
+const int DOG_Y = 234, DOG_STOP = 212;           // where it walks (under the shelf box) and where it sits down
 byte qrWanted = 0; unsigned long qrAt = 0;        // a QR is still to be drawn: 1 = the item page's (see drawItem), 2 = the staff page's on the map
 bool live = false, livePending = false;         // live = the list on screen is a search that updates as you type
 unsigned long liveAt = 0;
@@ -400,6 +405,34 @@ void icon(byte cat, int cx, int cy, uint16_t c) {
 }
 
 // ============================== Lights ==============================
+// ============================== The dog ==============================
+// One picture from dog.h onto the screen. Each byte holds two pixels, each a number that picks a colour from DOG_COLOR.
+// A whole row is sent at once, which is far quicker than one pixel at a time.
+void drawDog(int x, int y, const uint8_t* pic, byte w, byte h) {
+  uint16_t color[16], rowOf[72];
+  for (byte i = 0; i < 16; i++) color[i] = pgm_read_word(&DOG_COLOR[i]);
+  tft.setAddrWindow(x, y, x + w - 1, y + h - 1);
+  for (byte r = 0; r < h; r++) {
+    for (byte c = 0; c < w; c += 2) { byte two = pgm_read_byte(pic++); rowOf[c] = color[two >> 4]; rowOf[c + 1] = color[two & 15]; }
+    tft.pushColors(rowOf, w, r == 0);
+  }
+  tft.setAddrWindow(0, 0, tft.width() - 1, tft.height() - 1);
+}
+// Called from loop(). Once an item's QR is on the screen the dog walks in from the left, 8 pixels every 70 ms, and
+// sits. It waits whenever a key, a button or a scan is on its way, and stops if the screen changes.
+void dogTick() {
+  if (!dogStep) return;
+  if (mode != ITEM) { dogStep = 0; return; }
+  if (millis() - dogAt < 70 || keyCount || missedPress || Serial1.available() || Serial.available()) return;
+  dogAt = millis();
+  if (dogX >= DOG_STOP) {                                          // arrived: wipe the last step and sit
+    tft.fillRect(dogX - 8, DOG_Y, DOG_W, DOG_H, BG);
+    drawDog(DOG_STOP + 10, DOG_Y - 4, DOG_SIT, SIT_W, SIT_H);
+    dogStep = 0; return;
+  }
+  drawDog(dogX, DOG_Y, (const uint8_t*)pgm_read_ptr(&DOG_WALK[(dogStep >> 1) & 3]), DOG_W, DOG_H);   // each picture stays for two steps
+  dogX += 8; dogStep++;
+}
 void lightsOff() { strip.clear(); strip.show(); }
 void lightOne(int led, uint32_t color) { strip.clear(); if (led >= 0) strip.setPixelColor(led, color); strip.show(); }
 void addLights(int first, byte span, uint32_t color) { if (first < 0) return; for (byte i = 0; i < span; i++) if (first + i < NUM_LEDS) strip.setPixelColor(first + i, color); }
@@ -1097,7 +1130,8 @@ void drawItem() {
   else textF(28, 142, F("Not on the shelves in this room"), DIM, SMALL);
   int y = 180;                                                    // the two notes stack under the shelf, each as long as it needs
   if (field[K_WHAT][0]) { textF(14, y, F("What it is"), DIM, SMALL); y += 22; y += 20 * paragraph(14, y, field[K_WHAT], WHITE, LEFT_W, 3) + 16; }
-  if (field[K_GOOD][0]) { textF(14, y, F("Good for"), DIM, SMALL); y += 22; paragraph(14, y, field[K_GOOD], WHITE, LEFT_W, (284 - y) / 20 + 1); }
+  if (field[K_GOOD][0]) { textF(14, y, F("Good for"), DIM, SMALL); y += 22; y += 20 * paragraph(14, y, field[K_GOOD], WHITE, LEFT_W, (284 - y) / 20 + 1); }
+  dogFree = y <= 226; dogStep = 0;                               // room for the dog only when the notes end above its strip
   // Working out a QR takes the Mega over a second, and nothing else can happen meanwhile. So the page is drawn
   // without it, and loop() adds the QR once nobody has pressed anything for a moment: flicking through items stays quick.
   tft.fillRect(312, 82, 156, 156, PANEL); qrWanted = 1; qrAt = millis();
@@ -2224,9 +2258,10 @@ void loop() {
   if ((qrWanted == 1 && mode != ITEM) || (qrWanted == 2 && mode != MAP)) qrWanted = 0;
   if (qrWanted && millis() - qrAt > 350 && !keyCount && !missedPress && !Serial1.available() && !Serial.available()) {
     byte which = qrWanted; qrWanted = 0;
-    if (which == 1) { loadKind(currentKind); drawQR(312, 82); }
+    if (which == 1) { loadKind(currentKind); drawQR(312, 82); if (dogFree) { dogStep = 1; dogX = 2; dogAt = millis(); } }   // the QR is up: the dog may come in
     else if (rowCount && row[cursor] == ROW_PHONE) drawStaffQR();
   }
+  dogTick();
   if (livePending && millis() - liveAt > 250 && !Serial1.available()) { livePending = false; if (queryLen >= 2) liveSearch(); }
   if (staffUntil && millis() - lastActivity > IDLE_MS) staffUntil = 0;          // nobody touched it for 2 minutes: changes lock again
   if (mode == PIN && pinRestUntil && !pinResting()) draw();                     // the minute of rest is over: the message goes away

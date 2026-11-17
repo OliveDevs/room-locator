@@ -340,8 +340,6 @@ function itemView(k,fromConsole){
   ((k.tips?.length||TIPS[k.n]||TIPS[group])?'<section class="guide-section"><h2>Useful tips</h2>'+listItems(k.tips||TIPS[k.n]||TIPS[group])+'</section>':'')+((howto&&!manual.length&&!MODEL_CHOICES[k.n])?(makerSupport(k.n)?'<section class="guide-section"><h2>Maker support</h2>'+external('Open '+makerSupport(k.n)[0]+'\u2019s own support site',makerSupport(k.n)[1])+'<p class="note">Read the model on the item to find its exact manual there.</p></section>':''):manualHtml(k,manual))+'</div><aside class="side-stack"><div class="side-block"><h2>Borrowing</h2><p>Visit IDeATe Lending in Hunt Library basement, room A29, across from the elevator. Bring your CMU ID. Check current lending hours and borrowing rules before visiting.</p><p>During the semester, the normal loan is three days with a 6 p.m. due time. Weekends count; university holidays may shift the due date.</p><p>Loans cannot be renewed. Hand the item to staff in A29; drop boxes and other libraries do not count. Late fees run from $1 to $25 a day depending on what the item costs, and borrowing is blocked once fines reach $25.</p>'+external('Official IDeATe Lending rules','https://ideate.cmu.edu/resources/lending/index.html')+external('Full circulation policy','https://ideate.cmu.edu/resources/lending/ideate-circulation-policy.html')+external('Browse CMU’s '+categoryName(k.c)+' collection',collectionUrl(k.c))+'</div>'+(related.length?'<div class="side-block"><h2>Often used with</h2>'+related.map(g=>'<a class="source-link" href="#t'+encodeURIComponent(g)+'">'+esc(g.split('/')[1])+' →</a>').join('')+'<p>Compatibility and availability vary by model.</p></div>':'')+(fromConsole?'':reminderHtml(false))+kitsFor(k)+'<div class="side-block"><h2>Something wrong with it?</h2><p>Missing a part, broken, or this page is wrong? Tell the lending staff.</p><a class="source-link" href="'+esc(problemLink(k,live))+'">Report a problem by email \u2192</a></div><div class="side-block"><h2>At checkout</h2><p>Confirm the exact model, included parts, condition, and return date with staff. For powered devices, test startup before leaving when possible.</p></div></aside></div>';
   attachCalendar(k,fromConsole);
   countOpen(k,fromConsole);
-  if(fromConsole)dogRun();
-  dogHidden(k);
   const modelChoice=document.getElementById('model-choice');
   if(modelChoice)modelChoice.addEventListener('change',()=>{const result=document.getElementById('model-result'),selected=MODEL_CHOICES[k.n].options[Number(modelChoice.value)];result.innerHTML=modelChoice.value===''?'If none matches, ask staff for the model number before using a manual.':external('Open '+selected[0]+' maker guide',selected[1]);});
   const modelNumber=document.getElementById('model-number');
@@ -424,29 +422,6 @@ function roomView(){
   }));
 }
 // Kits: everything for one kind of project, each piece with its shelf. The first choice in each row is shown large; the others are alternatives.
-// ---------- A small dog (our own drawing of a black terrier) for a bit of fun
-const DOG='<svg class="dog" viewBox="0 0 64 44" aria-hidden="true"><polygon points="16,19 11,5 20,16"/><rect x="13" y="15" width="35" height="17" rx="8"/><rect x="39" y="7" width="17" height="15" rx="5"/><rect x="49" y="13" width="13" height="11" rx="4"/><polygon points="42,9 44,0 48,9"/><polygon points="49,9 52,1 55,9"/><circle cx="52.5" cy="12.5" r="1.3" fill="#fff"/><g class="dog-legs-a"><rect x="17" y="29" width="5" height="11" rx="2"/><rect x="42" y="29" width="5" height="11" rx="2"/></g><g class="dog-legs-b"><rect x="24" y="29" width="5" height="11" rx="2"/><rect x="35" y="29" width="5" height="11" rx="2"/></g></svg>';
-// runs across the top once when a page is opened from the console's code
-function dogRun(){
-  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
-  const strip=document.createElement('div');strip.className='dog-strip';strip.innerHTML=DOG;
-  app.insertBefore(strip,app.firstChild);
-  strip.firstChild.addEventListener('animationend',e=>{if(e.animationName==='dog-across')strip.remove()});
-}
-// and hides on a dozen item pages: tap it and it hops. The phone remembers which ones were found.
-const dogHides=k=>k.h&&parseInt(k.h,16)%31===7;
-function dogHidden(k){
-  if(!dogHides(k))return;
-  const fig=document.querySelector('.item-photo');if(!fig)return;
-  const all=K.filter(dogHides).length;
-  const b=document.createElement('button');b.type='button';b.className='dog-hide';b.setAttribute('aria-label','A small dog is hiding here');b.innerHTML=DOG;
-  const say=document.createElement('p');say.className='dog-say';say.setAttribute('role','status');
-  b.addEventListener('click',()=>{let found=[];try{found=JSON.parse(localStorage.getItem('rl-dogs')||'[]')}catch(e){}
-    if(!found.includes(k.h))found.push(k.h);try{localStorage.setItem('rl-dogs',JSON.stringify(found))}catch(e){}
-    b.classList.remove('hop');void b.offsetWidth;b.classList.add('hop');
-    say.textContent=found.length>=all?'You found all '+all+' hiding spots.':'You found the dog. '+found.length+' of '+all+' hiding spots found.'});
-  fig.appendChild(b);fig.appendChild(say);
-}
 // ---------- My loans: what this phone was reminded about, until someone presses Returned. Kept in this browser only.
 function loans(){try{const v=JSON.parse(localStorage.getItem('rl-loans')||'[]');return Array.isArray(v)?v:[]}catch(e){return []}}
 function saveLoans(v){try{localStorage.setItem('rl-loans',JSON.stringify(v));return true}catch(e){return false}}
