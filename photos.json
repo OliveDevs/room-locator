@@ -821,6 +821,78 @@
       "page": "https://commons.wikimedia.org/wiki/File:Apple_accessories_-_remote,_mini_DisplayPort_adapters.jpg",
       "artist": "raneko",
       "license": "CC BY 2.0"
+    },
+    "ironing board": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/03/Buegelbrett_%28fcm%29.jpg/960px-Buegelbrett_%28fcm%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Buegelbrett_(fcm).jpg",
+      "artist": "Frank C. Müller",
+      "license": "CC BY-SA 3.0"
+    },
+    "Livid Alias 8": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5b/Livid_Alias8_MIDI_Controller.jpg/960px-Livid_Alias8_MIDI_Controller.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Livid_Alias8_MIDI_Controller.jpg",
+      "artist": "Livid Instruments",
+      "license": "CC BY-SA 2.0"
+    },
+    "USB Ethernet adapter": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/ce/TP-Link_UE300_ethernet_USB_adapter_HS1.jpg/960px-TP-Link_UE300_ethernet_USB_adapter_HS1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:TP-Link_UE300_ethernet_USB_adapter_HS1.jpg",
+      "artist": "Hayden Schiff",
+      "license": "CC BY 4.0"
+    },
+    "headphone jack adapter": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/71/3.5_to_6.3_headphone_jack_adapter_%2801%29.jpg/960px-3.5_to_6.3_headphone_jack_adapter_%2801%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:3.5_to_6.3_headphone_jack_adapter_(01).jpg",
+      "artist": "Retired electrician",
+      "license": "CC0"
+    },
+    "rotary tool with accessories": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/46/Dremel_3000_%2829699621285%29.png/960px-Dremel_3000_%2829699621285%29.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Dremel_3000_(29699621285).png",
+      "artist": "Gareth Halfacree from Bradford, UK",
+      "license": "CC BY-SA 2.0"
+    },
+    "digital stage box": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/06/Allen_%26_Heath_AR2412_top.jpg/960px-Allen_%26_Heath_AR2412_top.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Allen_%26_Heath_AR2412_top.jpg",
+      "artist": "Andrew Lorimer",
+      "license": "CC BY-SA 4.0"
+    },
+    "headphone amplifier": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c4/SPL_Phonitor_2_%28model_1280_black%29_headphone_amplifier_with_monitor_controller_-_2014_NAMM_Show_%28by_Matt_Vanacoro%29.jpg/960px-SPL_Phonitor_2_%28model_1280_black%29_headphone_amplifier_with_monitor_controller_-_2014_NAMM_Show_%28by_Matt_Vanacoro%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:SPL_Phonitor_2_(model_1280_black)_headphone_amplifier_with_monitor_controller_-_2014_NAMM_Show_(by_Matt_Vanacoro).jpg",
+      "artist": "Matt Vanacoro",
+      "license": "CC BY 2.0"
+    },
+    "headphone splitter": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/78/Headphone_mic_splitter_adapter.jpg/960px-Headphone_mic_splitter_adapter.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Headphone_mic_splitter_adapter.jpg",
+      "artist": "Tiia Monto",
+      "license": "CC BY-SA 4.0"
+    },
+    "USB audio adapter": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/40/TRRS_to_USB_adapter.JPG/960px-TRRS_to_USB_adapter.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:TRRS_to_USB_adapter.JPG",
+      "artist": "DieNase666",
+      "license": "CC BY-SA 3.0"
+    },
+    "foot switch": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/73/Grundig_Fu%C3%9Fschalter_523_neu_o.jpg/960px-Grundig_Fu%C3%9Fschalter_523_neu_o.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Grundig_Fu%C3%9Fschalter_523_neu_o.jpg",
+      "artist": "Norbert Schnitzler",
+      "license": "CC BY-SA 3.0"
+    },
+    "USB to DMX cable": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/52/Usb_to_dmx_pigtail.jpg/960px-Usb_to_dmx_pigtail.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Usb_to_dmx_pigtail.jpg",
+      "artist": "MrDrBob",
+      "license": "CC BY-SA 3.0"
+    },
+    "Art-Net DMX node": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3e/ACME_Lighting_ArtNet_To_DMX_model_CA-AN28_%28DMX_Ethernet_Node%29_%282016-01-16_18.58.18_by_chcleung_%29.jpg/960px-ACME_Lighting_ArtNet_To_DMX_model_CA-AN28_%28DMX_Ethernet_Node%29_%282016-01-16_18.58.18_by_chcleung_%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:ACME_Lighting_ArtNet_To_DMX_model_CA-AN28_(DMX_Ethernet_Node)_(2016-01-16_18.58.18_by_chcleung_).jpg",
+      "artist": "chcleung",
+      "license": "CC BY-SA 2.0"
     }
   },
   "items": {
@@ -1101,7 +1173,19 @@
     "USB Hub": "USB hub",
     "Mini-DisplayPort to HDMI": "Mini DisplayPort to HDMI adapter",
     "Mini DisplayPort to DVI": "Mini DisplayPort to DVI adapter",
-    "Mini DisplayPort to VGA": "Mini DisplayPort adapters"
+    "Mini DisplayPort to VGA": "Mini DisplayPort adapters",
+    "Ironing Board": "ironing board",
+    "LIVID Alias 8": "Livid Alias 8",
+    "USB-C to Ethernet": "USB Ethernet adapter",
+    "1/8\" to 1/4\" Adapter": "headphone jack adapter",
+    "Rotary Tool Accessory": "rotary tool with accessories",
+    "Behringer S16 Digital Stage Box": "digital stage box",
+    "Headphone Amp": "headphone amplifier",
+    "Audio Splitter": "headphone splitter",
+    "USB A to 1/8\" Audio": "USB audio adapter",
+    "USB Foot Pedal Kit": "foot switch",
+    "Open DMX USB Interface": "USB to DMX cable",
+    "ODE Interface": "Art-Net DMX node"
   },
   "exact": [
     "Sony a7 III Camera",
@@ -2795,6 +2879,18 @@
       "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226782504436&vid=01CMU_INST:01CMU",
       "w": 250,
       "h": 148
+    },
+    "Zoom H4essential Field Audio Recorder": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020427752504436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020427752504436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "DPA XLR Adapter - Reserve": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/dpaXLRadapter.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226942304436&vid=01CMU_INST:01CMU",
+      "w": 457,
+      "h": 250
     }
   }
 }
