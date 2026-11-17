@@ -97,5 +97,13 @@
 .pup{display:block;height:auto;user-select:none;pointer-events:none}
 .hero-row{display:flex;align-items:flex-end;justify-content:space-between;gap:24px}.hero-row>div{min-width:0}.pup-peek{width:128px;flex:none;margin-bottom:-6px}.pup-wave{width:112px;flex:none}
 .empty-state .pup{width:128px;margin:0 auto 14px}.empty-state{text-align:center}
-.my-loans{position:relative}.pup-loans{position:absolute;right:20px;top:-58px;width:62px}
-@media(max-width:580px){.pup-peek{width:84px}.pup-wave{width:76px}.pup-loans{width:52px;top:-48px;right:14px}}
+
+@media(max-width:580px){.pup-peek{width:84px}.pup-wave{width:76px}}
+.pup-move{display:block;background-repeat:no-repeat;background-size:400% 100%;animation:pup-frames 1.6s steps(4,jump-none) infinite}
+.pup-pant{background-image:url(dog/pant.png);aspect-ratio:173/200}.pup-bark{background-image:url(dog/bark.png);aspect-ratio:163/200;animation-duration:.9s}
+@keyframes pup-frames{from{background-position:0 0}to{background-position:100% 0}}
+.my-loans{position:relative}.pup-loans{position:absolute;right:20px;top:-62px;width:58px}
+.pup-room{width:104px;float:right;margin:4px 0 8px 24px}
+.lost-link{display:flex;align-items:center;gap:18px;background:var(--white);padding:16px 22px;margin-bottom:28px}.lost-link .pup{width:64px;flex:none}.lost-link p{margin:0}
+@media(max-width:580px){.pup-loans{width:48px;top:-52px;right:14px}.pup-room{width:72px}}
+@media(prefers-reduced-motion:reduce){.pup-move{animation:none}}
