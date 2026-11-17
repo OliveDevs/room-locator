@@ -791,6 +791,36 @@
       "page": "https://commons.wikimedia.org/wiki/File:Wall-Wart-AC-Adapter.jpg",
       "artist": "Evan-Amos",
       "license": "Public domain"
+    },
+    "MIDI cable": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/02/Midi_ports_and_cable.jpg/960px-Midi_ports_and_cable.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Midi_ports_and_cable.jpg",
+      "artist": "Pretzelpaws",
+      "license": "CC BY-SA 3.0"
+    },
+    "USB hub": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d8/USB_HUB_2.0.jpg/960px-USB_HUB_2.0.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:USB_HUB_2.0.jpg",
+      "artist": "Kskhh",
+      "license": "CC BY-SA 4.0"
+    },
+    "Mini DisplayPort to HDMI adapter": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/16/Mini_DisplayPort_to_HDMI_adapter.jpeg/960px-Mini_DisplayPort_to_HDMI_adapter.jpeg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Mini_DisplayPort_to_HDMI_adapter.jpeg",
+      "artist": "User:Ragesoss",
+      "license": "CC BY-SA 3.0"
+    },
+    "Mini DisplayPort to DVI adapter": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9a/Mini_DisplayPort_to_DVI_adapter.jpg/960px-Mini_DisplayPort_to_DVI_adapter.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Mini_DisplayPort_to_DVI_adapter.jpg",
+      "artist": "Blake Patterson",
+      "license": "CC BY 2.0"
+    },
+    "Mini DisplayPort adapters": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/88/Apple_accessories_-_remote%2C_mini_DisplayPort_adapters.jpg/960px-Apple_accessories_-_remote%2C_mini_DisplayPort_adapters.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "page": "https://commons.wikimedia.org/wiki/File:Apple_accessories_-_remote,_mini_DisplayPort_adapters.jpg",
+      "artist": "raneko",
+      "license": "CC BY 2.0"
     }
   },
   "items": {
@@ -1066,7 +1096,12 @@
     "EOS Rebel T3 Camera": "exact:EOS Rebel T3 Camera",
     "FX3 Full-Frame Cinema Camera": "exact:FX3 Full-Frame Cinema Camera",
     "HDMI to DVI": "HDMI to DVI adapter",
-    "Lightning to USB A Adapter Cable": "Lightning cable"
+    "Lightning to USB A Adapter Cable": "Lightning cable",
+    "MIDI Cable": "MIDI cable",
+    "USB Hub": "USB hub",
+    "Mini-DisplayPort to HDMI": "Mini DisplayPort to HDMI adapter",
+    "Mini DisplayPort to DVI": "Mini DisplayPort to DVI adapter",
+    "Mini DisplayPort to VGA": "Mini DisplayPort adapters"
   },
   "exact": [
     "Sony a7 III Camera",
