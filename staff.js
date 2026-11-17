@@ -297,7 +297,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   // the Nov 16 backup, then every line in order. That way a change taken back on the console disappears here too, and an
   // empty list (after Start over on the console) puts the website back to the setup. What only the website knows about an
   // item (photo, manual link, description) is carried over.
-  let baseline = null;
+  let baseline = null, autoTimer = 0, cameFromConsole = false;
+  $('sync-auto-cancel').addEventListener('click', () => { clearInterval(autoTimer); $('sync-auto').hidden = true; status.textContent = 'Not saved. Press Save these changes to the website when you are ready.'; });
   const loadBaseline = async () => baseline || (baseline = await Promise.all([fetch('backup/2026-11-16/data.json?x=' + Date.now()).then(x => x.json()), fetch('backup/2026-11-16/room.json?x=' + Date.now()).then(x => x.json())]));
   async function apply(lines) {
     const [baseData, baseRoom] = await loadBaseline();
@@ -343,6 +344,14 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     notes.forEach(n => list.push(n));
     $('sync-summary').innerHTML = list.map(x => '<li>' + esc(x) + '</li>').join('');
     $('sync-result').hidden = false;
+    // Scanned straight from the console on a device that has the key: save by itself after a 5-second count, so keeping
+    // the website in step is one scan and nothing else. Cancel stops it; nothing to change means nothing is saved.
+    clearInterval(autoTimer); $('sync-auto').hidden = true;
+    if (cameFromConsole && moved && keep.get('rl-key')) {
+      let left = 5; $('sync-auto').hidden = false;
+      const tick = () => { $('sync-auto-text').textContent = 'Saving to the website in ' + left + '...'; if (left-- <= 0) { clearInterval(autoTimer); $('sync-auto').hidden = true; $('sync-publish').click(); } };
+      tick(); autoTimer = setInterval(tick, 1000);
+    }
   }
   const boardBelowIn = (u, n) => { while (n > 1 && u.boards && u.boards.length && !u.boards.includes(n)) n--; return n; };
   const download = (obj, name) => { const blob = new Blob([JSON.stringify(obj, null, 2) + '\n'], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
@@ -421,7 +430,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   addEventListener('rl-key-changed', drawHomeStatus);
   const takeAddress = () => {
     if (!location.hash.startsWith('#RLSYNC')) return;
-    $('tab-sync').click();
+    $('tab-sync').click(); cameFromConsole = true;
     const ok = readPage(location.href);
     history.replaceState(null, '', location.pathname);
     if (ok && Object.keys(pages).length < pageCount) status.textContent = 'Got it. On the console press Down for the next page and point the camera at it.';
