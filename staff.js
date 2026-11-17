@@ -538,7 +538,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
 }).catch(err => { console.error(err); status.textContent = 'Could not load the inventory. Open this page from the published site or a local web server.'; });
 
 // ---------- What students open: reads the public counters the student pages add to (one per item)
-try { localStorage.setItem('rl-staff', '1'); } catch (e) {}   // this device's own browsing is then left out of the counts
+try { localStorage.removeItem('rl-staff'); } catch (e) {}   // (an earlier version left staff phones out of the counts; staff borrow too, so they count now)
 (function () {
   const go = document.getElementById('opens-load'); if (!go) return;
   const say = t => { document.getElementById('opens-status').textContent = t; };

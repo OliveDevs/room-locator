@@ -139,7 +139,7 @@ function attachCalendar(k,fromConsole){
     link.download='Return '+k.n.replace(/[^A-Za-z0-9 ._-]+/g,' ').replace(/\s+/g,' ').replace(/[ .]+$/,'').trim().slice(0,60)+'.ics';
     document.body.appendChild(link); link.click(); link.remove();
     setTimeout(()=>URL.revokeObjectURL(link.href),60000);
-    status.textContent='A calendar file was made. Open it and choose Add: your calendar will alert you the day before and 2 hours before it is due.';
+    status.textContent='A calendar file was made. Open it and choose Add: your calendar will alert you the day before and 2 hours before it is due.'+(rememberLoan(k,due)?' It is also on My loans on this phone.':'');
   });
   button.addEventListener('click',()=>{
     const due=dueOrAsk(); if(!due)return;
@@ -149,7 +149,7 @@ function attachCalendar(k,fromConsole){
     const zone=Intl.DateTimeFormat().resolvedOptions().timeZone||'America/New_York';
     const by=due.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
     const params=new URLSearchParams({action:'TEMPLATE',text:'Return '+k.n+' to IDeATe Lending by '+by,dates:calendarStamp(start)+'/'+calendarStamp(due),stz:zone,etz:zone,details:'Due back at '+by+' on '+due.toLocaleDateString([], {weekday:'long',month:'long',day:'numeric'})+'. This event covers the last 2 hours before the deadline. Hand the item to staff in Hunt Library A29.\n\nLoans cannot be renewed. For illness or an emergency, email help@ideate.cmu.edu before it is due. Late fees are charged by the day.\n\nFor a warning the day before, choose Add notification and set 1 day before you save.\n\nItem guide: '+location.origin+location.pathname+'?i='+(k.h||''),location:'IDeATe Lending, Hunt Library A29, Carnegie Mellon University'});
-    status.textContent='Google Calendar opened with the last 2 hours before the deadline blocked out. It uses your own alert setting, so add a 1 day notification there if you want one, then save.';
+    status.textContent='Google Calendar opened with the last 2 hours before the deadline blocked out. It uses your own alert setting, so add a 1 day notification there if you want one, then save.'+(rememberLoan(k,due)?' It is also on My loans on this phone.':'');
     window.open('https://calendar.google.com/calendar/r/eventedit?'+params.toString(),'_blank','noopener,noreferrer');
   });
 }
@@ -321,11 +321,10 @@ function problemLink(k,live){
 }
 function kitsFor(k){const mine=KITS.filter(x=>x.parts.some(p=>p.pick.includes(k.n)));return mine.length?'<div class="side-block"><h2>Part of a kit</h2>'+mine.map(x=>'<a class="source-link" href="#kit-'+esc(x.id)+'">'+esc(x.name)+' \u2192</a>').join('')+'</div>':''}
 // Counts how often each guide is opened, so staff can see what students look for. Only the item's code is sent, to a free
-// public counter (abacus.jasoncameron.dev): no names, no cookies. Once per item per visit, and never from a staff device.
+// public counter (abacus.jasoncameron.dev): no names, no cookies. Once per item per visit. Staff phones count too: staff borrow as well.
 function countOpen(k,fromConsole){
   try{
     if(!k.h||!/^https?:$/.test(location.protocol)||/^(localhost|127\.)/.test(location.hostname))return;
-    if(localStorage.getItem('rl-key')||localStorage.getItem('rl-staff'))return;
     const seen='rl-seen-'+k.h; if(sessionStorage.getItem(seen))return; sessionStorage.setItem(seen,'1');
     const hit=key=>fetch('https://abacus.jasoncameron.dev/hit/roomlocator-ideate/'+key,{mode:'cors',keepalive:true}).catch(()=>{});
     hit('i-'+k.h); hit(fromConsole?'from-console':'from-site');
@@ -341,6 +340,8 @@ function itemView(k,fromConsole){
   ((k.tips?.length||TIPS[k.n]||TIPS[group])?'<section class="guide-section"><h2>Useful tips</h2>'+listItems(k.tips||TIPS[k.n]||TIPS[group])+'</section>':'')+((howto&&!manual.length&&!MODEL_CHOICES[k.n])?(makerSupport(k.n)?'<section class="guide-section"><h2>Maker support</h2>'+external('Open '+makerSupport(k.n)[0]+'\u2019s own support site',makerSupport(k.n)[1])+'<p class="note">Read the model on the item to find its exact manual there.</p></section>':''):manualHtml(k,manual))+'</div><aside class="side-stack"><div class="side-block"><h2>Borrowing</h2><p>Visit IDeATe Lending in Hunt Library basement, room A29, across from the elevator. Bring your CMU ID. Check current lending hours and borrowing rules before visiting.</p><p>During the semester, the normal loan is three days with a 6 p.m. due time. Weekends count; university holidays may shift the due date.</p><p>Loans cannot be renewed. Hand the item to staff in A29; drop boxes and other libraries do not count. Late fees run from $1 to $25 a day depending on what the item costs, and borrowing is blocked once fines reach $25.</p>'+external('Official IDeATe Lending rules','https://ideate.cmu.edu/resources/lending/index.html')+external('Full circulation policy','https://ideate.cmu.edu/resources/lending/ideate-circulation-policy.html')+external('Browse CMU’s '+categoryName(k.c)+' collection',collectionUrl(k.c))+'</div>'+(related.length?'<div class="side-block"><h2>Often used with</h2>'+related.map(g=>'<a class="source-link" href="#t'+encodeURIComponent(g)+'">'+esc(g.split('/')[1])+' →</a>').join('')+'<p>Compatibility and availability vary by model.</p></div>':'')+(fromConsole?'':reminderHtml(false))+kitsFor(k)+'<div class="side-block"><h2>Something wrong with it?</h2><p>Missing a part, broken, or this page is wrong? Tell the lending staff.</p><a class="source-link" href="'+esc(problemLink(k,live))+'">Report a problem by email \u2192</a></div><div class="side-block"><h2>At checkout</h2><p>Confirm the exact model, included parts, condition, and return date with staff. For powered devices, test startup before leaving when possible.</p></div></aside></div>';
   attachCalendar(k,fromConsole);
   countOpen(k,fromConsole);
+  if(fromConsole)dogRun();
+  dogHidden(k);
   const modelChoice=document.getElementById('model-choice');
   if(modelChoice)modelChoice.addEventListener('change',()=>{const result=document.getElementById('model-result'),selected=MODEL_CHOICES[k.n].options[Number(modelChoice.value)];result.innerHTML=modelChoice.value===''?'If none matches, ask staff for the model number before using a manual.':external('Open '+selected[0]+' maker guide',selected[1]);});
   const modelNumber=document.getElementById('model-number');
@@ -352,7 +353,8 @@ function renderCards(rows){const target=document.getElementById('results');docum
 function listing(category='',type=''){
   document.title='IDeATe Lending · Item guides';
   const categories=[...new Set(K.map(k=>k.c))].sort();
-  app.innerHTML='<p class="eyebrow">CMU / Hunt Library A29</p><h1>Equipment for what you make</h1><p class="intro">All '+K.length+' things you can borrow from IDeATe Lending. Search by name or by what you need to do. Each page shows the shelf, how to use the thing and a return reminder.</p><div class="search-mode" role="group" aria-label="How to search"><button type="button" data-mode="name" aria-pressed="true">Find an item</button><button type="button" data-mode="use" aria-pressed="false">What it is good for</button><a href="#kits">Kits for a whole project \u2192</a></div><div class="search-tools"><input id="query" type="search" placeholder="Item name: tripod, HDMI, Zoom..." aria-label="Search" autocomplete="off"><select id="category" aria-label="Filter by category"><option value="">All categories</option>'+categories.map(c=>'<option value="'+esc(c)+'"'+(c===category?' selected':'')+'>'+esc(categoryName(c))+'</option>').join('')+'</select></div><div id="kit-hits"></div><p class="result-count" id="count"></p><div class="item-grid" id="results"></div>';
+  app.innerHTML='<p class="eyebrow">CMU / Hunt Library A29</p><h1>Equipment for what you make</h1><p class="intro">All '+K.length+' things you can borrow from IDeATe Lending. Search by name or by what you need to do. Each page shows the shelf, how to use the thing and a return reminder.</p>'+loansHtml()+'<div class="search-mode" role="group" aria-label="How to search"><button type="button" data-mode="name" aria-pressed="true">Find an item</button><button type="button" data-mode="use" aria-pressed="false">What it is good for</button><a href="#kits">Kits for a whole project \u2192</a></div><div class="search-tools"><input id="query" type="search" placeholder="Item name: tripod, HDMI, Zoom..." aria-label="Search" autocomplete="off"><select id="category" aria-label="Filter by category"><option value="">All categories</option>'+categories.map(c=>'<option value="'+esc(c)+'"'+(c===category?' selected':'')+'>'+esc(categoryName(c))+'</option>').join('')+'</select></div><div id="kit-hits"></div><p class="result-count" id="count"></p><div class="item-grid" id="results"></div>';
+  attachLoans(app);
   const q=document.getElementById('query'),c=document.getElementById('category');
   // Two ways to look. "Find an item" reads names and types only; a word nobody spelled that way gets one slip per word
   // (a wrong, missing, extra or swapped letter) against names only. "What it is good for" reads what each thing is
@@ -422,13 +424,55 @@ function roomView(){
   }));
 }
 // Kits: everything for one kind of project, each piece with its shelf. The first choice in each row is shown large; the others are alternatives.
+// ---------- A small dog (our own drawing of a black terrier) for a bit of fun
+const DOG='<svg class="dog" viewBox="0 0 64 44" aria-hidden="true"><polygon points="16,19 11,5 20,16"/><rect x="13" y="15" width="35" height="17" rx="8"/><rect x="39" y="7" width="17" height="15" rx="5"/><rect x="49" y="13" width="13" height="11" rx="4"/><polygon points="42,9 44,0 48,9"/><polygon points="49,9 52,1 55,9"/><circle cx="52.5" cy="12.5" r="1.3" fill="#fff"/><g class="dog-legs-a"><rect x="17" y="29" width="5" height="11" rx="2"/><rect x="42" y="29" width="5" height="11" rx="2"/></g><g class="dog-legs-b"><rect x="24" y="29" width="5" height="11" rx="2"/><rect x="35" y="29" width="5" height="11" rx="2"/></g></svg>';
+// runs across the top once when a page is opened from the console's code
+function dogRun(){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const strip=document.createElement('div');strip.className='dog-strip';strip.innerHTML=DOG;
+  app.insertBefore(strip,app.firstChild);
+  strip.firstChild.addEventListener('animationend',e=>{if(e.animationName==='dog-across')strip.remove()});
+}
+// and hides on a dozen item pages: tap it and it hops. The phone remembers which ones were found.
+const dogHides=k=>k.h&&parseInt(k.h,16)%31===7;
+function dogHidden(k){
+  if(!dogHides(k))return;
+  const fig=document.querySelector('.item-photo');if(!fig)return;
+  const all=K.filter(dogHides).length;
+  const b=document.createElement('button');b.type='button';b.className='dog-hide';b.setAttribute('aria-label','A small dog is hiding here');b.innerHTML=DOG;
+  const say=document.createElement('p');say.className='dog-say';say.setAttribute('role','status');
+  b.addEventListener('click',()=>{let found=[];try{found=JSON.parse(localStorage.getItem('rl-dogs')||'[]')}catch(e){}
+    if(!found.includes(k.h))found.push(k.h);try{localStorage.setItem('rl-dogs',JSON.stringify(found))}catch(e){}
+    b.classList.remove('hop');void b.offsetWidth;b.classList.add('hop');
+    say.textContent=found.length>=all?'You found all '+all+' hiding spots.':'You found the dog. '+found.length+' of '+all+' hiding spots found.'});
+  fig.appendChild(b);fig.appendChild(say);
+}
+// ---------- My loans: what this phone was reminded about, until someone presses Returned. Kept in this browser only.
+function loans(){try{const v=JSON.parse(localStorage.getItem('rl-loans')||'[]');return Array.isArray(v)?v:[]}catch(e){return []}}
+function saveLoans(v){try{localStorage.setItem('rl-loans',JSON.stringify(v));return true}catch(e){return false}}
+function rememberLoan(k,due){const v=loans().filter(x=>x.h!==k.h);v.push({h:k.h,n:k.n,due:due.getTime()});v.sort((a,b)=>a.due-b.due);return saveLoans(v)}
+function loansHtml(){
+  const v=loans();if(!v.length)return '';
+  const now=Date.now(),when=t=>new Date(t).toLocaleString([], {weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+  return '<section class="my-loans" aria-label="My loans"><h2>My loans</h2><ul>'+v.map(x=>'<li'+(x.due<now?' class="late"':'')+'><a href="#i'+esc(x.h)+'">'+esc(x.n)+'</a><span>'+(x.due<now?'Was due ':'Due ')+esc(when(x.due))+'</span><button type="button" data-returned="'+esc(x.h)+'">Returned</button></li>').join('')+'</ul><p class="note">Remembered on this phone only. Loans cannot be renewed; hand each one to staff in A29.</p></section>';
+}
+function attachLoans(root){root.querySelectorAll('[data-returned]').forEach(b=>b.addEventListener('click',()=>{saveLoans(loans().filter(x=>x.h!==b.dataset.returned));const box=root.querySelector('.my-loans');if(box){box.outerHTML=loansHtml();attachLoans(root)}}))}
+// ---------- The code a kit page shows for the console: RL:KIT: and the page code of each first-choice piece
+function kitCodeText(kit){return 'RL:KIT:'+kit.parts.map(p=>K.find(k=>k.n===p.pick[0])).filter(Boolean).slice(0,8).map(k=>k.h).join(',')}
+function showKitCode(kit,box){
+  const draw=()=>{const q=qrcode(0,'M');q.addData(kitCodeText(kit));q.make();box.innerHTML='<div class="kit-qr">'+q.createSvgTag({cellSize:5,margin:4,scalable:true})+'</div><p>Hold this up to the scanner on the console in Lending. The shelf of every piece lights up, each in its own colour.</p><p class="note">It lights the first choice in each row, up to 8 pieces, and changes nothing. The console needs version 5.14 or newer.</p>'};
+  if(window.qrcode){draw();return}
+  box.textContent='Making the code...';
+  const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';sc.onload=draw;sc.onerror=()=>{box.textContent='The code could not be made. Check the connection and try again.'};document.head.appendChild(sc);
+}
 function kitsView(id){
   const kit=KITS.find(x=>x.id===id), find=n=>K.find(k=>k.n===n);
   if(!kit){document.title='Kits \u00b7 IDeATe Lending';
     app.innerHTML='<a class="back" href="./">\u2190 All items</a><h1>Kits for a whole project</h1><p class="intro">Pick what you are trying to do and get the full list to ask for, with the shelf for each piece.</p><div class="item-grid">'+KITS.map(x=>'<a class="item-card kit-card" href="#kit-'+esc(x.id)+'"><div><strong>'+esc(x.name)+'</strong><span class="card-where">'+x.parts.length+' pieces</span></div><span class="arrow" aria-hidden="true">\u2197</span></a>').join('')+'</div>';return}
   document.title=kit.name+' \u00b7 IDeATe Lending';
   app.innerHTML='<a class="back" href="#kits">\u2190 All kits</a><h1>'+esc(kit.name)+'</h1><p class="intro">'+esc(kit.why)+'</p><div class="kit-list">'+kit.parts.map(p=>{const items=p.pick.map(find).filter(Boolean);if(!items.length)return '';const first=items[0];
-    return '<div class="kit-row"><p class="kit-role">'+esc(p.role)+'</p><a class="item-card" href="#i'+first.h+'">'+thumbHtml(first)+'<div><strong>'+esc(first.n)+'</strong><span class="card-where">'+esc(first.in?first.w:'Ask at the desk')+'</span></div><span class="arrow" aria-hidden="true">\u2197</span></a>'+(items.length>1?'<p class="kit-or">or '+items.slice(1).map(k=>'<a href="#i'+k.h+'">'+esc(k.n)+'</a> ('+esc(k.in?k.w:'ask at the desk')+')').join(', or ')+'</p>':'')+'</div>'}).join('')+'</div><div class="guide-section kit-tip"><h2>Before you go</h2><p>'+esc(kit.tip)+'</p><p class="note">Each piece is checked out separately and may already be on loan. The desk has what is in today.</p></div>';
+    return '<div class="kit-row"><p class="kit-role">'+esc(p.role)+'</p><a class="item-card" href="#i'+first.h+'">'+thumbHtml(first)+'<div><strong>'+esc(first.n)+'</strong><span class="card-where">'+esc(first.in?first.w:'Ask at the desk')+'</span></div><span class="arrow" aria-hidden="true">\u2197</span></a>'+(items.length>1?'<p class="kit-or">or '+items.slice(1).map(k=>'<a href="#i'+k.h+'">'+esc(k.n)+'</a> ('+esc(k.in?k.w:'ask at the desk')+')').join(', or ')+'</p>':'')+'</div>'}).join('')+'</div><div class="guide-section kit-tip"><h2>Light the shelves in Lending</h2><p><button type="button" id="kit-code-go" class="kit-code-go">Show the code for the console</button></p><div id="kit-code" aria-live="polite"></div></div><div class="guide-section kit-tip"><h2>Before you go</h2><p>'+esc(kit.tip)+'</p><p class="note">Each piece is checked out separately and may already be on loan. The desk has what is in today.</p></div>';
+  document.getElementById('kit-code-go').addEventListener('click',e=>{e.target.hidden=true;showKitCode(kit,document.getElementById('kit-code'))});
 }
 function route(){if(!DATA)return;const hash=decodeURIComponent(location.hash.slice(1));const query=new URLSearchParams(location.search).get('i');let k;
   if(/^i[0-9a-f]{6}$/.test(hash))k=K.find(x=>x.h===hash.slice(1));   // links carry the item's own code, so they keep working when the list changes
