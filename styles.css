@@ -81,3 +81,5 @@
 .room-unit[data-unit="UND"]{align-items:flex-start}.room-unit[data-unit="DOO"]{z-index:1}
 @media(max-width:580px){.item-card{min-height:0!important;padding-top:16px!important;padding-bottom:16px!important}.room-unit{font-size:9px}}
 .room-unit[data-unit="UND"] span{display:none}
+.item-card{display:flex!important;flex-direction:row!important;justify-content:flex-start!important;gap:14px!important;align-items:center;min-height:0!important}.item-card .arrow{margin-left:auto}.item-card>div{flex:1;min-width:0}
+.card-thumb{flex:0 0 64px;width:64px;height:64px;object-fit:cover;background:#ecebe6}.card-thumb-none{display:block}

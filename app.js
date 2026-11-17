@@ -240,6 +240,11 @@ function guideFor(k){
 const listItems = items => '<ul>'+items.map(s=>'<li>'+esc(s)+'</li>').join('')+'</ul>';
 function external(label,url){return '<a class="source-link" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">'+esc(label)+' ↗</a>'}
 function photoFor(k){if(k.p&&k.p.none)return null;return k.p||PHOTO.images?.[PHOTO.items?.[k.n]]}
+// a small picture for the list. Only Wikimedia thumbnails, which come in a 120-pixel size; each loads when it scrolls into view
+function thumbHtml(k){
+  const photo=photoFor(k), small=photo&&/\/\d+px-/.test(photo.url)?photo.url.replace(/\/\d+px-/,'/120px-'):'';
+  return small?'<img class="card-thumb" src="'+esc(small)+'" alt="" loading="lazy" decoding="async" width="64" height="64" referrerpolicy="no-referrer" onerror="this.remove()">':'<span class="card-thumb card-thumb-none" aria-hidden="true"></span>';
+}
 function photoHtml(k){
   const photo=photoFor(k);
   if(!photo)return '<figure class="item-photo no-photo"><div class="no-photo-tile" aria-hidden="true"><span>'+esc(k.t)+'</span></div><figcaption><strong>No photo yet</strong><span>We would rather show nothing than a picture of the wrong thing. Ask at the desk to see it.</span></figcaption></figure>';
@@ -305,7 +310,7 @@ function itemView(k,fromConsole){
   const img=app.querySelector('.item-photo img');
   if(img)img.addEventListener('error',()=>{img.hidden=true;img.parentElement.classList.add('photo-unavailable')});
 }
-function renderCards(rows){const target=document.getElementById('results');document.getElementById('count').textContent=rows.length+' of '+K.length+' items';target.innerHTML=rows.length?rows.map(k=>'<a class="item-card" href="#k'+K.indexOf(k)+'"><div><small>'+esc(categoryName(k.c))+' / '+esc(k.t)+'</small><br><strong>'+esc(k.n)+'</strong><span class="card-where">'+esc(k.in?k.w:'Ask at the desk')+'</span></div><span class="arrow" aria-hidden="true">↗</span></a>').join(''):'<div class="empty-state">No matching items. Try a shorter name or another category.</div>'}
+function renderCards(rows){const target=document.getElementById('results');document.getElementById('count').textContent=rows.length+' of '+K.length+' items';target.innerHTML=rows.length?rows.map(k=>'<a class="item-card" href="#i'+k.h+'">'+thumbHtml(k)+'<div><small>'+esc(categoryName(k.c))+' / '+esc(k.t)+'</small><br><strong>'+esc(k.n)+'</strong><span class="card-where">'+esc(k.in?k.w:'Ask at the desk')+'</span></div><span class="arrow" aria-hidden="true">↗</span></a>').join(''):'<div class="empty-state">No matching items. Try a shorter name or another category.</div>'}
 function listing(category='',type=''){
   document.title='IDeATe Lending · Item guides';
   const categories=[...new Set(K.map(k=>k.c))].sort();
@@ -335,11 +340,12 @@ function roomView(){
     const shelves=new Map();
     for(let s=1;s<=unit.shelves;s++)if(unit.boards.includes(s))shelves.set(s,[]);
     K.filter(k=>k.u===unit.code).forEach(k=>{const support=unit.boards.filter(b=>b<=k.s).at(-1)||k.s;if(!shelves.has(support))shelves.set(support,[]);shelves.get(support).push(k)});
-    detail.innerHTML='<h2>'+esc(unit.name)+'</h2><p>'+unit.boards.length+(unit.boards.length===1?' shelf':' shelves')+', top shelf first</p>'+[...shelves.entries()].sort((a,b)=>b[0]-a[0]).map(([s,items])=>'<div class="room-shelf"><h3>Shelf '+s+'</h3>'+(items.length?items.map(k=>'<a href="#k'+K.indexOf(k)+'">'+esc(k.n)+'</a>').join(''):'<p>No listed items</p>')+'</div>').join('');
+    detail.innerHTML='<h2>'+esc(unit.name)+'</h2><p>'+unit.boards.length+(unit.boards.length===1?' shelf':' shelves')+', top shelf first</p>'+[...shelves.entries()].sort((a,b)=>b[0]-a[0]).map(([s,items])=>'<div class="room-shelf"><h3>Shelf '+s+'</h3>'+(items.length?items.map(k=>'<a href="#i'+k.h+'">'+esc(k.n)+'</a>').join(''):'<p>No listed items</p>')+'</div>').join('');
   }));
 }
 function route(){if(!DATA)return;const hash=decodeURIComponent(location.hash.slice(1));const query=new URLSearchParams(location.search).get('i');let k;
-  if(/^k\d+$/.test(hash))k=K[Number(hash.slice(1))];
+  if(/^i[0-9a-f]{6}$/.test(hash))k=K.find(x=>x.h===hash.slice(1));   // links carry the item's own code, so they keep working when the list changes
+  else if(/^k\d+$/.test(hash))k=K[Number(hash.slice(1))];             // (old links by position still open)
   else if(query&&!hash)k=K.find(x=>x.h===query.toLowerCase());
   if(k)itemView(k,!!(query&&!hash));else if(hash==='room')roomView();else if(hash.startsWith('t')){const [c,t]=hash.slice(1).split('/');listing(c,t)}else listing();
   window.scrollTo(0,0);
