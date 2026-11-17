@@ -60,10 +60,10 @@ $('connect-save').addEventListener('click', async () => {
   keep.set('rl-key', value); $('connect-why').textContent = 'Checking...';
   const problem = await checkKey().catch(() => 'Could not reach GitHub. Check the internet connection.');
   if (problem) { keep.set('rl-key', null); $('connect-why').textContent = problem; return; }
-  $('connect').hidden = true; $('connect-key').value = ''; status.textContent = 'This device can now save to the website.';
+  $('connect').hidden = true; $('connect-key').value = ''; status.textContent = 'This device can now save to the website.'; dispatchEvent(new Event('rl-key-changed'));
   if (afterKey) { const go = afterKey; afterKey = null; go(); }
 });
-$('connect-forget').addEventListener('click', () => { keep.set('rl-key', null); $('connect').hidden = true; status.textContent = 'The key was removed from this device.'; });
+$('connect-forget').addEventListener('click', () => { keep.set('rl-key', null); $('connect').hidden = true; status.textContent = 'The key was removed from this device.'; dispatchEvent(new Event('rl-key-changed')); });
 
 Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room.json?v=' + Date.now()).then(r => r.json())]).then(([data, room]) => {
   // just saved from this browser and the site has not caught up yet: use the saved copy (for a quarter of an hour at most)
@@ -83,7 +83,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   const tabs = ['move', 'shelf', 'add', 'edit', 'sync'];
   tabs.forEach(t => $('tab-' + t).addEventListener('click', () => {
     tabs.forEach(o => { $('tab-' + o).setAttribute('aria-selected', o === t); $('tool-' + o).hidden = o !== t; });
-    $('code-out').hidden = true; status.textContent = '';
+    $('code-out').hidden = !made.length || t === 'sync'; status.textContent = '';
   }));
 
   // ---- shared pickers
@@ -105,14 +105,29 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   }
 
   // ---- the QR code
+  // Every code made this visit is kept in a list, so several changes can be set up first and then shown to the console
+  // one after another: the PIN is typed once, then it is scan, Select, Next.
+  const made = []; let madeAt = -1;
+  function drawCode() {
+    const c = made[madeAt]; if (!c) { $('code-out').hidden = true; return; }
+    const qr = qrcode(0, 'M'); qr.addData(c.code); qr.make();
+    $('qr').innerHTML = qr.createSvgTag({ cellSize: 8, margin: 4, scalable: true });
+    $('code-title').textContent = c.title; $('code-what').textContent = c.what; $('code-text').textContent = c.code; $('code-extra').textContent = c.extra || '';
+    $('code-many').hidden = made.length < 2;
+    $('code-count').textContent = 'Code ' + (madeAt + 1) + ' of ' + made.length;
+    $('code-prev').disabled = madeAt === 0; $('code-next').disabled = madeAt === made.length - 1;
+    $('code-out').hidden = false;
+  }
   function showCode(code, title, what, extra) {
     if (code.length >= MAX_CODE) { status.textContent = 'That code is too long for the scanner (' + code.length + ' characters). Use a shorter name.'; $('code-out').hidden = true; return; }
-    const qr = qrcode(0, 'M'); qr.addData(code); qr.make();
-    $('qr').innerHTML = qr.createSvgTag({ cellSize: 8, margin: 4, scalable: true });
-    $('code-title').textContent = title; $('code-what').textContent = what; $('code-text').textContent = code; $('code-extra').textContent = extra || '';
-    status.textContent = ''; $('code-out').hidden = false;
-    $('code-out').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const had = made.findIndex(c => c.code === code);
+    if (had >= 0) madeAt = had; else { made.push({ code, title, what, extra }); madeAt = made.length - 1; }
+    status.textContent = made.length > 1 ? 'Added. ' + made.length + ' codes are ready: set up more, or show them to the console one after another.' : '';
+    drawCode(); $('code-out').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+  $('code-prev').addEventListener('click', () => { if (madeAt > 0) { madeAt--; drawCode(); } });
+  $('code-next').addEventListener('click', () => { if (madeAt < made.length - 1) { madeAt++; drawCode(); } });
+  $('code-clear').addEventListener('click', () => { made.length = 0; madeAt = -1; drawCode(); status.textContent = 'The list of codes is empty.'; });
 
   // ---- move a thing
   const mf = $('move-form');
@@ -249,7 +264,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     pageCount = n; pages[p] = { total, lines: lines.slice(1).filter(Boolean) };
     remember();
     showPages();
-    if (Object.keys(pages).length === pageCount) { stopCamera(); const all = []; for (let i = 1; i <= pageCount; i++) all.push(...pages[i].lines); apply(all.map(l => l.split('|'))); try { localStorage.removeItem(KEEP); } catch (e) {} }
+    if (Object.keys(pages).length === pageCount) { stopCamera(); const all = []; for (let i = 1; i <= pageCount; i++) all.push(...pages[i].lines); apply(all.map(l => l.split('|'))).then(() => { try { localStorage.removeItem(KEEP); } catch (e) {} }).catch(() => { status.textContent = 'Could not load the Nov 16 backup. Check the internet connection and scan again.'; }); }
     return true;
   }
   function tick() {
@@ -278,13 +293,21 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   });
 
   let outData = null, outRoom = null;
-  function apply(lines) {
-    const d = JSON.parse(JSON.stringify(data)), r = JSON.parse(JSON.stringify(room));
+  // The console's list is EVERY change since the Nov 16 setup, so the website is rebuilt from scratch each time:
+  // the Nov 16 backup, then every line in order. That way a change taken back on the console disappears here too, and an
+  // empty list (after Start over on the console) puts the website back to the setup. What only the website knows about an
+  // item (photo, manual link, description) is carried over.
+  let baseline = null;
+  const loadBaseline = async () => baseline || (baseline = await Promise.all([fetch('backup/2026-11-16/data.json?x=' + Date.now()).then(x => x.json()), fetch('backup/2026-11-16/room.json?x=' + Date.now()).then(x => x.json())]));
+  async function apply(lines) {
+    const [baseData, baseRoom] = await loadBaseline();
+    const d = JSON.parse(JSON.stringify(baseData)), r = JSON.parse(JSON.stringify(baseRoom));
+    const nowBy = Object.fromEntries(kinds.map(k => [k.h, k]));
+    for (const k of d.kinds) { const now = nowBy[k.h]; if (!now) continue; for (const key of ['p', 'r', 'd', 'g', 'tips']) { if (now[key] !== undefined) k[key] = JSON.parse(JSON.stringify(now[key])); else delete k[key]; } }
     const ub = Object.fromEntries(r.units.map(u => [u.code, u]));
-    const synced = r.synced || { lines: 0, first: '' };
     const firstText = lines.length ? lines[0].join('|') : '';
-    let start = synced.lines && synced.first === firstText && synced.lines <= lines.length ? synced.lines : 0;
-    const count = { I: 0, S: 0, X: 0, U: 0, B: 0, A: 0 }, notes = [];
+    const start = 0;
+    const count = { I: 0, S: 0, X: 0, U: 0, B: 0, A: 0, C: 0 }, notes = [];
     const byH = Object.fromEntries(d.kinds.map(k => [k.h, k]));
     const inRange = (s, lo, hi) => s >= Number(lo) && s <= Number(hi);
     for (const f of lines.slice(start)) {
@@ -294,21 +317,23 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
       else if (t === 'X') { d.kinds.forEach(k => { if (k.u === f[1] && inRange(k.s, f[2], f[3])) { k.u = f[4]; k.s = Number(f[5]); } else if (k.u === f[4] && inRange(k.s, f[5], f[6])) { k.u = f[1]; k.s = Number(f[2]); } }); count.X++; }
       else if (t === 'U') { const a = ub[f[1]], b = ub[f[2]]; if (a && b) { for (const key of ['first', 'shelves', 'rect']) [a[key], b[key]] = [b[key], a[key]]; count.U++; } }
       else if (t === 'B') { const u = ub[f[1]], n = Number(f[2]); if (u) { const set = new Set(u.boards && u.boards.length ? u.boards : [...Array(u.shelves).keys()].map(i => i + 1)); if (f[3] === '1') set.add(n); else if (n > 1) set.delete(n); u.boards = [...set].sort((x, y) => x - y); count.B++; } }
+      else if (t === 'C') { const k = byH[(f[1] || '').toLowerCase()]; if (k) { k.x = Number(f[2]) || k.x; count.C++; } }
       else if (t === 'A') {
         const name = f[3], h = nameCode(name);
-        if (!byH[h]) { const k = { n: name, c: CAT_ORDER[Number(f[1])] || 'Cables & More', t: f[2], x: Number(f[6]) || 1, in: true, d: '', h, u: f[4], s: Number(f[5]) }; d.kinds.push(k); byH[h] = k; count.A++; }
+        if (!byH[h]) { const now = nowBy[h] || {}; const k = { n: name, c: CAT_ORDER[Number(f[1])] || 'Cables & More', t: f[2], x: Number(f[6]) || 1, in: true, d: now.d || '', h, u: f[4], s: Number(f[5]) }; for (const key of ['p', 'r', 'g']) if (now[key] !== undefined) k[key] = now[key]; d.kinds.push(k); byH[h] = k; count.A++; }
       }
     }
     const names = Object.fromEntries(r.units.map(u => [u.code, u.name]));
-    for (const k of d.kinds) { const u = ub[k.u]; k.w = u && u.shelves && k.s ? names[k.u] + ', shelf ' + boardBelowIn(u, k.s) : (names[k.u] || k.u); }
+    for (const k of d.kinds) { const u = ub[k.u]; k.w = u && u.shelves && k.s ? names[k.u] + ', shelf ' + boardBelowIn(u, k.s) : (names[k.u] || k.u); k.in = !!(u && u.shelves && k.s); }
     d.kinds.sort((a, b) => a.n.localeCompare(b.n));
-    r.synced = { lines: lines.length, first: firstText };
+    r.synced = { lines: lines.length, first: firstText, at: new Date().toISOString() };
     r.source = 'Room Locator console, changes brought over on ' + new Date().toISOString().slice(0, 10);
     outData = d; outRoom = r;
-    const done = lines.length - start;
     const list = [];
-    if (start) list.push(start + ' changes were already on the website; ' + done + ' new.');
-    if (!done) list.push('Nothing new since the last time.');
+    const moved = d.kinds.filter(k => { const b = nowBy[k.h]; return !b || b.u !== k.u || b.s !== k.s || b.x !== k.x; }).length + kinds.filter(k => !byH[k.h]).length;
+    list.push(lines.length ? 'The console has ' + lines.length + (lines.length === 1 ? ' change' : ' changes') + ' since the Nov 16 setup. Saving makes the website match it exactly.' : 'The console has no changes. Saving puts the website back to the Nov 16 setup.');
+    list.push(moved ? moved + (moved === 1 ? ' item page will change.' : ' item pages will change.') : 'The website already matches: nothing will change.');
+    if (count.C) list.push(count.C + (count.C === 1 ? ' count changed' : ' counts changed'));
     if (count.I) list.push(count.I + (count.I === 1 ? ' thing moved' : ' things moved'));
     if (count.S) list.push(count.S + (count.S === 1 ? ' whole shelf moved' : ' whole shelves moved'));
     if (count.X) list.push(count.X + (count.X === 1 ? ' pair of shelves swapped' : ' pairs of shelves swapped'));
@@ -321,7 +346,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   }
   const boardBelowIn = (u, n) => { while (n > 1 && u.boards && u.boards.length && !u.boards.includes(n)) n--; return n; };
   const download = (obj, name) => { const blob = new Blob([JSON.stringify(obj, null, 2) + '\n'], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
-  $('sync-publish').addEventListener('click', async e => { if (!outData) return; if (await publish({ 'data.json': outData, 'room.json': outRoom }, 'Changes from the console (staff page)', e.target)) { $('sync-saved').hidden = false; } });
+  $('sync-publish').addEventListener('click', async e => { if (!outData) return; if (await publish({ 'data.json': outData, 'room.json': outRoom }, 'Website matched to the console (staff page)', e.target)) { $('sync-saved').hidden = false; setTimeout(() => location.reload(), 2500); } });
   $('web-reset').addEventListener('click', async e => {
     if (!confirm('Put the website back to the Nov 16 setup? Every change brought over from the console since then, and every edit made here, is taken off the website.')) return;
     const [d, r] = await Promise.all([fetch('backup/2026-11-16/data.json?x=' + Date.now()).then(x => x.json()), fetch('backup/2026-11-16/room.json?x=' + Date.now()).then(x => x.json())]);
@@ -383,6 +408,17 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     refresh3d();
   }
   // opened by pointing a phone camera at the console's "To the website" code: go straight to that tab and take the page in
+  // ---- the status line at the top: is the website in step with the console, and can this device save
+  const drawHomeStatus = () => {
+    const sy = room.synced, when = sy && sy.at ? new Date(sy.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+    $('home-sync').textContent = sy && sy.at ? 'Website last matched the console ' + when + ', with ' + sy.lines + (sy.lines === 1 ? ' change' : ' changes') + ' since the Nov 16 setup.' : 'The website is at the Nov 16 setup. No console changes have been brought over yet.';
+    $('home-key').textContent = keep.get('rl-key') ? 'This device can save to the website.' : 'This device cannot save to the website yet.';
+    $('home-key-set').textContent = keep.get('rl-key') ? 'Forget the key' : 'Set up saving';
+  };
+  drawHomeStatus();
+  $('home-sync-go').addEventListener('click', () => { $('tab-sync').click(); $('tool-sync').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  $('home-key-set').addEventListener('click', () => { if (keep.get('rl-key')) { keep.set('rl-key', null); drawHomeStatus(); } else askForKey('Paste the site key once and this device can save.'); });
+  addEventListener('rl-key-changed', drawHomeStatus);
   const takeAddress = () => {
     if (!location.hash.startsWith('#RLSYNC')) return;
     $('tab-sync').click();
@@ -420,6 +456,12 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     return d;
   };
   $('edit-download').addEventListener('click', () => { const d = editedData(); if (!d) return; download(d, 'data.json'); status.textContent = ''; $('edit-handoff').hidden = false; $('edit-handoff').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); });
-  $('edit-publish').addEventListener('click', async e => { const d = editedData(); if (!d) return; const k = editItem(); if (await publish({ 'data.json': d }, 'Edit ' + k.n + ' (staff page)', e.target)) setTimeout(() => location.reload(), 1500); });
-  window.__rlSync = { readPage, apply: lines => { apply(lines); return { data: outData, room: outRoom }; } };   // (for testing)
+  $('edit-publish').addEventListener('click', async e => {
+    const d = editedData(); if (!d) return; const k = editItem(), copies = d.kinds.find(x => x.h === k.h).x;
+    if (!(await publish({ 'data.json': d }, 'Edit ' + k.n + ' (staff page)', e.target))) return;
+    if (copies !== k.x) { k.x = copies; showCode('RL:COUNT:' + k.h + ':' + copies, 'Show this to the console too', k.n + ': Lending now has ' + copies + '. The website is saved; this tells the console.', 'Without this the console keeps showing the old count.'); }
+    else setTimeout(() => location.reload(), 1500);
+  });
+  $('edit-count-code').addEventListener('click', () => { const k = editItem(); if (!k) { status.textContent = 'Pick the item from the list first.'; return; } const n = Math.floor(Number(ef.elements.copies.value)); if (!(n >= 1 && n <= 250)) { status.textContent = 'The count has to be between 1 and 250.'; return; } showCode('RL:COUNT:' + k.h + ':' + n, 'Show this to the console', k.n + ': Lending now has ' + n + '.', 'This changes the count on the console only. Save to the website changes it there.'); });
+  window.__rlSync = { readPage, apply: async lines => { await apply(lines); return { data: outData, room: outRoom }; } };   // (for testing)
 }).catch(err => { console.error(err); status.textContent = 'Could not load the inventory. Open this page from the published site or a local web server.'; });

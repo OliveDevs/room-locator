@@ -110,6 +110,7 @@
 //                 X, unit, low, high, unit, low, high   two shelves swapped
 //                 B, unit, groove, 1 or 0[, S]      a board put in (1) or taken out (0); S = the line before moved its things down
 //                 A, category, type, name, unit, shelf, copies   a new item was added (history only)
+//                 C, name code, copies              how many Lending has of one thing was changed (from the website)
 //                 U, unit, unit                     two whole units traded places in the room (each keeps its name, things
 //                                                   and boards; the lights at each spot now belong to the other one)
 // Shelf 1 is the BOTTOM shelf of a unit. The light for groove n is (first light + n - 1).
@@ -143,7 +144,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.11";
+const char VERSION[] PROGMEM = "5.12";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -226,6 +227,7 @@ byte fromCount = 0;                             // things on the shelf being mov
 byte moveFromDepth = 0;                         // where Back returns once an item move is done
 byte doneNote = 0;                               // what the "Done" footer adds: 1 = move the label card, 2 = swap the bodies, 3 = undone
 byte syncPage = 0, syncPages = 1;                 // the QR pages for the website
+bool justCounted = false;                        // the next item screen says "Count changed"
 bool justMoved = false, justChanged = false, justAdded = false;    // the next screen says "Moved" / "Done" / "Added" once
 // the staff PIN
 const unsigned long STAFF_MS = 300000UL;        // once the PIN is right, changes are open for 5 minutes at most...
@@ -249,7 +251,7 @@ char addName[40], addType[28], addCode[40], addProblem[48];
 long addedFrom = 0;                             // where the original KINDS.TSV ends: items added at the console come after this
 struct Change { char type; byte a[6]; };        // one line of MOVES.TSV kept in memory: type 'I' (a thing), 'S' or 'X' (see the top)
 Change changes[MAX_MOVES]; byte moveTotal = 0;
-char movedUnit[5], movedShelf[4];
+char movedUnit[5], movedShelf[4], movedCopies[5];
 byte thingCount[17];                            // things on each shelf of the unit on screen (by its bottom groove)
 
 // the data files
@@ -395,12 +397,12 @@ int findUnit(const char* code) {                // -1 = no such unit
 // changes done at the console live in MOVES.TSV and are played back, in order, over KINDS.TSV every time a kind is read
 bool moveListHasRoom(char type, unsigned long key) {   // a thing already on the list can always be moved again
   if (moveTotal < MAX_MOVES) return true;
-  if (type == 'I') for (byte i = 0; i < moveTotal; i++) if (changes[i].type == 'I' && changes[i].a[0] == ((key >> 16) & 255) && changes[i].a[1] == ((key >> 8) & 255) && changes[i].a[2] == (key & 255)) return true;
+  if (type == 'I' || type == 'C') for (byte i = 0; i < moveTotal; i++) if (changes[i].type == type && changes[i].a[0] == ((key >> 16) & 255) && changes[i].a[1] == ((key >> 8) & 255) && changes[i].a[2] == (key & 255)) return true;
   return false;
 }
 void rememberChange(char type, const byte* a) {          // call moveListHasRoom() first. A thing moved again: its old line goes, the new one is last
-  if (type == 'I') {
-    for (byte i = 0; i < moveTotal; i++) if (changes[i].type == 'I' && changes[i].a[0] == a[0] && changes[i].a[1] == a[1] && changes[i].a[2] == a[2]) {
+  if (type == 'I' || type == 'C') {                          // (a new count for a thing replaces its older new count the same way)
+    for (byte i = 0; i < moveTotal; i++) if (changes[i].type == type && changes[i].a[0] == a[0] && changes[i].a[1] == a[1] && changes[i].a[2] == a[2]) {
       for (byte j = i; j + 1 < moveTotal; j++) changes[j] = changes[j + 1];
       moveTotal--; break;
     }
@@ -412,19 +414,21 @@ bool inRange(byte s, byte lo, byte hi) { return s >= lo && s <= hi; }
 void applyMove() {                               // play every change back over the kind in `line`
   if (!moveTotal) return;
   int u = findUnit(field[K_UNIT]); int s = atoi(field[K_SHELF]);
-  int u0 = u, s0 = s;
+  int u0 = u, s0 = s, copies = -1;
   unsigned long k = nameCode(field[K_NAME]);
   byte k0 = (k >> 16) & 255, k1 = (k >> 8) & 255, k2 = k & 255;
   for (byte i = 0; i < moveTotal; i++) {
     const byte* a = changes[i].a;
     switch (changes[i].type) {
       case 'I': if (a[0] == k0 && a[1] == k1 && a[2] == k2) { u = a[3]; s = a[4]; } break;
+      case 'C': if (a[0] == k0 && a[1] == k1 && a[2] == k2) copies = a[3]; break;      // how many Lending has was changed
       case 'S': if (u == a[0] && inRange(s, a[1], a[2])) { u = a[3]; s = a[4]; } break;
       case 'X': if (u == a[0] && inRange(s, a[1], a[2])) { u = a[3]; s = a[4]; }
                 else if (u == a[3] && inRange(s, a[4], a[5])) { u = a[0]; s = a[1]; }
                 break;
     }
   }
+  if (copies >= 0) { itoa(copies, movedCopies, 10); field[K_COPIES] = movedCopies; }
   if (u == u0 && s == s0) return;
   if (u >= 0 && u < unitTotal) { strcpy(movedUnit, unitCode[u]); field[K_UNIT] = movedUnit; }
   itoa(s, movedShelf, 10); field[K_SHELF] = movedShelf;
@@ -553,7 +557,8 @@ void loadMoves() {
     byte a[6] = {0, 0, 0, 0, 0, 0};
     char t = field[0][1] ? 'I' : toupper(field[0][0]);
     if (t == 'U' || t == 'B' || t == 'A') continue;                 // units were done above; boards and new items are history only
-    if (t == 'S' || t == 'X') { a[0] = unitIndex(field[1]); a[1] = atoi(field[2]); a[2] = atoi(field[3]); a[3] = unitIndex(field[4]); a[4] = atoi(field[5]); a[5] = atoi(field[6]); if (a[0] == 255 || a[3] == 255) continue; }
+    if (t == 'C') { unsigned long k = strtoul(field[1], NULL, 16); a[0] = (k >> 16) & 255; a[1] = (k >> 8) & 255; a[2] = k & 255; a[3] = atoi(field[2]); }
+    else if (t == 'S' || t == 'X') { a[0] = unitIndex(field[1]); a[1] = atoi(field[2]); a[2] = atoi(field[3]); a[3] = unitIndex(field[4]); a[4] = atoi(field[5]); a[5] = atoi(field[6]); if (a[0] == 255 || a[3] == 255) continue; }
     else { t = 'I'; unsigned long k = strtoul(field[0], NULL, 16); a[0] = (k >> 16) & 255; a[1] = (k >> 8) & 255; a[2] = k & 255; a[3] = unitIndex(field[1]); a[4] = atoi(field[2]); if (a[3] == 255) continue; }
     rememberChange(t, a);
   }
@@ -564,6 +569,7 @@ bool saveChange(char type, const byte* a) {     // adds one line to MOVES.TSV
   if (!f) return false;
   char buf[48];
   if (type == 'I') snprintf_P(buf, sizeof(buf), PSTR("%02x%02x%02x\t%s\t%d"), a[0], a[1], a[2], unitCode[a[3]], a[4]);
+  else if (type == 'C') snprintf_P(buf, sizeof(buf), PSTR("C\t%02x%02x%02x\t%d"), a[0], a[1], a[2], a[3]);
   else if (type == 'S') snprintf_P(buf, sizeof(buf), PSTR("S\t%s\t%d\t%d\t%s\t%d"), unitCode[a[0]], a[1], a[2], unitCode[a[3]], a[4]);
   else if (type == 'X') snprintf_P(buf, sizeof(buf), PSTR("X\t%s\t%d\t%d\t%s\t%d\t%d"), unitCode[a[0]], a[1], a[2], unitCode[a[3]], a[4], a[5]);
   else if (type == 'B') snprintf_P(buf, sizeof(buf), a[3] ? PSTR("B\t%s\t%d\t%d\tS") : PSTR("B\t%s\t%d\t%d"), unitCode[a[0]], a[1], a[2]);
@@ -1035,7 +1041,8 @@ void drawItem() {
   // Working out a QR takes the Mega over a second, and nothing else can happen meanwhile. So the page is drawn
   // without it, and loop() adds the QR once nobody has pressed anything for a moment: flicking through items stays quick.
   tft.fillRect(312, 82, 156, 156, PANEL); qrWanted = 1; qrAt = millis();
-  if (justMoved) { justMoved = false; footer(F("Moved. Its new spot is saved on the card.")); }
+  if (justCounted) { justCounted = false; footer(F("Count changed. Saved on the card.")); }
+  else if (justMoved) { justMoved = false; footer(F("Moved. Its new spot is saved on the card.")); }
   else if (justAdded) { justAdded = false; footer(F("Added. It is saved on the card.")); }
   else footer(itemWasScanned ? F("Down: move it     Scan more: a list") : F("Down: move it     Back"));
 }
@@ -1088,6 +1095,11 @@ void drawMapBody(int was = -1) {                 // was = the row the cursor jus
     else if (u == ROW_SYNC) { title = F("Send to website"); l1 = F("Shows the changes as QR"); l2 = F("codes. Scan them on the"); l3 = F("website's staff page."); }
     else { title = F("Change staff PIN"); l1 = F("Pick a new 4-digit PIN."); l2 = F("It is asked before every"); l3 = F("change to the room."); }
     textF(MAP_X + 16, MAP_Y + 44, title, WHITE, BOLD);
+    if (u == ROW_SYNC) {                                         // how much there is to send
+      File f = cardOpen("MOVES.TSV"); long pos = 0; int n = 0; while (f && (pos = readLine(f, pos)) >= 0) if (field[0][0]) n++; if (f) f.close();
+      char buf[40]; snprintf_P(buf, sizeof(buf), n == 1 ? PSTR("%d change to send") : PSTR("%d changes to send"), n);
+      text(MAP_X + 16, MAP_Y + 176, buf, ACCENT, SMALL, 260);
+    }
     textF(MAP_X + 16, MAP_Y + 86, l1, DIM, SMALL); textF(MAP_X + 16, MAP_Y + 110, l2, DIM, SMALL); textF(MAP_X + 16, MAP_Y + 134, l3, DIM, SMALL);
     textF(316, 72, F("Select:"), WHITE, BOLD); textF(316, 96, u == ROW_RECENT ? F("see the list") : u == ROW_SYNC ? F("show the codes") : u == ROW_RESET ? F("asks for the PIN") : F("set a new PIN"), DIM, SMALL);
     return;
@@ -1494,9 +1506,21 @@ void codeProblem(const __FlashStringHelper* what) {      // a phone code that ca
   textF(18, 130, F("Nothing was changed. Make a new code on the"), DIM, SMALL); textF(18, 154, F("website and scan it again."), DIM, SMALL);
   footer(F("Any button = Home"));
 }
+// RL:COUNT:<code6>:<copies>   (made by the website's "Edit an item" when the count changes)
 // RL:MOVE:<code6>:<UNIT>-<shelf>    RL:SHELF:<UNIT>-<shelf>:<UNIT>-<shelf>[:SWAP]    RL:ADD:<type>|<UNIT>-<shelf>|<copies>|<name>
 void runCode(char* c) {
   c += 3;
+  if (strncasecmp_P(c, PSTR("COUNT:"), 6) == 0) {
+    char* num = strchr(c + 6, ':'); if (!num) { codeProblem(F("The code is not complete.")); return; }
+    *num++ = '\0';
+    unsigned long key = strtoul(c + 6, NULL, 16); long kind = findNameCode(key); int n = atoi(num);
+    if (kind < 0) { codeProblem(F("That item is not in this console's list.")); return; }
+    if (n < 1 || n > 250) { codeProblem(F("The count has to be between 1 and 250.")); return; }
+    byte a[6] = {(byte)((key >> 16) & 255), (byte)((key >> 8) & 255), (byte)(key & 255), (byte)n, 0, 0};
+    if (!saveOrSay('C', a, key)) return;
+    staffUntil = millis() + STAFF_MS;
+    backDepth = 0; mode = HOME; justCounted = true; openItem(kind, false); return;
+  }
   if (strncasecmp_P(c, PSTR("MOVE:"), 5) == 0) {
     char* place = strchr(c + 5, ':'); if (!place) { codeProblem(F("The code is not complete.")); return; }
     *place++ = '\0';
@@ -1604,6 +1628,12 @@ void describeChange(long pos, char* top, byte topSize, char* under, byte underSi
   under[0] = '\0';
   if (t == 'B') { snprintf_P(top, topSize, atoi(field[3]) ? PSTR("Board put in: %s, groove %s") : PSTR("Board taken out: %s, groove %s"), n1, field[2]); if (field[4][0]) strcpy_P(under, PSTR("its things went to the shelf below")); }
   else if (t == 'A') { snprintf_P(top, topSize, PSTR("Added: %s"), field[3]); int u = findUnit(field[4]); snprintf_P(under, underSize, PSTR("%s, shelf %s"), u >= 0 ? unitName[u] : field[4], field[5]); }
+  else if (t == 'C') {
+    char n[4]; copyText(n, field[2], sizeof(n));
+    long k = findNameCode(strtoul(field[1], NULL, 16));
+    if (k >= 0) { loadKind(k); copyText(top, field[K_NAME], topSize); } else strcpy_P(top, PSTR("A thing"));
+    snprintf_P(under, underSize, PSTR("Lending now has %s"), n);
+  }
   else if (t == 'U') { int u2 = findUnit(field[2]); snprintf_P(top, topSize, PSTR("%s and %s traded places"), n1, u2 >= 0 ? unitName[u2] : field[2]); }
   else if (t == 'S' || t == 'X') {
     char a[24], b[24]; int u2 = findUnit(field[4]);
@@ -1683,7 +1713,8 @@ void startOver() {
   }
   loadBoards(); loadMoves(); findAddedFrom();
   clearPutAway(); homeCursor = 0; goHome();
-  char msg[40]; strcpy_P(msg, PSTR("Back to the ")); strcat_P(msg, BACKUP_NAME);
+  go(SYNC); syncPage = 0; syncPages = 1; draw();                   // the code that puts the website back too
+  char msg[64]; strcpy_P(msg, PSTR("Console is back to the ")); strcat_P(msg, BACKUP_NAME); strcat_P(msg, PSTR(".  Back = Home"));
   tft.fillRect(0, 294, 480, 26, PANEL); text(14, 312, msg, ACCENT, SMALL);
 }
 void undoLast() {                                // takes the last change back
@@ -1757,7 +1788,6 @@ void drawSync() {
   header("To the website", right);
   char qtext[SYNC_BYTES + 80]; int first, total;
   int lines = syncText(qtext, sizeof(qtext), syncPage, syncPages, &first, &total);
-  if (!total) { textF(18, 90, F("No changes yet. Nothing to send."), WHITE, SMALL); footer(F("Back")); return; }
   textF(18, 90, F("Making the code. About 3 seconds..."), DIM, SMALL);     // this big QR takes the Mega a while: say so
   QRCode qr;
   bool made = qrcode_initText(&qr, qrData, SYNC_QR, ECC_LOW, qtext) == 0;
@@ -1768,7 +1798,8 @@ void drawSync() {
   for (byte dy = 0; dy < qr.size; dy++) { byte dx = 0; while (dx < qr.size) { if (!qrcode_getModule(&qr, dx, dy)) { dx++; continue; } byte r = dx; while (r < qr.size && qrcode_getModule(&qr, r, dy)) r++; tft.fillRect(X + (QUIET + dx) * PX, Y + (QUIET + dy) * PX, (r - dx) * PX, PX, BLACK); dx = r; } }
   char buf[40];
   textF(276, 72, F("Point a phone's"), WHITE, SMALL); textF(276, 94, F("camera at this."), WHITE, SMALL); textF(276, 116, F("The staff page opens"), WHITE, SMALL); textF(276, 138, F("with these changes."), WHITE, SMALL);
-  snprintf_P(buf, sizeof(buf), PSTR("Changes %d to %d of %d"), first + 1, first + lines, total); text(276, 178, buf, DIM, SMALL, 196);
+  if (total) { snprintf_P(buf, sizeof(buf), PSTR("Changes %d to %d of %d"), first + 1, first + lines, total); text(276, 178, buf, DIM, SMALL, 196); }
+  else { textF(276, 178, F("No changes here: this"), DIM, SMALL); textF(276, 200, F("puts the website back to"), DIM, SMALL); textF(276, 222, F("the Nov 16 setup too."), DIM, SMALL); }
   if (syncPages > 1) textF(276, 200, F("Scan every page."), DIM, SMALL);
   footer(syncPages > 1 ? F("Up / Down = next page     Back") : F("Back"));
 }

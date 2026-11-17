@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="stylesheet" href="styles.css?v=20261116m"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="stylesheet" href="styles.css?v=20261116p"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
 <main class="staff-main">
 <p class="eyebrow">For lending staff</p>
 <h1>Staff tools</h1>
@@ -11,6 +11,12 @@
 <button type="button" role="tab" id="tab-edit" aria-controls="tool-edit" aria-selected="false">Edit an item</button>
 <button type="button" role="tab" id="tab-sync" aria-controls="tool-sync" aria-selected="false">From the console</button>
 </div>
+
+<section class="home-status">
+<p id="home-sync"></p>
+<p><button type="button" id="home-sync-go" class="button-secondary">Bring in the console's changes</button></p>
+<p><span id="home-key"></span> <button type="button" id="home-key-set" class="link-button"></button></p>
+</section>
 
 <section id="room3d-card" class="room3d-card" hidden>
 <h2>The room: click a shelf</h2>
@@ -105,6 +111,7 @@
 <label class="wide">Short description<textarea name="description" rows="2" placeholder="What this item is useful for"></textarea></label>
 <label>How many Lending has<input name="copies" type="number" min="1" step="1" inputmode="numeric"></label>
 <button type="button" id="edit-publish" class="wide">Save to the website</button>
+<button type="button" id="edit-count-code" class="wide button-secondary">Only tell the console the new count</button>
 <button type="button" id="edit-download" class="wide button-secondary">Or download the file instead (data.json)</button>
 <div class="wide handoff" id="edit-handoff" hidden>
 <h3>Last step: hand the file over</h3>
@@ -162,6 +169,7 @@
 </ol>
 <p class="note">Code text: <code id="code-text"></code></p>
 <p class="note" id="code-extra"></p>
+<div id="code-many" class="code-many" hidden><button type="button" id="code-prev" class="button-secondary">Previous</button><span id="code-count"></span><button type="button" id="code-next">Next code</button><button type="button" id="code-clear" class="link-button">Empty the list</button></div>
 </div>
 </section>
 
@@ -172,7 +180,9 @@
 <li>Shelf numbers count grooves from the bottom. If a board was taken out for something tall, the console puts things on the board below.</li>
 <li>This page reads the website's copy of the room. Moves made at the console since the last update are not shown here, so the console's own screen is the one to trust.</li>
 <li>A new item added with a code exists on the console right away. Its guide page appears on this site after "From the console" brings it over and you press Save.</li>
-<li>How many Lending has: "Edit an item" changes the number on the website. The console's own number comes from the laptop's item list.</li>
+<li>How many Lending has: "Edit an item" saves the number to the website, then shows a code for the console so it knows too.</li>
+<li>Several changes at once: every code you make is kept in a list under the QR. Set them all up, then show them to the console with Next code. The PIN is typed once.</li>
+<li>"From the console" always makes the website match the console exactly, including changes that were taken back there. With no changes on the console it puts the website back to the Nov 16 setup.</li>
 <li>A mistake on the console can be taken back there: Recent changes, then pick any change and press Select twice. Adding a new item cannot be undone one at a time, only with Start over.</li>
 <li>Start over (the last spot on the console's map, behind the PIN) takes back every change and every item added at the console. "From the console" on this page has the matching button for the website.</li>
 </ul>
@@ -185,4 +195,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="room3d.js?v=20261116g"></script>
-<script src="staff.js?v=20261116m" defer></script></body></html>
+<script src="staff.js?v=20261116p" defer></script></body></html>

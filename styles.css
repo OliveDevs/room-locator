@@ -73,3 +73,6 @@
 .reminder-top .calendar-status{margin:6px 0 0!important}
 .reminder-buttons{display:grid;gap:8px}.reminder-buttons .button-secondary{margin-bottom:0}
 .connect{background:#fff;padding:20px 22px;margin:20px 0;max-width:640px}.connect h2{margin-top:0;font-size:20px}.connect input{display:block;width:100%;min-height:44px;padding:9px 10px;margin:6px 0 12px;font:inherit;border:1px solid var(--line)}
+.home-status{margin:20px 0 4px;max-width:720px}.home-status p{margin:0 0 8px}.home-status .button-secondary{background:#fff;color:var(--red);border:1px solid var(--red);padding:10px 14px;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.link-button{background:none;border:0;padding:0;color:var(--red);font:inherit;text-decoration:underline;cursor:pointer}
+.code-many{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}.code-many button:not(.link-button){border:1px solid var(--red);background:var(--red);color:#fff;padding:10px 14px;font:inherit;font-size:14px;font-weight:700;cursor:pointer}.code-many .button-secondary{background:#fff!important;color:var(--red)!important}.code-many button:disabled{opacity:.4;cursor:default}
