@@ -94,3 +94,8 @@
 .my-loans{background:var(--white);padding:22px 24px;margin:32px 0 0}.my-loans h2{font-size:19px;margin-bottom:12px}.my-loans ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}.my-loans li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px 16px;align-items:center}.my-loans li a{font-weight:650}.my-loans li span{color:var(--muted);font-size:14px}.my-loans li.late span{color:var(--red);font-weight:650}.my-loans button{width:auto;background:#fff;color:var(--red);border:1px solid var(--red);padding:8px 14px;font:inherit;font-size:14px;font-weight:650;cursor:pointer}.my-loans .note{font-size:13px;color:var(--muted);margin:14px 0 0}
 .kit-code-go{background:var(--red);color:#fff;border:0;padding:13px 18px;font:inherit;font-size:15px;font-weight:700;cursor:pointer}.kit-qr{max-width:240px;background:#fff;line-height:0;margin-bottom:14px}.kit-qr svg{width:100%;height:auto}
 @media(max-width:580px){.my-loans li{grid-template-columns:1fr auto}.my-loans li a{grid-column:1/-1}}
+.pup{display:block;height:auto;user-select:none;pointer-events:none}
+.hero-row{display:flex;align-items:flex-end;justify-content:space-between;gap:24px}.hero-row>div{min-width:0}.pup-peek{width:128px;flex:none;margin-bottom:-6px}.pup-wave{width:112px;flex:none}
+.empty-state .pup{width:128px;margin:0 auto 14px}.empty-state{text-align:center}
+.my-loans{position:relative}.pup-loans{position:absolute;right:20px;top:-58px;width:62px}
+@media(max-width:580px){.pup-peek{width:84px}.pup-wave{width:76px}.pup-loans{width:52px;top:-48px;right:14px}}
