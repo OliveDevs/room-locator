@@ -129,7 +129,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   const placeName = (code, n) => { const u = unitBy[code]; if (!u) return code; return u.shelves ? u.name + ', shelf ' + n : u.name + ' (ask at the desk)'; };
 
   // ---- tabs
-  const tabs = ['move', 'shelf', 'add', 'edit', 'sync'];
+  const tabs = ['move', 'shelf', 'many', 'add', 'edit', 'sync'];
   tabs.forEach(t => $('tab-' + t).addEventListener('click', () => {
     tabs.forEach(o => { $('tab-' + o).setAttribute('aria-selected', o === t); $('tool-' + o).hidden = o !== t; });
     $('code-out').hidden = !made.length || t === 'sync'; status.textContent = '';
@@ -165,8 +165,44 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     $('code-many').hidden = made.length < 2;
     $('code-count').textContent = 'Code ' + (madeAt + 1) + ' of ' + made.length;
     $('code-prev').disabled = madeAt === 0; $('code-next').disabled = madeAt === made.length - 1;
+    drawAll();
     $('code-out').hidden = false;
   }
+  // ---- send the whole list in one go (console v5.15): each code becomes a numbered part, RL:B:<id>:<part>/<parts>:<code>,
+  // and the parts are shown one after another, round and round, until staff say the console has them all.
+  const canBatch = c => /^RL:(MOVE|SHELF|COUNT):/.test(c.code);
+  let playTimer = null, playAt = 0, playParts = [];
+  function drawAll() {
+    const ok = made.filter(canBatch), box = $('code-all');
+    box.hidden = ok.length < 2 || !!playTimer;
+    if (box.hidden) return;
+    $('code-all-title').textContent = ok.length + ' changes are lined up';
+    $('code-all-what').textContent = made.length > ok.length ? (made.length - ok.length) + ' other code' + (made.length - ok.length === 1 ? '' : 's') + ' (new items, linking) cannot go in a batch: show ' + (made.length - ok.length === 1 ? 'it' : 'them') + ' on ' + (made.length - ok.length === 1 ? 'its' : 'their') + ' own.' : '';
+    $('code-all-list').innerHTML = ok.map(c => '<li><strong>' + esc(c.title) + '</strong> ' + esc(c.what) + '</li>').join('');
+  }
+  function stopPlay(finished) {
+    if (playTimer) clearInterval(playTimer); playTimer = null;
+    $('code-play').hidden = true; document.querySelector('#code-out .code-steps > ol').hidden = false;
+    if (finished) { for (let i = made.length - 1; i >= 0; i--) if (canBatch(made[i])) made.splice(i, 1); madeAt = made.length ? 0 : -1; status.textContent = 'Sent. On the console, open the map and choose "To the website" to bring the website up to date.'; }
+    drawCode();
+  }
+  function showPart() {
+    const p = playParts[playAt]; const qr = qrcode(0, 'M'); qr.addData(p.code); qr.make();
+    $('qr').innerHTML = qr.createSvgTag({ cellSize: 8, margin: 4, scalable: true });
+    $('code-title').textContent = 'Sending ' + playParts.length + ' changes'; $('code-what').textContent = p.title + ': ' + p.what;
+    $('code-text').textContent = p.code; $('code-extra').textContent = '';
+    $('code-play-count').textContent = 'Showing ' + (playAt + 1) + ' of ' + playParts.length;
+  }
+  $('code-all-go').addEventListener('click', () => {
+    const ok = made.filter(canBatch).slice(0, 64), id = Math.floor(Math.random() * 255 + 1).toString(16).padStart(2, '0');
+    playParts = ok.map((c, i) => ({ code: 'RL:B:' + id + ':' + (i + 1) + '/' + ok.length + ':' + c.code.slice(3), title: c.title, what: c.what }));
+    const long = playParts.find(p => p.code.length > 71); if (long) { status.textContent = 'One change is too long to send in a batch: ' + long.title + '. Show that one on its own.'; return; }
+    playAt = 0; $('code-all').hidden = true; $('code-many').hidden = true; $('code-play').hidden = false; document.querySelector('#code-out .code-steps > ol').hidden = true;
+    showPart(); playTimer = setInterval(() => { playAt = (playAt + 1) % playParts.length; showPart(); }, 2300);   // the scanner ignores a repeat of the same code within 2 seconds
+    $('code-out').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  $('code-play-done').addEventListener('click', () => stopPlay(true));
+  $('code-play-stop').addEventListener('click', () => stopPlay(false));
   function showCode(code, title, what, extra) {
     if (code.length >= MAX_CODE) { status.textContent = 'That code is too long for the scanner (' + code.length + ' characters). Use a shorter name.'; $('code-out').hidden = true; return; }
     const had = made.findIndex(c => c.code === code);
@@ -176,7 +212,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   }
   $('code-prev').addEventListener('click', () => { if (madeAt > 0) { madeAt--; drawCode(); } });
   $('code-next').addEventListener('click', () => { if (madeAt < made.length - 1) { madeAt++; drawCode(); } });
-  $('code-clear').addEventListener('click', () => { made.length = 0; madeAt = -1; drawCode(); status.textContent = 'The list of codes is empty.'; });
+  $('code-clear').addEventListener('click', () => { if (playTimer) stopPlay(false); made.length = 0; madeAt = -1; drawCode(); status.textContent = 'The list of codes is empty.'; });
 
   // ---- move a thing
   const mf = $('move-form');
@@ -196,6 +232,32 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     if (!unitBy[u]) { status.textContent = 'Choose where it goes.'; return; }
     if (u === k.u && unitBy[u].shelves && boardBelow(unitBy[u], s) === boardBelow(unitBy[u], k.s)) { status.textContent = 'It is already on that shelf. Click the shelf it is moving to.'; $('code-out').hidden = true; return; }
     showCode('RL:MOVE:' + k.h + ':' + u + '-' + s, 'Move ' + k.n, 'From ' + placeName(k.u, k.s) + ' to ' + placeName(u, unitBy[u].shelves ? boardBelow(unitBy[u], s) : 0) + '.');
+  });
+
+  // ---- move several things: tick what leaves a shelf, pick where it goes, and each becomes a move on the list
+  const yf = $('many-form');
+  unitOptions(yf.elements.fromUnit, lit, 'Choose a unit'); unitOptions(yf.elements.toUnit, units, 'Choose a unit');
+  const manyList = () => {
+    const c = yf.elements.fromUnit.value, n = Number(yf.elements.fromShelf.value), things = c && n ? onShelf(c, boardBelow(unitBy[c], n)) : [];
+    $('many-list').innerHTML = !c || !n ? '' : !things.length ? '<p class="tool-note">This shelf is empty on this copy of the room.</p>' :
+      '<p class="tool-note">' + things.length + ' things on this shelf. <button type="button" class="link-button" id="many-all">Tick all</button> <button type="button" class="link-button" id="many-none">Untick all</button></p>' +
+      things.map(k => '<label class="many-item"><input type="checkbox" name="pick" value="' + esc(k.h) + '" checked> ' + esc(k.n) + (k.x > 1 ? ' <small>(' + k.x + ' copies)</small>' : '') + '</label>').join('');
+    const set = on => $('many-list').querySelectorAll('input').forEach(i => { i.checked = on; });
+    if ($('many-all')) { $('many-all').addEventListener('click', () => set(true)); $('many-none').addEventListener('click', () => set(false)); }
+  };
+  yf.elements.fromUnit.addEventListener('change', () => { shelfOptions(yf.elements.fromShelf, yf.elements.fromUnit.value); manyList(); });
+  yf.elements.fromShelf.addEventListener('change', manyList);
+  yf.elements.toUnit.addEventListener('change', () => shelfOptions(yf.elements.toShelf, yf.elements.toUnit.value));
+  yf.addEventListener('submit', e => {
+    e.preventDefault();
+    const picked = [...$('many-list').querySelectorAll('input:checked')].map(i => kinds.find(k => k.h === i.value)).filter(Boolean);
+    const u = yf.elements.toUnit.value, s = Number(yf.elements.toShelf.value || 0);
+    if (!picked.length) { status.textContent = 'Tick at least one thing.'; return; }
+    if (!unitBy[u]) { status.textContent = 'Choose where they go.'; return; }
+    const dest = unitBy[u].shelves ? boardBelow(unitBy[u], s) : 0, from = yf.elements.fromUnit.value;
+    if (u === from && dest === boardBelow(unitBy[from], Number(yf.elements.fromShelf.value))) { status.textContent = 'That is the shelf they are already on.'; return; }
+    picked.forEach(k => showCode('RL:MOVE:' + k.h + ':' + u + '-' + s, 'Move ' + k.n, 'From ' + placeName(k.u, k.s) + ' to ' + placeName(u, dest) + '.'));
+    status.textContent = picked.length + (picked.length === 1 ? ' move' : ' moves') + ' added. ' + made.length + ' changes are on the list below.';
   });
 
   // ---- move a whole shelf

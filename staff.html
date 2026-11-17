@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="stylesheet" href="styles.css?v=20261116r"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="stylesheet" href="styles.css?v=20261117j"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
 <main class="staff-main">
 <p class="eyebrow">For lending staff</p>
 <h1>Staff tools</h1>
@@ -7,6 +7,7 @@
 <div class="tool-tabs" role="tablist" aria-label="Staff tools">
 <button type="button" role="tab" id="tab-move" aria-controls="tool-move" aria-selected="true">Move a thing</button>
 <button type="button" role="tab" id="tab-shelf" aria-controls="tool-shelf" aria-selected="false">Move a shelf</button>
+<button type="button" role="tab" id="tab-many" aria-controls="tool-many" aria-selected="false">Move several things</button>
 <button type="button" role="tab" id="tab-add" aria-controls="tool-add" aria-selected="false">Add a new item</button>
 <button type="button" role="tab" id="tab-edit" aria-controls="tool-edit" aria-selected="false">Edit an item</button>
 <button type="button" role="tab" id="tab-sync" aria-controls="tool-sync" aria-selected="false">From the console</button>
@@ -62,6 +63,18 @@
 <label><input type="radio" name="how" value="swap"> Swap the two shelves</label>
 </fieldset>
 <button type="submit" class="wide">Make the console code</button>
+</form>
+</section>
+
+<section id="tool-many" class="tool" role="tabpanel" aria-labelledby="tab-many" hidden>
+<form id="many-form" class="staff-form">
+<p class="wide tool-note">Pick a shelf, untick anything that is staying, and choose where the rest go. Each thing is added to the list of changes below. Do this for as many shelves as you like, then send the whole list to the console in one go.</p>
+<label>From unit<select name="fromUnit" required></select></label>
+<label>Shelf<select name="fromShelf" required></select></label>
+<div class="wide many-list" id="many-list"></div>
+<label>To unit<select name="toUnit" required></select></label>
+<label>Shelf<select name="toShelf" required></select></label>
+<button type="submit" class="wide">Add these moves to the list</button>
 </form>
 </section>
 
@@ -188,6 +201,23 @@
 </ol>
 <p class="note">Code text: <code id="code-text"></code></p>
 <p class="note" id="code-extra"></p>
+<div id="code-all" class="code-all" hidden>
+<h3 id="code-all-title"></h3>
+<p id="code-all-what"></p>
+<ul id="code-all-list" class="code-all-list"></ul>
+<button type="button" id="code-all-go">Send them all to the console in one go</button>
+<p class="note">Needs console version 5.15 or newer. On an older console, use Next code and press Select for each one.</p>
+</div>
+<div id="code-play" class="code-play" hidden>
+<p id="code-play-count" class="code-play-count"></p>
+<ol>
+<li>Hold the phone about 10 cm from the console's scanner, screen bright, and keep it there.</li>
+<li>Type the staff PIN on the console once. The codes keep going round by themselves.</li>
+<li>Watch the console count up. When it says all of them are in, press the button below.</li>
+</ol>
+<button type="button" id="code-play-done">The console says all of them are in</button>
+<button type="button" id="code-play-stop" class="button-secondary">Stop</button>
+</div>
 <div id="code-many" class="code-many" hidden><button type="button" id="code-prev" class="button-secondary">Previous</button><span id="code-count"></span><button type="button" id="code-next">Next code</button><button type="button" id="code-clear" class="link-button">Empty the list</button></div>
 </div>
 </section>
@@ -226,4 +256,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="room3d.js?v=20261116g"></script>
-<script src="staff.js?v=20261117b" defer></script></body></html>
+<script src="staff.js?v=20261117c" defer></script></body></html>

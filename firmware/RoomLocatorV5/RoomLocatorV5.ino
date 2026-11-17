@@ -131,6 +131,8 @@
  code; scanning it fills the put-away list, so each piece gets its own colour. No PIN: it changes nothing. Claude's code.
  Also v5.14: a small dog trots across an item's screen and sits, when there is room under the shelf box. The dog
  pictures are Diana's (made with ChatGPT's image tool, in dog.h); Claude shrank them for the screen and wrote dogTick().
+ (v5.15): we wanted staff to line up many changes on the staff page and send them over in one go. The page shows the
+ codes one after another as RL:B parts; the console saves each as it arrives and counts them. Claude's design and code.
   _____
 
  Diana Caballero and Gauri Sharma
@@ -203,7 +205,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.14";
+const char VERSION[] PROGMEM = "5.15";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -1616,8 +1618,90 @@ void codeProblem(const __FlashStringHelper* what) {      // a phone code that ca
 // RL:WEB:<pass>               (made once by the website's "Link the console": see "the website pass" above)
 // RL:COUNT:<code6>:<copies>   (made by the website's "Edit an item" when the count changes)
 // RL:MOVE:<code6>:<UNIT>-<shelf>    RL:SHELF:<UNIT>-<shelf>:<UNIT>-<shelf>[:SWAP]    RL:ADD:<type>|<UNIT>-<shelf>|<copies>|<name>
+// ---------- Many changes in one go (v5.15)
+// RL:B:<id>:<part>/<parts>:<the rest of a MOVE, SHELF or COUNT code>      for example RL:B:4f:3/12:MOVE:29c081:AUD-5
+// The staff page shows the parts one after another, round and round, while the phone is held at the scanner. Each part
+// is saved the moment it arrives, with no Select press (the list was checked on the staff page), and a part seen twice
+// is not saved twice. <id> tells one batch from the next. Every change lands on Recent changes, where it can be undone.
+byte batchId = 0, batchParts = 0, batchSeen[8], batchIn = 0, batchSaved = 0, batchSkipped = 0;   // batchParts 0 = no batch yet
+const __FlashStringHelper* batchWhy = NULL;      // why the last skipped part was not used
+bool quietSave(char type, const byte* a, unsigned long key, const __FlashStringHelper** why) {
+  if (!moveListHasRoom(type, key)) { *why = F("The console's list of changes is full."); return false; }
+  if (!saveChange(type, a)) { *why = F("The SD card would not write."); return false; }
+  rememberChange(type, a); return true;
+}
+bool batchApply(char* c, const __FlashStringHelper** why) {       // true = saved (or already true)
+  if (strncasecmp_P(c, PSTR("MOVE:"), 5) == 0) {
+    char* place = strchr(c + 5, ':'); if (!place) { *why = F("A part was not complete."); return false; }
+    *place++ = '\0';
+    long kind = findNameCode(strtoul(c + 5, NULL, 16)); byte u, sh;
+    if (kind < 0) { *why = F("An item is not in this console's list."); return false; }
+    if (!parsePlace(place, &u, &sh)) { *why = F("A unit or shelf does not exist here."); return false; }
+    currentKind = kind; moveWhat = W_ITEM; toNewBoard = false; moveToUnit = u; moveToShelf = unitCount[u] ? spaceLo(u, sh) : 0;
+    if (atMoveTarget()) return true;                               // it is there already
+    unsigned long key = nameCode(field[K_NAME]);                   // atMoveTarget() loaded the kind
+    byte a[6] = {(byte)((key >> 16) & 255), (byte)((key >> 8) & 255), (byte)(key & 255), moveToUnit, moveToShelf, 0};
+    return quietSave('I', a, key, why);
+  }
+  if (strncasecmp_P(c, PSTR("SHELF:"), 6) == 0) {
+    char* from = c + 6; char* to = strchr(from, ':'); if (!to) { *why = F("A part was not complete."); return false; }
+    *to++ = '\0'; char* swap = strchr(to, ':'); if (swap) *swap++ = '\0';
+    byte u1, s1, u2, s2;
+    if (!parsePlace(from, &u1, &s1) || !parsePlace(to, &u2, &s2) || !unitCount[u1] || !unitCount[u2]) { *why = F("A unit or shelf does not exist here."); return false; }
+    byte lo = spaceLo(u1, s1), dest = spaceLo(u2, s2);
+    if (u1 == u2 && lo == dest) return true;
+    countThings(u1); if (!thingCount[lo]) { *why = F("A shelf to move was empty."); return false; }
+    bool swapping = swap && strcasecmp_P(swap, PSTR("SWAP")) == 0;
+    byte a[6] = {u1, lo, spaceHi(u1, lo), u2, dest, (byte)(swapping ? spaceHi(u2, dest) : 0)};
+    return quietSave(swapping ? 'X' : 'S', a, 0, why);
+  }
+  if (strncasecmp_P(c, PSTR("COUNT:"), 6) == 0) {
+    char* num = strchr(c + 6, ':'); if (!num) { *why = F("A part was not complete."); return false; }
+    *num++ = '\0';
+    unsigned long key = strtoul(c + 6, NULL, 16); int n = atoi(num);
+    if (findNameCode(key) < 0) { *why = F("An item is not in this console's list."); return false; }
+    if (n < 1 || n > 250) { *why = F("A count was not between 1 and 250."); return false; }
+    byte a[6] = {(byte)((key >> 16) & 255), (byte)((key >> 8) & 255), (byte)(key & 255), (byte)n, 0, 0};
+    return quietSave('C', a, key, why);
+  }
+  *why = F("Only moves and counts can be sent together."); return false;
+}
+void drawBatch() {
+  char lineOut[48];
+  backDepth = 0; mode = HOME; homeMessage = true; lightsOff();
+  header("From the staff page", NULL);
+  snprintf_P(lineOut, sizeof(lineOut), PSTR("%d of %d changes received"), batchIn, batchParts); text(18, 84, lineOut, WHITE, TITLE);
+  snprintf_P(lineOut, sizeof(lineOut), PSTR("%d saved, %d not used"), batchSaved, batchSkipped); text(18, 122, lineOut, batchSkipped ? ACCENT : GREEN, SMALL);
+  if (batchWhy) textF(18, 146, batchWhy, DIM, SMALL);
+  if (batchIn < batchParts) {
+    strcpy_P(lineOut, PSTR("Still waiting for: ")); byte shown = 0;
+    for (byte i = 0; i < batchParts && shown < 6; i++) if (!(batchSeen[i >> 3] & (1 << (i & 7)))) { char num[5]; itoa(i + 1, num, 10); if (shown++) strcat_P(lineOut, PSTR(", ")); strcat(lineOut, num); }
+    if (batchParts - batchIn > 6) strcat_P(lineOut, PSTR(" ..."));
+    text(18, 190, lineOut, WHITE, SMALL);
+    footer(F("Keep the phone at the scanner"));
+  } else {
+    textF(18, 190, F("All of them are in. Each one is on Recent"), WHITE, SMALL); textF(18, 214, F("changes, where it can be undone."), WHITE, SMALL);
+    footer(F("Any button = Home"));
+  }
+}
+void batchCode(char* c) {
+  char* part = strchr(c, ':'); char* total = part ? strchr(part, '/') : NULL; char* body = total ? strchr(total, ':') : NULL;
+  byte id = (byte)strtoul(c, NULL, 16); int i = part ? atoi(part + 1) : 0, n = total ? atoi(total + 1) : 0;
+  if (!body || i < 1 || n < 1 || n > 64 || i > n) { codeProblem(F("The code is not complete.")); return; }
+  body++;
+  if (!batchParts || id != batchId || n != batchParts) { batchId = id; batchParts = n; memset(batchSeen, 0, sizeof(batchSeen)); batchIn = batchSaved = batchSkipped = 0; batchWhy = NULL; }
+  byte bit = i - 1;
+  if (!(batchSeen[bit >> 3] & (1 << (bit & 7)))) {                 // a part seen before is only counted once
+    batchSeen[bit >> 3] |= 1 << (bit & 7); batchIn++;
+    const __FlashStringHelper* why = NULL;
+    if (batchApply(body, &why)) batchSaved++; else { batchSkipped++; batchWhy = why; }
+  }
+  staffUntil = millis() + STAFF_MS; if (!staffUntil) staffUntil = 1;
+  drawBatch();
+}
 void runCode(char* c) {
   c += 3;
+  if (strncasecmp_P(c, PSTR("B:"), 2) == 0) { batchCode(c + 2); return; }
   if (strncasecmp_P(c, PSTR("WEB:"), 4) == 0) {                  // the website pass, handed over once by the staff page
     if (!passLooksRight(c + 4)) { codeProblem(F("That website pass is not the right shape.")); return; }
     cardRemove("WEB.TSV"); File f = cardOpen("WEB.TSV", FILE_WRITE);
