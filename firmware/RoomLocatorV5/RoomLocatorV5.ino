@@ -127,6 +127,8 @@
  website too, and the map says how many changes are waiting to be sent. Our design, Claude's code.
  (v5.13): we wanted staff to need only the console PIN. The console now keeps a "website pass" and adds it to the two
  staff codes it shows, so the phone that scans them can save. Claude proposed how; we chose it.
+ (v5.14): we wanted the console to light every shelf of a kit at once. A kit page on the website shows an RL:KIT
+ code; scanning it fills the put-away list, so each piece gets its own colour. No PIN: it changes nothing. Claude's code.
   _____
 
  Diana Caballero and Gauri Sharma
@@ -198,7 +200,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.13";
+const char VERSION[] PROGMEM = "5.14";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -268,6 +270,7 @@ unsigned long liveAt = 0;
 
 // the put-away list
 long listKind[MAX_LIST]; int listLed[MAX_LIST]; byte listSpan[MAX_LIST]; byte listColor[MAX_LIST]; byte listCount = 0;
+bool listIsKit = false;                         // the list on the put-away screen came from a kit code (only its title changes)
 bool itemWasScanned = false;                    // the open item came from a scan (so a second scan starts the list)
 
 // moving and changing shelves
@@ -990,6 +993,7 @@ void drawList() {
   else if (mode == RECENT) strcpy_P(title, PSTR("Recent changes"));
   else if (mode == ACTIONS) { if (stage == ST_TO) snprintf_P(title, sizeof(title), PSTR("Shelf %d has things on it"), moveToShelf); else snprintf_P(title, sizeof(title), PSTR("%s, shelf %d"), unitName[fromUnit], fromLo); }
   else if (mode == SHELF) { int u = findUnit(shelfUnit); snprintf_P(title, sizeof(title), PSTR("%s, shelf %d"), u >= 0 ? unitName[u] : shelfUnit, shelfNumber); }
+  else if (listIsKit) snprintf_P(title, sizeof(title), PSTR("Kit: %d to collect"), listCount);
   else strcpy_P(title, PSTR("Put these away"));
   if (rowCount == 0) right[0] = '\0';
   header(title, right);
@@ -1000,7 +1004,7 @@ void drawList() {
     else if (mode == RECENT) textF(18, 90, F("No changes since the laptop last collected them."), DIM, SMALL);
     else textF(18, 90, mode == RESULTS ? F("Nothing matches. Try another word.") : F("Nothing here."), DIM, SMALL);
   }
-  if (mode == PUTAWAY) footer(F("Scan the next thing.  Back = done, lights off"));
+  if (mode == PUTAWAY) footer(listIsKit ? F("Each piece has its own light.  Back = lights off") : F("Scan the next thing.  Back = done, lights off"));
   else if (justChanged) { justChanged = false; doneFooter(); }
   else if (mode == UNITVIEW && stage == ST_TO) footer(F("Up / Down, Select = put it here"));
   else if (mode == UNITVIEW) footer(F("Select a shelf, or a groove to add a board"));
@@ -1349,7 +1353,7 @@ void draw() {
 
 // ============================== Put-away list ==============================
 // a scanned thing: the first one shows where it lives; a second, different one starts the put-away list
-void clearPutAway() { listCount = 0; rowCount = 0; }
+void clearPutAway() { listCount = 0; rowCount = 0; listIsKit = false; }
 void addToPutAway(long kind) {
   for (byte i = 0; i < listCount; i++) if (listKind[i] == kind) return;      // already on it
   if (listCount >= MAX_LIST) return;
@@ -1645,6 +1649,22 @@ void runCode(char* c) {
     backDepth = 0; mode = HOME; go(ADDNEW); draw(); return;
   }
   codeProblem(F("The console does not know this kind of code."));
+}
+// RL:KIT:<code6>,<code6>,...   (shown on a kit page of the website) lights the shelf of every piece at once, each in
+// its own colour, by filling the put-away list. It changes nothing, so it does not ask for the PIN. Up to MAX_LIST pieces.
+void kitCode(char* c) {
+  long found[MAX_LIST]; byte n = 0;                               // look every piece up first, so the list is only replaced by a kit that works
+  while (*c && n < MAX_LIST) {
+    long kind = findNameCode(strtoul(c, NULL, 16));
+    if (kind >= 0) found[n++] = kind;
+    c = strchr(c, ','); if (!c) break; c++;
+  }
+  queryLen = 0; query[0] = '\0'; live = false; livePending = false;
+  if (!n) { codeProblem(F("None of that kit is in this console's list.")); return; }
+  clearPutAway();
+  for (byte i = 0; i < n; i++) addToPutAway(found[i]);
+  listIsKit = true; backDepth = 0; mode = PUTAWAY; rowCount = listCount; cursor = 0;
+  draw();
 }
 void addScanned(char* t) {                       // a scan while a new item is being set up
   if (strncasecmp_P(t, PSTR("LOC:"), 4) == 0) {
@@ -1946,7 +1966,7 @@ void pressed(byte b) {                          // Up, Down, Select or Back, fro
 
 // ============================== Scans and typing ==============================
 void scannedKind(long kind) {
-  if (mode == PUTAWAY) { addToPutAway(kind); }
+  if (mode == PUTAWAY) { listIsKit = false; addToPutAway(kind); }
   else if (mode == ITEM && itemWasScanned && kind != currentKind) { clearPutAway(); addToPutAway(currentKind); addToPutAway(kind); backDepth = 0; mode = PUTAWAY; }
   else { backDepth = 0; mode = HOME; openItem(kind, true); return; }
   rowCount = listCount; cursor = listCount - 1;
@@ -1979,6 +1999,7 @@ void entered(char* textIn) {
   if (strcasecmp_P(textIn, PSTR("CLEAR")) == 0) { clearPutAway(); homeCursor = 0; goHome(); return; }
   if (mode == PIN) return;                                                      // scans wait while the PIN is typed
   if (mode == ADDNEW) { addScanned(textIn); return; }
+  if (strncasecmp_P(textIn, PSTR("RL:KIT:"), 7) == 0) { kitCode(textIn + 7); return; }      // a kit from the website: lights only, no PIN
   if (strncasecmp_P(textIn, PSTR("RL:"), 3) == 0) {                            // a code made on the website's staff page
     queryLen = 0; query[0] = '\0';
     if (staffOK()) runCode(textIn);
