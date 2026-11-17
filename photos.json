@@ -1138,5 +1138,1663 @@
     "Tascam DR-60DmkII Field Recorder",
     "EOS Rebel T3 Camera",
     "FX3 Full-Frame Cinema Camera"
-  ]
+  ],
+  "lending": {
+    "3.5mm to 2-Male RCA Adapter": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/3.5mm2rca.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226776004436&vid=01CMU_INST:01CMU",
+      "w": 225,
+      "h": 225
+    },
+    "Boompole": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991007775029704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991007775029704436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "DPA Clip Bass": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/DPA-Clip-Bass.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226943904436&vid=01CMU_INST:01CMU",
+      "w": 396,
+      "h": 165
+    },
+    "DPA Clip Cello": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/DPA-Clip-Cello.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226943704436&vid=01CMU_INST:01CMU",
+      "w": 377,
+      "h": 151
+    },
+    "DPA Clip Guitar": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/DPA-Clip-Guitar.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226943504436&vid=01CMU_INST:01CMU",
+      "w": 196,
+      "h": 349
+    },
+    "DPA Clip Piano": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/DPA-Clip-Piano.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226943304436&vid=01CMU_INST:01CMU",
+      "w": 179,
+      "h": 239
+    },
+    "DPA Clip Universal": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/DPA-Clip-Universal.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226942904436&vid=01CMU_INST:01CMU",
+      "w": 192,
+      "h": 231
+    },
+    "DPA Clip Violin": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/DPA-Clip-Violin.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226943104436&vid=01CMU_INST:01CMU",
+      "w": 192,
+      "h": 229
+    },
+    "Microphone Clip": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020379860004436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020379860004436&vid=01CMU_INST:01CMU",
+      "w": 172,
+      "h": 199
+    },
+    "PDC21": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/PylePDC21-e1456165641897.jpg",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226781904436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 203
+    },
+    "TM-70T Combo Tuner Metronome": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020594751604436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020594751604436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 137
+    },
+    "Guitar Cable": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/guitar_cable.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226937404436&vid=01CMU_INST:01CMU",
+      "w": 253,
+      "h": 151
+    },
+    "XLR Cable": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/XLRCable.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226941204436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "Portable Cassette Tape Player": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020443437904436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020443437904436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 189
+    },
+    "H4essential Field Recorder": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020427752504436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020427752504436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "Tascam DR-60DmkII Field Recorder": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991019644789804436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991019644789804436&vid=01CMU_INST:01CMU",
+      "w": 300,
+      "h": 186
+    },
+    "Zoom F3 Field Recorder": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020231955804436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020231955804436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "Zoom H1 Audio Recorder": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/ZoomH1.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226939704436&vid=01CMU_INST:01CMU",
+      "w": 304,
+      "h": 177
+    },
+    "Zoom H1n Audio Recorder": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/ZoomH1n.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226939504436&vid=01CMU_INST:01CMU",
+      "w": 131,
+      "h": 300
+    },
+    "Zoom H4nPro Field Audio Recorder": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991016856559704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991016856559704436&vid=01CMU_INST:01CMU",
+      "w": 130,
+      "h": 259
+    },
+    "Zoom H6 Audio Recorder": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/ZoomH6Kitv2.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226939304436&vid=01CMU_INST:01CMU",
+      "w": 300,
+      "h": 400
+    },
+    "AKG Headphones": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/AKG_Headphones01-e1425996228527.jpg",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226775104436&vid=01CMU_INST:01CMU",
+      "w": 470,
+      "h": 313
+    },
+    "Sony Headphones": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/SonyHeadphonesMDR7506.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226791604436&vid=01CMU_INST:01CMU",
+      "w": 278,
+      "h": 300
+    },
+    "AKAI MPKmini Keyboard II": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/DSC_0046-300x199.jpg",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226775404436&vid=01CMU_INST:01CMU",
+      "w": 300,
+      "h": 199
+    },
+    "Electric Cello": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020594653504436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020594653504436&vid=01CMU_INST:01CMU",
+      "w": 93,
+      "h": 200
+    },
+    "M-Audio Oxygen25 MIDI Keyboard": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991007774519704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991007774519704436&vid=01CMU_INST:01CMU",
+      "w": 300,
+      "h": 198
+    },
+    "minilogue xd": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/KorgMinilogueXD.JPG",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226784904436&vid=01CMU_INST:01CMU",
+      "w": 792,
+      "h": 311
+    },
+    "Scarlett 2i2 Audio Interface": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/scarlett2i2.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226780504436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "AKAI Drum Pad": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/AkaiDrumPad.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226775204436&vid=01CMU_INST:01CMU",
+      "w": 398,
+      "h": 300
+    },
+    "Launch Control XL": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/launchControlXL.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226773204436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 255
+    },
+    "Novation LaunchPad Mini": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/LaunchPad-e1425999912464.jpg",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226783404436&vid=01CMU_INST:01CMU",
+      "w": 470,
+      "h": 313
+    },
+    "Audio-Technica AT822 Stereo Microphone": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991007775429704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991007775429704436&vid=01CMU_INST:01CMU",
+      "w": 300,
+      "h": 272
+    },
+    "Audio-Technica Cardioid Condenser Boundary Microphone": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991007775199704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991007775199704436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 297
+    },
+    "Audio-Technica Condenser Shotgun Microphone": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991007775319704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991007775319704436&vid=01CMU_INST:01CMU",
+      "w": 350,
+      "h": 286
+    },
+    "Audio-Technica Pro70 Wired Lavalier Microphone": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991007775229704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991007775229704436&vid=01CMU_INST:01CMU",
+      "w": 400,
+      "h": 400
+    },
+    "CAD 22 Handheld Cardioid Microphone": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991007775159704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991007775159704436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 593
+    },
+    "DPA Core Microphone-L": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/DPA-CORE-MIC.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226942704436&vid=01CMU_INST:01CMU",
+      "w": 177,
+      "h": 303
+    },
+    "Dual-Channel Wireless Microphone System": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020593754104436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020593754104436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "Rode VideoMic Pro+ Mountable Shotgun Microphone": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991019955256704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991019955256704436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 145
+    },
+    "Rode Wireless PRO Microphone": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020313770904436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020313770904436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "SM-7B Microphone": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020266059404436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020266059404436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "Sony Omni Wireless Lavalier Microphone": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991007775489704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991007775489704436&vid=01CMU_INST:01CMU",
+      "w": 300,
+      "h": 300
+    },
+    "USB Mic": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/USBmic_generic.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226943404436&vid=01CMU_INST:01CMU",
+      "w": 526,
+      "h": 205
+    },
+    "WA-87 Microphone": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020266059204436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020266059204436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "Wireless Phone Microphone": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020443135704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020443135704436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 158
+    },
+    "Yeti USB Microphone": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/YetiUsbMic.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226940204436&vid=01CMU_INST:01CMU",
+      "w": 132,
+      "h": 281
+    },
+    "802VLZ4 8-Channel Audio Mixer": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/MackieMixer802.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226789604436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 187
+    },
+    "Alesis Multimix4 4-Channel Mixer": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/alesis_multimix4-e1453228924763.jpg",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226774904436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 156
+    },
+    "Audio Mixer 402VLZ4": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/MackieMixer402.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226789804436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "BX8 Powered Speaker": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/BX8.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226787404436&vid=01CMU_INST:01CMU",
+      "w": 193,
+      "h": 250
+    },
+    "Bose S1 Pro+ PA System": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020226787704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226787704436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "Fostex 6301 Powered Speakers": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020190459204436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020190459204436&vid=01CMU_INST:01CMU",
+      "w": 199,
+      "h": 121
+    },
+    "PartyBox Bluetooth Speaker": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020587634304436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020587634304436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "Rokit Powered 8 Speaker": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/RokitSpeakers.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226780804436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 140
+    },
+    "Desktop Microphone Stand": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991007775409704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991007775409704436&vid=01CMU_INST:01CMU",
+      "w": 560,
+      "h": 560
+    },
+    "Mic Stand": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/MicStand.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226936704436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 642
+    },
+    "Multi-Function Stand": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/multiFunctionStand.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226783904436&vid=01CMU_INST:01CMU",
+      "w": 244,
+      "h": 350
+    },
+    "Microphone Tripod": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/micStandBoomArm.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226787304436&vid=01CMU_INST:01CMU",
+      "w": 131,
+      "h": 262
+    },
+    "Lightning to USB A Adapter Cable": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020443437504436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020443437504436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "USB C to HDMI": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/USBCtoHDMI.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226944604436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 250
+    },
+    "1/4\" to 1/8\" Adapter": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/AudioJack1-4to1-8.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226777304436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 149
+    },
+    "1/4\" to 1/8\" Audio Adapter.": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020487532404436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020487532404436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "1/8\" to 1/4\" Audio Adapter": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991007811769704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991007811769704436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 193
+    },
+    "3-Pin XLR Adapter": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991015139859704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991015139859704436&vid=01CMU_INST:01CMU",
+      "w": 300,
+      "h": 232
+    },
+    "5-Pin XLR Adapter": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991015139879704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991015139879704436&vid=01CMU_INST:01CMU",
+      "w": 279,
+      "h": 188
+    },
+    "DPA XLR Adapter": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/dpaXLRadapter.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226942304436&vid=01CMU_INST:01CMU",
+      "w": 457,
+      "h": 250
+    },
+    "USB-C Audio": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/usbCaudio.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226942804436&vid=01CMU_INST:01CMU",
+      "w": 118,
+      "h": 126
+    },
+    "1/4\" AUX Extension": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/QuarterIn-to-QuarterInAudioCable.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226777204436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "1/4\" Audio Cable": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/quarterinch.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226777004436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "1/8\" AUX": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/1-8inMTo1-8inF.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226776604436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 212
+    },
+    "1/8\" Audio Cable": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991015139839704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991015139839704436&vid=01CMU_INST:01CMU",
+      "w": 350,
+      "h": 350
+    },
+    "1/8\" M to M Cable": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/1-8inMTo1-8inM.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226776504436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "1/8\" to 1/4\" AUX": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/1-8inTo1-4in.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226776704436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "RCA Cable": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/RCAmale-RCAmale.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226781104436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "XLR-DMX Adapter Cable": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/xlr_dmx_cable_adapter.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226940604436&vid=01CMU_INST:01CMU",
+      "w": 301,
+      "h": 161
+    },
+    "Extension Cord": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/ExtensionCord.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226939804436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 179
+    },
+    "HDMI F-F Ext": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/HDMICableExtenderF-F.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226937904436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 175
+    },
+    "HDMI to DVI": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/HDMItoDVI.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226937704436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "HDMI(in) to 2xDVI": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/HDMI-in-2xDVI-out.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226937504436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "HDMI Cable": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/HDMIcable.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226773504436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 187
+    },
+    "HDMI Cable 40ft": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/40ftHDMI.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226937204436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 166
+    },
+    "HDMI Cable Micro": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/HDMI-HDMImicro.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226937004436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "HDMI Cable Mini": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/HDMI-HDMImini.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226936804436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "Micro HDMI to HDMI": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/MicroHDMItoHDMI.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226787204436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 187
+    },
+    "Mini DisplayPort to DVI": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/MdpToDviAdapter.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226936304436&vid=01CMU_INST:01CMU",
+      "w": 393,
+      "h": 250
+    },
+    "Mini-DisplayPort to HDMI": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/MDP_to_HDMI-300x200.jpg",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226935904436&vid=01CMU_INST:01CMU",
+      "w": 300,
+      "h": 200
+    },
+    "Mini DisplayPort Cable": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/MiniDisplayport.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226936504436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 238
+    },
+    "Mini DisplayPort to VGA": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/MiniDisplayport-VGA.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226936104436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 185
+    },
+    "USB C to A Adapter": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/USB_C_A_adapter.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226945304436&vid=01CMU_INST:01CMU",
+      "w": 76,
+      "h": 72
+    },
+    "Power Strip": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/PowerStrip.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226781304436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "RCA Cable, 1/8\" (Audio)": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991015139809704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991015139809704436&vid=01CMU_INST:01CMU",
+      "w": 240,
+      "h": 178
+    },
+    "RockeTek Multi Card Reader": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020179259704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020179259704436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 182
+    },
+    "SD Card Reader": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991014812609704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991014812609704436&vid=01CMU_INST:01CMU",
+      "w": 183,
+      "h": 200
+    },
+    "128GB microSD": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/128micro.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226776204436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "Thunderbolt 3 to Thunderbolt 2 Adapter": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/Thunderbolt3-2Adapter.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226778604436&vid=01CMU_INST:01CMU",
+      "w": 300,
+      "h": 81
+    },
+    "Thunderbolt Cable (L)": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/Thunderbolt.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226778504436&vid=01CMU_INST:01CMU",
+      "w": 356,
+      "h": 250
+    },
+    "Thunderbolt Cable (S)": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/Thunderbolt.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226778404436&vid=01CMU_INST:01CMU",
+      "w": 356,
+      "h": 250
+    },
+    "SD to USB A Adapter": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020232856404436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020232856404436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "USB C TO A Adapter Type 2": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/USB_C_A_adapter_02.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226945204436&vid=01CMU_INST:01CMU",
+      "w": 316,
+      "h": 250
+    },
+    "Apple USB C-C Cable - 2m": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/AppleUSB-C-Cable.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226774504436&vid=01CMU_INST:01CMU",
+      "w": 355,
+      "h": 250
+    },
+    "Thunderbolt 3 Cable": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020594654204436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020594654204436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "USB 3.0 Cable": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/USB3.0AtoUSB3.0BMicro.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226777904436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 188
+    },
+    "USB A to USB B Cable": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/USBAtoUSBB.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226777704436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 140
+    },
+    "USB A to USB B Micro": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/USBAtoUSBBMicro.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226777604436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "USB A to USB B Mini": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/USBAtoUSBBMini.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226777504436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "USB C to A Cable": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/USB_C_A_cable.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226945004436&vid=01CMU_INST:01CMU",
+      "w": 342,
+      "h": 250
+    },
+    "USB C to C Cable": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/UsbCcable.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226944804436&vid=01CMU_INST:01CMU",
+      "w": 319,
+      "h": 250
+    },
+    "Collapsible Utility Wagon": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020527304204436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020527304204436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "7-in-1 USB-C Dongle": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/7in1hub.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226775804436&vid=01CMU_INST:01CMU",
+      "w": 201,
+      "h": 251
+    },
+    "DisplayPort to HDMI": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/DisplayPort-HDMI.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226938504436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 163
+    },
+    "HDMI (out) to VGA": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/HDMItoVGA.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226938304436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "HDMI 90 F-M": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/HDMIf-mDirectionChange.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226938104436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "Keyboard USB": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/computerKeyboardUsb.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226790904436&vid=01CMU_INST:01CMU",
+      "w": 242,
+      "h": 194
+    },
+    "MOUSE USB-C": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/usb_c_mouse.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226784404436&vid=01CMU_INST:01CMU",
+      "w": 343,
+      "h": 348
+    },
+    "SD to USB A-C Adapter": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/USB-A-C-SdMicroSdAdapter.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020232859204436&vid=01CMU_INST:01CMU",
+      "w": 199,
+      "h": 198
+    },
+    "USB-C Hub": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020506037604436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020506037604436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "USB Extension Cable": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/USBExtension.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226944204436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "Dell Monitor 27 in.": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/Dell27UHD4K_Monitor.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226776304436&vid=01CMU_INST:01CMU",
+      "w": 350,
+      "h": 278
+    },
+    "MOUSE": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/wiredMouse.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226784604436&vid=01CMU_INST:01CMU",
+      "w": 116,
+      "h": 131
+    },
+    "Stream Deck Studio Controller": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020282057804436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020282057804436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 155
+    },
+    "USB BluRay Drive": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/PioneerUsbBlueRay.jpg",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226772404436&vid=01CMU_INST:01CMU",
+      "w": 500,
+      "h": 375
+    },
+    "USB DVD DRIVE": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/usbDVD.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226944404436&vid=01CMU_INST:01CMU",
+      "w": 472,
+      "h": 291
+    },
+    "USB Memory Stick": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/USB_Memory-300x200.jpg",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226943604436&vid=01CMU_INST:01CMU",
+      "w": 300,
+      "h": 200
+    },
+    "Intuos Pro Pad PTH660": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991007780049704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991007780049704436&vid=01CMU_INST:01CMU",
+      "w": 327,
+      "h": 235
+    },
+    "C920s Pro HD Webcam": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020437388504436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020437388504436&vid=01CMU_INST:01CMU",
+      "w": 176,
+      "h": 200
+    },
+    "Logitech Web Cam": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/LogitechWebcam.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226772904436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "MS Web Cam": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/msWebCam.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226784104436&vid=01CMU_INST:01CMU",
+      "w": 261,
+      "h": 312
+    },
+    "NEC 3D Glasses": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/3dGlassesNP02GL.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226783704436&vid=01CMU_INST:01CMU",
+      "w": 536,
+      "h": 252
+    },
+    "Phone Tripod Mount": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/cellPhoneClamp.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226781604436&vid=01CMU_INST:01CMU",
+      "w": 154,
+      "h": 250
+    },
+    "DMX Controller": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/DmxController.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226944504436&vid=01CMU_INST:01CMU",
+      "w": 350,
+      "h": 350
+    },
+    "DMX Lighting Kit": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/DMXLighting.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226944304436&vid=01CMU_INST:01CMU",
+      "w": 1050,
+      "h": 750
+    },
+    "DMX USB Pro": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/dmxusbpro.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226944104436&vid=01CMU_INST:01CMU",
+      "w": 127,
+      "h": 120
+    },
+    "LED LC500 Light Stick": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020427752604436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020427752604436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "Mini Tube Light": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020428453204436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020428453204436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "RGB LED LC500R Light Stick": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020427752704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020427752704436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "LED Light Kit": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/dracast_led500_c.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226789204436&vid=01CMU_INST:01CMU",
+      "w": 300,
+      "h": 300
+    },
+    "Lighting kit": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991019688389704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991019688389704436&vid=01CMU_INST:01CMU",
+      "w": 199,
+      "h": 200
+    },
+    "Lume Cube 17-inch Ring Light Pro": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020360228904436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020360228904436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "Lighting Gel Kit": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020444135604436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020444135604436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 167
+    },
+    "60\" 16:9 Projection Screen": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020427752304436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020427752304436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "Projection Screen": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/ProjectionScreen.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226781204436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 187
+    },
+    "Apeman M7 Mini Projector": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/AM7MiniProjector.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226774804436&vid=01CMU_INST:01CMU",
+      "w": 299,
+      "h": 250
+    },
+    "Casio Projector": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/CasioProjector.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226938904436&vid=01CMU_INST:01CMU",
+      "w": 244,
+      "h": 119
+    },
+    "Epson EF-11 Mini LCD Projector": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/EpsonEF11-Projector.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226772004436&vid=01CMU_INST:01CMU",
+      "w": 556,
+      "h": 349
+    },
+    "Epson Projector H723A": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/Epson5250.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226940104436&vid=01CMU_INST:01CMU",
+      "w": 500,
+      "h": 236
+    },
+    "Epson VS330 Projector": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991008455719704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991008455719704436&vid=01CMU_INST:01CMU",
+      "w": 344,
+      "h": 236
+    },
+    "NEC Projector": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/NECnpm353ws.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226783604436&vid=01CMU_INST:01CMU",
+      "w": 566,
+      "h": 387
+    },
+    "Optoma Projector": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/optoma_daehhgl.jpg",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226782204436&vid=01CMU_INST:01CMU",
+      "w": 304,
+      "h": 303
+    },
+    "Pico Pocket Projector": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020360227804436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020360227804436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 118
+    },
+    "Backlight Base": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/backlightBase.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226788804436&vid=01CMU_INST:01CMU",
+      "w": 566,
+      "h": 427
+    },
+    "Light Stand": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/lightStand.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226788604436&vid=01CMU_INST:01CMU",
+      "w": 151,
+      "h": 313
+    },
+    "Giroptic 360cam": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991016856519704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991016856519704436&vid=01CMU_INST:01CMU",
+      "w": 184,
+      "h": 184
+    },
+    "Yi 360 Camera": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/yi360vr.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226940004436&vid=01CMU_INST:01CMU",
+      "w": 182,
+      "h": 300
+    },
+    "5-in-1 43\" Light Reflector-Diffuser": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020440101604436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020440101604436&vid=01CMU_INST:01CMU",
+      "w": 199,
+      "h": 131
+    },
+    "A-Mount to E-Mount Lens Adapter": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/SonyEmountAdpt.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226788704436&vid=01CMU_INST:01CMU",
+      "w": 229,
+      "h": 300
+    },
+    "Canon BP-727": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/Canon-BP727.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226786804436&vid=01CMU_INST:01CMU",
+      "w": 258,
+      "h": 269
+    },
+    "Canon EOS EF - EOS R Lens Mount Adapter": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020440101804436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020440101804436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "Canon R800 Power Adapter": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/Canon-VIXIA-HF-R800-Power-Adapter.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226785804436&vid=01CMU_INST:01CMU",
+      "w": 240,
+      "h": 301
+    },
+    "E6N AC Adapter": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/CanonE6NAC-Adaptor.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226941304436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "Gel Filters": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991019992358304436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991019992358304436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "ICEMAN-SE External Camera Cooling Fan": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020500736904436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020500736904436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "Lightning to HDMI": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/LightningtoHDMI.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226936904436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "Magic Arm Clamp": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/ManfrottoClamp.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226788104436&vid=01CMU_INST:01CMU",
+      "w": 398,
+      "h": 280
+    },
+    "Magic Arm Type 143": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/ManfrottoArm143.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226787904436&vid=01CMU_INST:01CMU",
+      "w": 246,
+      "h": 250
+    },
+    "Magic Arm Type 244": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/ManfrottoArm244.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226787804436&vid=01CMU_INST:01CMU",
+      "w": 406,
+      "h": 250
+    },
+    "Manfrotto 244 RC Magic Arm": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991007774649704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991007774649704436&vid=01CMU_INST:01CMU",
+      "w": 400,
+      "h": 400
+    },
+    "Mini Clamp Arm": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/miniClampArm.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226786304436&vid=01CMU_INST:01CMU",
+      "w": 516,
+      "h": 230
+    },
+    "MiniHDMI": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/MiniDisplayport-HDMI.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226785104436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "Mount Adapter EF-EOS R": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020499838804436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020499838804436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "Phone Mount M": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/ManfrottoPhoneMount.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226781704436&vid=01CMU_INST:01CMU",
+      "w": 125,
+      "h": 180
+    },
+    "Shill Smartphone Tripod Mount": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991016856579704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991016856579704436&vid=01CMU_INST:01CMU",
+      "w": 266,
+      "h": 386
+    },
+    "Tripod Phone Mount": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020360229704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020360229704436&vid=01CMU_INST:01CMU",
+      "w": 109,
+      "h": 200
+    },
+    "Canon R800": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/Canon-VIXIA-HF-R800.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226785904436&vid=01CMU_INST:01CMU",
+      "w": 443,
+      "h": 241
+    },
+    "Panasonic HC-VX981 Camcorder": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020360230804436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020360230804436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 131
+    },
+    "Sony HXR-NX100 Camcorder": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991016126579704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991016126579704436&vid=01CMU_INST:01CMU",
+      "w": 210,
+      "h": 162
+    },
+    "VIRB 360": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/GarminVIRB360_c.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226942604436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "Canon EOS 6D Camera": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/CanonEOS6Dcamera.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226786204436&vid=01CMU_INST:01CMU",
+      "w": 566,
+      "h": 448
+    },
+    "Canon EOS Rebel T6i Camera": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991016126129704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991016126129704436&vid=01CMU_INST:01CMU",
+      "w": 196,
+      "h": 174
+    },
+    "Canon EOS Rebel T7i Camera": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991016856379704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991016856379704436&vid=01CMU_INST:01CMU",
+      "w": 244,
+      "h": 207
+    },
+    "Canon EOS Rebel T8i Camera": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991019872889904436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991019872889904436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "EOS Rebel T3 Camera": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020226772104436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226772104436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 163
+    },
+    "Osmo Mobile 8 Phone Gimbal": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020506036804436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020506036804436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "100mm-400mm Telephoto Lens (Sony E-Mount)": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020498438104436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020498438104436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "12mm f/2.0 wide-angle lens (Sony E-mount)": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/rokinon_lens.jpg",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226780904436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "4mm f/2.8 Circular Fisheye Lens (Sony E-mount)": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020498838804436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020498838804436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "Canon EF 24-105 IS Lens": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/Canon-EF-24-105-IS-lens.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226786504436&vid=01CMU_INST:01CMU",
+      "w": 230,
+      "h": 325
+    },
+    "Canon EF 75mm-300mm f/4-5.6 Lens": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991014234509704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991014234509704436&vid=01CMU_INST:01CMU",
+      "w": 350,
+      "h": 324
+    },
+    "Canon Macro Lens EF 100mm f/2.8": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991007774579704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991007774579704436&vid=01CMU_INST:01CMU",
+      "w": 100,
+      "h": 170
+    },
+    "Canon RF 35mm f/1.8": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/canon35.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226785604436&vid=01CMU_INST:01CMU",
+      "w": 225,
+      "h": 225
+    },
+    "Canon RF 50mm f/1.8": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/canon50.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226785304436&vid=01CMU_INST:01CMU",
+      "w": 244,
+      "h": 207
+    },
+    "FE 50mm F1.8 Full-frame Standard Prime Lens": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/SonyLensSEL50F.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226779604436&vid=01CMU_INST:01CMU",
+      "w": 294,
+      "h": 247
+    },
+    "Laowa Sony A 60mm f/2.8 Lens": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/Loawa60MacroLens.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226790004436&vid=01CMU_INST:01CMU",
+      "w": 208,
+      "h": 300
+    },
+    "Rokinon 100mm f/2.8 Macro Lens": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991019959757604436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991019959757604436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 184
+    },
+    "Rokinon AF 18mm f/2.8 FE Lens": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991019959757504436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991019959757504436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 268
+    },
+    "Sony E 30mm f/3.5 Macro Lens": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/SonyLensSEL30M35.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226779704436&vid=01CMU_INST:01CMU",
+      "w": 249,
+      "h": 209
+    },
+    "Tilt 50mm F1.4 Lens (Sony E-mount)": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020498438304436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020498438304436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "Tokina AT-X124 Wide-Angle AF PRO DX II 12-24mm F/4.0": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991007811809704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991007811809704436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 250
+    },
+    "A7 IV Camera": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020479090704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020479090704436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "Canon EOS R6 II Camera": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/canonr6.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226786404436&vid=01CMU_INST:01CMU",
+      "w": 265,
+      "h": 190
+    },
+    "EOS R50 Camera": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020585332304436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020585332304436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "FX3 Full-Frame Cinema Camera": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020441803804436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020441803804436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "Sony A6000 Camera": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/SonyA6000camera.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226779804436&vid=01CMU_INST:01CMU",
+      "w": 392,
+      "h": 300
+    },
+    "Sony a7 III Camera": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020358630904436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020358630904436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "DragonFrame Key Pad": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/dragonFrameKeyPad.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226941904436&vid=01CMU_INST:01CMU",
+      "w": 390,
+      "h": 405
+    },
+    "Backdrop Support Kit": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020505538704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020505538704436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 179
+    },
+    "Camera Slider": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/cameraSlider_c.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226787004436&vid=01CMU_INST:01CMU",
+      "w": 500,
+      "h": 113
+    },
+    "Compact Action Tripod": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/manfrottoTripodc.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226778204436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "GorillaPod 1K Flexible Mini-Tripod with Ball Head": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020436190204436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020436190204436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "GorillaPod SLR-Zoom Flexible Mini- Tripod w/ BH1-01EN Ball Head": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020436190104436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020436190104436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "Large Tripod": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991007812279704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991007812279704436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 419
+    },
+    "Magnus VT-4000 Tripod": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/MagnusVT4000Tripod.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226778104436&vid=01CMU_INST:01CMU",
+      "w": 320,
+      "h": 606
+    },
+    "Mini Flex Tripod B": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/MiniFlexTripodA.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226786004436&vid=01CMU_INST:01CMU",
+      "w": 194,
+      "h": 275
+    },
+    "Mini Tripod A": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/miniTripod.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226785704436&vid=01CMU_INST:01CMU",
+      "w": 107,
+      "h": 182
+    },
+    "Mini Tripod B": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/MiniTripodM.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226785504436&vid=01CMU_INST:01CMU",
+      "w": 334,
+      "h": 314
+    },
+    "Mini Tripod C": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/YiMiniTripod.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226785404436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "Small Tripod": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991007814339704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991007814339704436&vid=01CMU_INST:01CMU",
+      "w": 300,
+      "h": 493
+    },
+    "DCB107 Battery Charger": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020498438504436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020498438504436&vid=01CMU_INST:01CMU",
+      "w": 157,
+      "h": 200
+    },
+    "DeWalt Drill": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/DSC_0003-e1425998027552.jpg",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226774404436&vid=01CMU_INST:01CMU",
+      "w": 470,
+      "h": 313
+    },
+    "Glue Gun": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/Blusmart_glue_gun.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226938604436&vid=01CMU_INST:01CMU",
+      "w": 484,
+      "h": 422
+    },
+    "Glue Gun - DT-280F": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/hot_glue_gun.jpg",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226938404436&vid=01CMU_INST:01CMU",
+      "w": 115,
+      "h": 94
+    },
+    "Glue Gun DWHT75098": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/dewaltGlueGun.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226938204436&vid=01CMU_INST:01CMU",
+      "w": 329,
+      "h": 224
+    },
+    "Gorilla Glue Glue Gun Model 100438": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/GorillaGlueGlueGun.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226937604436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 192
+    },
+    "Hammer / Irwin.": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020443438004436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020443438004436&vid=01CMU_INST:01CMU",
+      "w": 102,
+      "h": 199
+    },
+    "Heat Gun Type 1": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/HeatGun.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226936204436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "Heat Gun Type 2": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/PcHeatGun.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226936004436&vid=01CMU_INST:01CMU",
+      "w": 296,
+      "h": 300
+    },
+    "DeWalt Impact Driver DCF787": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/DSC_0001-e1425998452575.jpg",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226945104436&vid=01CMU_INST:01CMU",
+      "w": 470,
+      "h": 313
+    },
+    "DeWalt Impact Driver DCF885": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/DSC_0001-e1425998452575.jpg",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226944904436&vid=01CMU_INST:01CMU",
+      "w": 470,
+      "h": 313
+    },
+    "EZ-Lock Cut-Off Wheel (P)": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/EZ_Lock_CutOff_Plastic.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226939604436&vid=01CMU_INST:01CMU",
+      "w": 232,
+      "h": 226
+    },
+    "EZ-Lock Mandrel": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/EZ_Lock_Mandrel.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226939404436&vid=01CMU_INST:01CMU",
+      "w": 432,
+      "h": 171
+    },
+    "EZ-Lock Wood Cutting Wheel": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/EZ_Lock_Wood_Cutter.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226939204436&vid=01CMU_INST:01CMU",
+      "w": 252,
+      "h": 241
+    },
+    "Rotary Tool": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/rotary_tool_c.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226780704436&vid=01CMU_INST:01CMU",
+      "w": 388,
+      "h": 130
+    },
+    "Ratcheting Screwdriver Set - 26 pcs.": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020443437704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020443437704436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 134
+    },
+    "Socket Set - 101 pcs.": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020443437304436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020443437304436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "SteamWave Handheld Steamer": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020500737004436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020500737004436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "Cricut Deep Housing": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/CricutDeepHousing.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226785004436&vid=01CMU_INST:01CMU",
+      "w": 438,
+      "h": 132
+    },
+    "Cricut Fine Housing": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/CricutBladeHousing.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226784704436&vid=01CMU_INST:01CMU",
+      "w": 292,
+      "h": 110
+    },
+    "Cricut Grip Mat": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/CricutMat.PNG",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226784504436&vid=01CMU_INST:01CMU",
+      "w": 245,
+      "h": 470
+    },
+    "Cricut Pen": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/CricutPen.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226784004436&vid=01CMU_INST:01CMU",
+      "w": 600,
+      "h": 84
+    },
+    "Cricut Rotary Blade with Housing": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/CricutRotaryBlade.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226783804436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "Cricut Tool Set": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/cricut_tool_set.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226783504436&vid=01CMU_INST:01CMU",
+      "w": 213,
+      "h": 284
+    },
+    "Cricut USB Cable": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/CricutUSBCable.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226783304436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "Cricut XL Scraper": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/Cricut_XL_Scraper.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226783104436&vid=01CMU_INST:01CMU",
+      "w": 479,
+      "h": 295
+    },
+    "Cricut Maker": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/CricutMaker.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226784304436&vid=01CMU_INST:01CMU",
+      "w": 230,
+      "h": 100
+    },
+    "Steam Iron": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/steam_iron.jpg",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226779204436&vid=01CMU_INST:01CMU",
+      "w": 197,
+      "h": 206
+    },
+    "Automatic Buttonhole Foot": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/AutomaticButtonholeFoot.PNG",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226788904436&vid=01CMU_INST:01CMU",
+      "w": 137,
+      "h": 117
+    },
+    "Blind Stitch Foot": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/JanomeBlindStitchFoot.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226788204436&vid=01CMU_INST:01CMU",
+      "w": 142,
+      "h": 185
+    },
+    "Bobbin Set": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/BobbinSet1.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226788004436&vid=01CMU_INST:01CMU",
+      "w": 953,
+      "h": 1234
+    },
+    "Button Sewing Foot": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/ButtonSewingFoot.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226787604436&vid=01CMU_INST:01CMU",
+      "w": 233,
+      "h": 151
+    },
+    "Crochet Hook": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/CrochetHooks.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226783004436&vid=01CMU_INST:01CMU",
+      "w": 292,
+      "h": 220
+    },
+    "Embroidery Foot": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/BrotherEmbroideryFoot.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226940704436&vid=01CMU_INST:01CMU",
+      "w": 210,
+      "h": 349
+    },
+    "Overedge Foot": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/JanomeOveredgePresserFoot.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226782104436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "Pinking Shears": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020226781404436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226781404436&vid=01CMU_INST:01CMU",
+      "w": 199,
+      "h": 103
+    },
+    "Seam Ripper": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/SeamRipper.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226780404436&vid=01CMU_INST:01CMU",
+      "w": 90,
+      "h": 215
+    },
+    "Sewing Thimble": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/Thimble.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226780204436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 194
+    },
+    "Textile Tool Kit": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/TextileToolKit_c.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226778704436&vid=01CMU_INST:01CMU",
+      "w": 240,
+      "h": 319
+    },
+    "Transparent Button Hole Presser Foot": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/JanomeTransparentBHFoot.PNG",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226778304436&vid=01CMU_INST:01CMU",
+      "w": 256,
+      "h": 231
+    },
+    "Walking Foot": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/PresserFoot.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226942204436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 331
+    },
+    "Wool Pressing Mat - 17\" x 24\"": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020440101704436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020440101704436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 200
+    },
+    "Zipper Foot": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/ZipperFeet.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226939904436&vid=01CMU_INST:01CMU",
+      "w": 423,
+      "h": 468
+    },
+    "Janome HD-3000 Sewing Machine": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/Janome-HD3000-e1452100754873.jpg",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226791404436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 250
+    },
+    "Janome MOD-19 Sewing Machine": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/JanomeMOD19.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226791504436&vid=01CMU_INST:01CMU",
+      "w": 323,
+      "h": 250
+    },
+    "Steamer": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/steamer.jpg",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226779004436&vid=01CMU_INST:01CMU",
+      "w": 131,
+      "h": 166
+    },
+    "HTC VIVE Kit": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/HTC_vive.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226935604436&vid=01CMU_INST:01CMU",
+      "w": 663,
+      "h": 370
+    },
+    "Intel RealSense": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/IntelRealSense.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226792404436&vid=01CMU_INST:01CMU",
+      "w": 711,
+      "h": 267
+    },
+    "Kinect2": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/Kinect-640x353.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226790704436&vid=01CMU_INST:01CMU",
+      "w": 640,
+      "h": 353
+    },
+    "Leap Controller": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/LEAP01-300x246.jpg",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226789504436&vid=01CMU_INST:01CMU",
+      "w": 300,
+      "h": 246
+    },
+    "Vive Tracker": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/viveTracker_c.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226942404436&vid=01CMU_INST:01CMU",
+      "w": 213,
+      "h": 208
+    },
+    "Xbox Control USB": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/xboxControlUsbWhite.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226941604436&vid=01CMU_INST:01CMU",
+      "w": 159,
+      "h": 129
+    },
+    "Xbox Control Wireless": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/xboxControlWireless.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226941404436&vid=01CMU_INST:01CMU",
+      "w": 264,
+      "h": 188
+    },
+    "Acer Mixed Reality Headset and Controllers": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/AcerMixedReality.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226772204436&vid=01CMU_INST:01CMU",
+      "w": 561,
+      "h": 250
+    },
+    "HTC VIVE Pro VR Kit": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/vive_pro.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226771904436&vid=01CMU_INST:01CMU",
+      "w": 489,
+      "h": 238
+    },
+    "Lenovo Explorer": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/LenovoExplorer.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226789004436&vid=01CMU_INST:01CMU",
+      "w": 606,
+      "h": 243
+    },
+    "Oculus Quest 2": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991020226783204436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226783204436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 113
+    },
+    "Oculus RIFT": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/OculusRIFT.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226782804436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 232
+    },
+    "Oculus Rift S VR Headset": {
+      "url": "https://cmu.primo.exlibrisgroup.com/view/delivery/thumbnail/01CMU_INST/991019960357804436?ignoreDefault=true",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991019960357804436&vid=01CMU_INST:01CMU",
+      "w": 200,
+      "h": 175
+    },
+    "Odyssey": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/SamsungHMDOdyssey.png",
+      "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226782504436&vid=01CMU_INST:01CMU",
+      "w": 250,
+      "h": 148
+    }
+  }
 }
