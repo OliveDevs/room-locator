@@ -548,7 +548,13 @@
       "d": "",
       "h": "41aaaa",
       "u": "AUDW",
-      "s": 3
+      "s": 3,
+      "r": [
+        [
+          "M-Audio Oxygen 25 quickstart guide (PDF, M-Audio)",
+          "https://cdn.inmusicbrands.com/m-audio/maudio_documentation/Oxygen%2025%20-%20Quickstart%20Guide%20-%20v1.1.pdf"
+        ]
+      ]
     },
     {
       "n": "MicroMoog Synthesizer",
@@ -654,7 +660,17 @@
       "d": "",
       "h": "bd4332",
       "u": "AUDW",
-      "s": 3
+      "s": 3,
+      "r": [
+        [
+          "DMX basics: a beginner's guide to lighting control (Thomann)",
+          "https://www.thomann.de/blog/en/learn/dmx-basics-lighting-control/"
+        ],
+        [
+          "DMX lighting starter guide (ENTTEC)",
+          "https://support.enttec.com/dmx-software/emu/dmx-lighting-for-djs-and-small-bands-starter-guide"
+        ]
+      ]
     },
     {
       "n": "Scarlett 2i2 Audio Interface",
@@ -1032,7 +1048,13 @@
       "d": "Mounts on a camera, points at whoever is talking",
       "h": "8cf453",
       "u": "AUDW",
-      "s": 5
+      "s": 5,
+      "r": [
+        [
+          "Rode user guides: pick your VideoMic model (Rode)",
+          "https://rode.com/en-us/user-guides"
+        ]
+      ]
     },
     {
       "n": "Rode VideoMic Pro+ Mountable Shotgun Microphone",
@@ -2550,7 +2572,13 @@
       "d": "",
       "h": "f89d0c",
       "u": "CMP",
-      "s": 5
+      "s": 5,
+      "r": [
+        [
+          "iPad User Guide (Apple)",
+          "https://support.apple.com/en-sa/guide/ipad/ipadf3dbb83f/ios"
+        ]
+      ]
     },
     {
       "n": "iPad Pro",
@@ -2563,7 +2591,13 @@
       "d": "",
       "h": "474682",
       "u": "CMP",
-      "s": 5
+      "s": 5,
+      "r": [
+        [
+          "iPad User Guide (Apple)",
+          "https://support.apple.com/en-sa/guide/ipad/ipadf3dbb83f/ios"
+        ]
+      ]
     },
     {
       "n": "MOUSE",
@@ -2789,7 +2823,17 @@
       "d": "",
       "h": "3278ea",
       "u": "LP",
-      "s": 3
+      "s": 3,
+      "r": [
+        [
+          "DMX basics: a beginner's guide to lighting control (Thomann)",
+          "https://www.thomann.de/blog/en/learn/dmx-basics-lighting-control/"
+        ],
+        [
+          "DMX lighting starter guide (ENTTEC)",
+          "https://support.enttec.com/dmx-software/emu/dmx-lighting-for-djs-and-small-bands-starter-guide"
+        ]
+      ]
     },
     {
       "n": "DMX Distributor",
@@ -2802,7 +2846,17 @@
       "d": "",
       "h": "b3237b",
       "u": "LP",
-      "s": 3
+      "s": 3,
+      "r": [
+        [
+          "DMX basics: a beginner's guide to lighting control (Thomann)",
+          "https://www.thomann.de/blog/en/learn/dmx-basics-lighting-control/"
+        ],
+        [
+          "DMX lighting starter guide (ENTTEC)",
+          "https://support.enttec.com/dmx-software/emu/dmx-lighting-for-djs-and-small-bands-starter-guide"
+        ]
+      ]
     },
     {
       "n": "DMX Lighting Kit",
@@ -2815,7 +2869,17 @@
       "d": "",
       "h": "f5dc82",
       "u": "LP",
-      "s": 3
+      "s": 3,
+      "r": [
+        [
+          "DMX basics: a beginner's guide to lighting control (Thomann)",
+          "https://www.thomann.de/blog/en/learn/dmx-basics-lighting-control/"
+        ],
+        [
+          "DMX lighting starter guide (ENTTEC)",
+          "https://support.enttec.com/dmx-software/emu/dmx-lighting-for-djs-and-small-bands-starter-guide"
+        ]
+      ]
     },
     {
       "n": "DMX USB Pro",
@@ -2866,7 +2930,17 @@
       "d": "",
       "h": "853c31",
       "u": "LP",
-      "s": 3
+      "s": 3,
+      "r": [
+        [
+          "DMX basics: a beginner's guide to lighting control (Thomann)",
+          "https://www.thomann.de/blog/en/learn/dmx-basics-lighting-control/"
+        ],
+        [
+          "DMX lighting starter guide (ENTTEC)",
+          "https://support.enttec.com/dmx-software/emu/dmx-lighting-for-djs-and-small-bands-starter-guide"
+        ]
+      ]
     },
     {
       "n": "LED LC500 Light Stick",
@@ -3295,7 +3369,13 @@
       "d": "",
       "h": "0ad0da",
       "u": "PV",
-      "s": 5
+      "s": 5,
+      "r": [
+        [
+          "Canon Mount Adapter EF-EOS R support and manual (Canon)",
+          "https://www.canon.co.uk/support/consumer/products/lenses/rf/mount-adapter-ef-eos-r.html"
+        ]
+      ]
     },
     {
       "n": "Canon R800 Power Adapter",
@@ -3451,7 +3531,13 @@
       "d": "",
       "h": "f866ae",
       "u": "PV",
-      "s": 5
+      "s": 5,
+      "r": [
+        [
+          "Canon Mount Adapter EF-EOS R support and manual (Canon)",
+          "https://www.canon.co.uk/support/consumer/products/lenses/rf/mount-adapter-ef-eos-r.html"
+        ]
+      ]
     },
     {
       "n": "Phone Mount M",
@@ -3560,7 +3646,13 @@
       "d": "Handheld 4K camcorder with a long zoom",
       "h": "e589dd",
       "u": "A3",
-      "s": 0
+      "s": 0,
+      "r": [
+        [
+          "Panasonic 4K camcorder (HC-VX981 family) operating instructions (Panasonic)",
+          "https://eww.pavc.panasonic.co.jp/hdw/oi/WXF990"
+        ]
+      ]
     },
     {
       "n": "Panasonic HC-VX98 Camcorder",
@@ -3573,7 +3665,13 @@
       "d": "Handheld 4K camcorder with a long zoom",
       "h": "951672",
       "u": "PV",
-      "s": 3
+      "s": 3,
+      "r": [
+        [
+          "Panasonic 4K camcorder (HC-VX981 family) operating instructions (Panasonic)",
+          "https://eww.pavc.panasonic.co.jp/hdw/oi/WXF990"
+        ]
+      ]
     },
     {
       "n": "Panasonic HC-VX981 Camcorder",
@@ -3827,7 +3925,13 @@
       "d": "For a GoPro",
       "h": "8f6ec8",
       "u": "PV",
-      "s": 6
+      "s": 6,
+      "r": [
+        [
+          "FeiyuTech G5 user manual (ManualsLib)",
+          "https://www.manualslib.com/manual/2448859/Feiyutech-G5.html"
+        ]
+      ]
     },
     {
       "n": "Osmo Mobile 8 Phone Gimbal",
@@ -3840,7 +3944,13 @@
       "d": "For a phone",
       "h": "91c11f",
       "u": "PV",
-      "s": 6
+      "s": 6,
+      "r": [
+        [
+          "DJI Osmo Mobile 8 manual and downloads (DJI)",
+          "https://www.dji.com/osmo-mobile-8/downloads"
+        ]
+      ]
     },
     {
       "n": "10-18mm Ultra Wide-Angle Contemporary Lens (Sony E-mount)",
@@ -3905,7 +4015,13 @@
       "d": "All-round zoom, for Canon DSLRs",
       "h": "a535be",
       "u": "PV",
-      "s": 4
+      "s": 4,
+      "r": [
+        [
+          "Canon EF 24-105mm f/4L IS II USM support and manual (Canon USA). Check that your lens says II",
+          "https://www.usa.canon.com/support/p/ef-24-105mm-f-4l-is-ii-usm"
+        ]
+      ]
     },
     {
       "n": "Canon EF 75mm-300mm f/4-5.6 Lens",
@@ -3976,7 +4092,13 @@
       "d": "Fast prime, low light and blurry backgrounds, for Sony",
       "h": "349625",
       "u": "PV",
-      "s": 4
+      "s": 4,
+      "r": [
+        [
+          "Sony FE 50mm F1.8 (SEL50F18F) manuals (Sony)",
+          "https://www.sony.com.au/electronics/support/lenses-e-mount-lenses/sel50f18f/downloads"
+        ]
+      ]
     },
     {
       "n": "Laowa Sony A 60mm f/2.8 Lens",
@@ -4395,7 +4517,13 @@
       "d": "",
       "h": "5b6b37",
       "u": "SHOP",
-      "s": 6
+      "s": 6,
+      "r": [
+        [
+          "DeWalt DCB107 charger instruction manual (ManualsLib)",
+          "https://www.manualslib.com/manual/1542650/Dewalt-Dcb107.html"
+        ]
+      ]
     },
     {
       "n": "Digital Caliper (0-150mm)",
@@ -4408,7 +4536,17 @@
       "d": "",
       "h": "52ba55",
       "u": "SHOP",
-      "s": 3
+      "s": 3,
+      "r": [
+        [
+          "How to use your digital calipers: 7 tips (Make:)",
+          "https://makezine.com/article/digital-fabrication/3d-printing-workshop/how-to-use-your-digital-calipers-7-tips/"
+        ],
+        [
+          "Calipers guide (PDF, Adafruit)",
+          "https://cdn-learn.adafruit.com/downloads/pdf/calipers.pdf"
+        ]
+      ]
     },
     {
       "n": "DeWalt Drill",
@@ -4421,7 +4559,17 @@
       "d": "",
       "h": "56af7f",
       "u": "SHOP",
-      "s": 6
+      "s": 6,
+      "r": [
+        [
+          "How to use a power drill (Lowe's)",
+          "https://www.lowes.com/n/how-to/how-to-use-a-power-drill"
+        ],
+        [
+          "Decoding the clutch settings on a cordless drill (Pro Tool Reviews)",
+          "https://www.protoolreviews.com/drill-clutch-settings"
+        ]
+      ]
     },
     {
       "n": "Glue Gun",
@@ -4434,7 +4582,17 @@
       "d": "",
       "h": "4053ae",
       "u": "SHOP",
-      "s": 4
+      "s": 4,
+      "r": [
+        [
+          "Tips and tricks for using a glue gun (Dremel)",
+          "https://www.dremel.com/us/en/projects/how-to/how-to-avoid-failures-while-using-a-glue-gun"
+        ],
+        [
+          "How to use a hot glue gun the right way (Surebonder)",
+          "https://surebonder.com/blogs/surebonder-blog/how-to-use-a-hot-glue-gun-the-right-way"
+        ]
+      ]
     },
     {
       "n": "Glue Gun - DT-280F",
@@ -4447,7 +4605,17 @@
       "d": "",
       "h": "0a72d6",
       "u": "SHOP",
-      "s": 4
+      "s": 4,
+      "r": [
+        [
+          "Tips and tricks for using a glue gun (Dremel)",
+          "https://www.dremel.com/us/en/projects/how-to/how-to-avoid-failures-while-using-a-glue-gun"
+        ],
+        [
+          "How to use a hot glue gun the right way (Surebonder)",
+          "https://surebonder.com/blogs/surebonder-blog/how-to-use-a-hot-glue-gun-the-right-way"
+        ]
+      ]
     },
     {
       "n": "Glue Gun DWHT75098",
@@ -4460,7 +4628,17 @@
       "d": "",
       "h": "011508",
       "u": "SHOP",
-      "s": 4
+      "s": 4,
+      "r": [
+        [
+          "Tips and tricks for using a glue gun (Dremel)",
+          "https://www.dremel.com/us/en/projects/how-to/how-to-avoid-failures-while-using-a-glue-gun"
+        ],
+        [
+          "How to use a hot glue gun the right way (Surebonder)",
+          "https://surebonder.com/blogs/surebonder-blog/how-to-use-a-hot-glue-gun-the-right-way"
+        ]
+      ]
     },
     {
       "n": "Gorilla Glue Glue Gun Model 100438",
@@ -4473,7 +4651,17 @@
       "d": "",
       "h": "8e21ba",
       "u": "SHOP",
-      "s": 4
+      "s": 4,
+      "r": [
+        [
+          "Tips and tricks for using a glue gun (Dremel)",
+          "https://www.dremel.com/us/en/projects/how-to/how-to-avoid-failures-while-using-a-glue-gun"
+        ],
+        [
+          "How to use a hot glue gun the right way (Surebonder)",
+          "https://surebonder.com/blogs/surebonder-blog/how-to-use-a-hot-glue-gun-the-right-way"
+        ]
+      ]
     },
     {
       "n": "Hammer / Irwin.",
@@ -4577,7 +4765,17 @@
       "d": "",
       "h": "7353f8",
       "u": "SHOP",
-      "s": 4
+      "s": 4,
+      "r": [
+        [
+          "How to use heat shrink tubing (iFixit)",
+          "https://www.ifixit.com/Guide/How+to+Use+Heat+Shrink+Tubing/64041"
+        ],
+        [
+          "Heat shrink guns: how they work and how to use them safely (Cable Ties Unlimited)",
+          "https://www.cabletiesunlimited.com/blogs/learn/heat-shrink-guns-how-they-work-and-how-to-use-them-safely"
+        ]
+      ]
     },
     {
       "n": "Heat Gun Type 2",
@@ -4590,7 +4788,17 @@
       "d": "",
       "h": "7358b1",
       "u": "SHOP",
-      "s": 4
+      "s": 4,
+      "r": [
+        [
+          "How to use heat shrink tubing (iFixit)",
+          "https://www.ifixit.com/Guide/How+to+Use+Heat+Shrink+Tubing/64041"
+        ],
+        [
+          "Heat shrink guns: how they work and how to use them safely (Cable Ties Unlimited)",
+          "https://www.cabletiesunlimited.com/blogs/learn/heat-shrink-guns-how-they-work-and-how-to-use-them-safely"
+        ]
+      ]
     },
     {
       "n": "DeWalt Impact Driver DCF787",
@@ -4680,7 +4888,17 @@
       "d": "",
       "h": "119fe2",
       "u": "SHOP",
-      "s": 2
+      "s": 2,
+      "r": [
+        [
+          "Guide to Dremel accessories: which bit does what (Dremel)",
+          "https://www.dremel.com/us/en/guide-to-dremel-accessories"
+        ],
+        [
+          "Dremel instructions (Utah State University Innovation Hub)",
+          "https://library.usu.edu/innovation-hub/equipment/dremel-instructions"
+        ]
+      ]
     },
     {
       "n": "EZ-Lock Mandrel",
@@ -4693,7 +4911,17 @@
       "d": "",
       "h": "0da04d",
       "u": "SHOP",
-      "s": 2
+      "s": 2,
+      "r": [
+        [
+          "Guide to Dremel accessories: which bit does what (Dremel)",
+          "https://www.dremel.com/us/en/guide-to-dremel-accessories"
+        ],
+        [
+          "Dremel instructions (Utah State University Innovation Hub)",
+          "https://library.usu.edu/innovation-hub/equipment/dremel-instructions"
+        ]
+      ]
     },
     {
       "n": "EZ-Lock Wood Cutting Wheel",
@@ -4706,7 +4934,17 @@
       "d": "",
       "h": "586bec",
       "u": "SHOP",
-      "s": 2
+      "s": 2,
+      "r": [
+        [
+          "Guide to Dremel accessories: which bit does what (Dremel)",
+          "https://www.dremel.com/us/en/guide-to-dremel-accessories"
+        ],
+        [
+          "Dremel instructions (Utah State University Innovation Hub)",
+          "https://library.usu.edu/innovation-hub/equipment/dremel-instructions"
+        ]
+      ]
     },
     {
       "n": "Rotary Sanding Drum",
@@ -4719,7 +4957,17 @@
       "d": "",
       "h": "78002a",
       "u": "SHOP",
-      "s": 2
+      "s": 2,
+      "r": [
+        [
+          "Guide to Dremel accessories: which bit does what (Dremel)",
+          "https://www.dremel.com/us/en/guide-to-dremel-accessories"
+        ],
+        [
+          "Dremel instructions (Utah State University Innovation Hub)",
+          "https://library.usu.edu/innovation-hub/equipment/dremel-instructions"
+        ]
+      ]
     },
     {
       "n": "Rotary Tool Accessory",
@@ -4732,7 +4980,17 @@
       "d": "",
       "h": "3c7de8",
       "u": "SHOP",
-      "s": 2
+      "s": 2,
+      "r": [
+        [
+          "Guide to Dremel accessories: which bit does what (Dremel)",
+          "https://www.dremel.com/us/en/guide-to-dremel-accessories"
+        ],
+        [
+          "Dremel instructions (Utah State University Innovation Hub)",
+          "https://library.usu.edu/innovation-hub/equipment/dremel-instructions"
+        ]
+      ]
     },
     {
       "n": "Rotary Tool",
@@ -4745,7 +5003,17 @@
       "d": "",
       "h": "9f7c5e",
       "u": "SHOP",
-      "s": 5
+      "s": 5,
+      "r": [
+        [
+          "Guide to Dremel accessories: which bit does what (Dremel)",
+          "https://www.dremel.com/us/en/guide-to-dremel-accessories"
+        ],
+        [
+          "Dremel instructions (Utah State University Innovation Hub)",
+          "https://library.usu.edu/innovation-hub/equipment/dremel-instructions"
+        ]
+      ]
     },
     {
       "n": "Ratcheting Screwdriver Set - 26 pcs.",
@@ -5281,7 +5549,13 @@
       "d": "Everyday sewing",
       "h": "fe29c1",
       "u": "ST1",
-      "s": 1
+      "s": 1,
+      "r": [
+        [
+          "Singer Talent 3321 instruction manual (ManualsLib)",
+          "https://www.manualslib.com/manual/478952/Singer-3321-Matri.html"
+        ]
+      ]
     },
     {
       "n": "Steamer",
@@ -5307,7 +5581,13 @@
       "d": "",
       "h": "d469fa",
       "u": "VR",
-      "s": 2
+      "s": 2,
+      "r": [
+        [
+          "HTC Vive user guide (PDF, HTC)",
+          "https://developer.vive.com/documents/720/Vive_User_Guide.pdf"
+        ]
+      ]
     },
     {
       "n": "Intel RealSense",
@@ -5320,7 +5600,13 @@
       "d": "",
       "h": "29c081",
       "u": "VR",
-      "s": 2
+      "s": 2,
+      "r": [
+        [
+          "Get started with Intel RealSense depth cameras (Intel)",
+          "https://www.intelrealsense.com/get-started-depth-camera"
+        ]
+      ]
     },
     {
       "n": "Kinect2",
@@ -5333,7 +5619,13 @@
       "d": "",
       "h": "f9d6ef",
       "u": "VR",
-      "s": 2
+      "s": 2,
+      "r": [
+        [
+          "Kinect for Windows v2: getting started (Microsoft)",
+          "https://learn.microsoft.com/en-us/previous-versions/windows/kinect/dn782035(v=ieb.10)"
+        ]
+      ]
     },
     {
       "n": "Leap Controller",
