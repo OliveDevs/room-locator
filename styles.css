@@ -85,3 +85,4 @@
 .card-thumb{flex:0 0 64px;width:64px;height:64px;object-fit:cover;background:#ecebe6}.card-thumb-none{display:block}
 
 .parts{margin:0;display:grid;gap:12px}.parts div{display:grid;grid-template-columns:minmax(110px,30%) 1fr;gap:4px 18px}.parts dt{font-weight:700}.parts dd{margin:0}.howto-note{border-left:3px solid var(--red);padding-left:14px}@media(max-width:580px){.parts div{grid-template-columns:1fr}}
+.item-photo-own{display:flex;flex-direction:column}.item-photo-own img{max-width:calc(100% - 32px);height:auto!important;margin:24px auto;background:#fff!important;object-fit:contain}.card-thumb{object-fit:contain!important;background:#fff}

@@ -239,15 +239,17 @@ function guideFor(k){
 }
 const listItems = items => '<ul>'+items.map(s=>'<li>'+esc(s)+'</li>').join('')+'</ul>';
 function external(label,url){return '<a class="source-link" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">'+esc(label)+' ↗</a>'}
-function photoFor(k){if(k.p&&k.p.none)return null;return k.p||PHOTO.images?.[PHOTO.items?.[k.n]]}
+// the library catalog's own picture of the item comes first; a general stand-in photo is the fallback
+function photoFor(k){if(k.p&&k.p.none)return null;if(k.p)return k.p;const own=PHOTO.lending?.[k.n];return own?{...own,kind:'lending'}:PHOTO.images?.[PHOTO.items?.[k.n]]}
 // a small picture for the list. Only Wikimedia thumbnails, which come in a 120-pixel size; each loads when it scrolls into view
 function thumbHtml(k){
-  const photo=photoFor(k), small=!photo?'':/\/\d+px-/.test(photo.url)?photo.url.replace(/\/\d+px-/,'/120px-'):/Special:FilePath\/.*[?&]width=\d+/.test(photo.url)?photo.url.replace(/width=\d+/,'width=120'):'';
+  const photo=photoFor(k), small=!photo?'':photo.kind==='lending'?photo.url:/\/\d+px-/.test(photo.url)?photo.url.replace(/\/\d+px-/,'/120px-'):/Special:FilePath\/.*[?&]width=\d+/.test(photo.url)?photo.url.replace(/width=\d+/,'width=120'):'';
   return small?'<img class="card-thumb" src="'+esc(small)+'" alt="" loading="lazy" decoding="async" width="64" height="64" referrerpolicy="no-referrer" onerror="this.remove()">':'<span class="card-thumb card-thumb-none" aria-hidden="true"></span>';
 }
 function photoHtml(k){
   const photo=photoFor(k);
   if(!photo)return '<figure class="item-photo no-photo"><div class="no-photo-tile" aria-hidden="true"><span>'+esc(k.t)+'</span></div><figcaption><strong>No photo yet</strong><span>We would rather show nothing than a picture of the wrong thing. Ask at the desk to see it.</span></figcaption></figure>';
+  if(photo.kind==='lending')return '<figure class="item-photo item-photo-own"><img src="'+esc(photo.url)+'" alt="'+esc('Photo of '+k.n+' from the lending catalog')+'" style="width:'+Math.round(photo.w*Math.min(2,300/photo.h,480/photo.w))+'px" loading="eager" referrerpolicy="no-referrer" onerror="this.closest(\'figure\').classList.add(\'photo-unavailable\');this.remove()"><figcaption><strong>From the lending catalog</strong><span>The library\u2019s own picture of this item.</span><small>Photo: IDeATe Lending, Carnegie Mellon University Libraries \u00b7 <a href="'+esc(photo.page)+'" target="_blank" rel="noopener noreferrer">Catalog record \u2197</a></small></figcaption></figure>';
   const exact=!!k.p||PHOTO.exact?.includes(k.n),illustration=photo.kind==='illustration',alt=illustration?'Illustration of '+k.t:exact?'Photo showing '+k.n:'Representative photo for '+categoryName(k.c)+' / '+k.t;
   const license=photo.license||'',parts=license.match(/^CC (BY-SA|BY) (\d\.\d)$/),licenseUrl=parts?'https://creativecommons.org/licenses/'+parts[1].toLowerCase()+'/'+parts[2]+'/':license==='CC0'?'https://creativecommons.org/publicdomain/zero/1.0/':'';
   const credit=illustration?'Original site illustration':'Photo: '+esc(photo.artist||'Wikimedia Commons contributor')+(photo.page&&photo.page!=='#'?' · <a href="'+esc(photo.page)+'" target="_blank" rel="noopener noreferrer">Source ↗</a>':'')+(licenseUrl?' · <a href="'+licenseUrl+'" target="_blank" rel="noopener noreferrer">'+esc(license)+' ↗</a>':license?' · '+esc(license):'');
@@ -358,4 +360,4 @@ function route(){if(!DATA)return;const hash=decodeURIComponent(location.hash.sli
   if(k)itemView(k,!!(query&&!hash));else if(hash==='room')roomView();else if(hash.startsWith('t')){const [c,t]=hash.slice(1).split('/');listing(c,t)}else listing();
   window.scrollTo(0,0);
 }
-Promise.all([fetch('data.json?v=20261116t').then(r=>{if(!r.ok)throw Error('Inventory unavailable');return r.json()}),fetch('photos.json?v=20261116i').then(r=>r.ok?r.json():{}).catch(()=>({})),fetch('room.json?v=20261116a').then(r=>r.ok?r.json():{units:[]}).catch(()=>({units:[]})),fetch('howto.json?v=20261116a').then(r=>r.ok?r.json():null).catch(()=>null)]).then(([data,photos,room,howto])=>{DATA=data;K=data.kinds;PHOTO=photos;ROOM=room;if(howto&&howto.guides&&howto.items)HOWTO=howto;route();addEventListener('hashchange',route)}).catch(()=>{app.innerHTML='<h1>Item guide unavailable</h1><p>Please try reloading this page.</p>'});
+Promise.all([fetch('data.json?v=20261116t').then(r=>{if(!r.ok)throw Error('Inventory unavailable');return r.json()}),fetch('photos.json?v=20261116j').then(r=>r.ok?r.json():{}).catch(()=>({})),fetch('room.json?v=20261116a').then(r=>r.ok?r.json():{units:[]}).catch(()=>({units:[]})),fetch('howto.json?v=20261116b').then(r=>r.ok?r.json():null).catch(()=>null)]).then(([data,photos,room,howto])=>{DATA=data;K=data.kinds;PHOTO=photos;ROOM=room;if(howto&&howto.guides&&howto.items)HOWTO=howto;route();addEventListener('hashchange',route)}).catch(()=>{app.innerHTML='<h1>Item guide unavailable</h1><p>Please try reloading this page.</p>'});
