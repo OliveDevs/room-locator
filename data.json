@@ -60,7 +60,13 @@
       "d": "",
       "h": "9aa101",
       "u": "AUDW",
-      "s": 6
+      "s": 6,
+      "r": [
+        [
+          "How to use the DPA instrument clips (DPA Mic University)",
+          "https://www.dpamicrophones.com/mic-university/how-to-mic/how-to-use-the-dpa-instrument-clips/"
+        ]
+      ]
     },
     {
       "n": "DPA Clip Cello",
@@ -73,7 +79,13 @@
       "d": "",
       "h": "a5f4df",
       "u": "AUDW",
-      "s": 6
+      "s": 6,
+      "r": [
+        [
+          "How to use the DPA instrument clips (DPA Mic University)",
+          "https://www.dpamicrophones.com/mic-university/how-to-mic/how-to-use-the-dpa-instrument-clips/"
+        ]
+      ]
     },
     {
       "n": "DPA Clip Guitar",
@@ -86,7 +98,13 @@
       "d": "",
       "h": "df5274",
       "u": "AUDW",
-      "s": 6
+      "s": 6,
+      "r": [
+        [
+          "How to use the DPA instrument clips (DPA Mic University)",
+          "https://www.dpamicrophones.com/mic-university/how-to-mic/how-to-use-the-dpa-instrument-clips/"
+        ]
+      ]
     },
     {
       "n": "DPA Clip Piano",
@@ -99,7 +117,13 @@
       "d": "",
       "h": "0701bb",
       "u": "AUDW",
-      "s": 6
+      "s": 6,
+      "r": [
+        [
+          "How to use the DPA instrument clips (DPA Mic University)",
+          "https://www.dpamicrophones.com/mic-university/how-to-mic/how-to-use-the-dpa-instrument-clips/"
+        ]
+      ]
     },
     {
       "n": "DPA Clip Universal",
@@ -112,7 +136,13 @@
       "d": "",
       "h": "46203f",
       "u": "AUDW",
-      "s": 6
+      "s": 6,
+      "r": [
+        [
+          "How to use the DPA instrument clips (DPA Mic University)",
+          "https://www.dpamicrophones.com/mic-university/how-to-mic/how-to-use-the-dpa-instrument-clips/"
+        ]
+      ]
     },
     {
       "n": "DPA Clip Violin",
@@ -125,7 +155,13 @@
       "d": "",
       "h": "781be3",
       "u": "AUDW",
-      "s": 6
+      "s": 6,
+      "r": [
+        [
+          "How to use the DPA instrument clips (DPA Mic University)",
+          "https://www.dpamicrophones.com/mic-university/how-to-mic/how-to-use-the-dpa-instrument-clips/"
+        ]
+      ]
     },
     {
       "n": "DPA Instrument Clip - Reserve",
@@ -138,7 +174,13 @@
       "d": "",
       "h": "e3e696",
       "u": "AUDW",
-      "s": 6
+      "s": 6,
+      "r": [
+        [
+          "How to use the DPA instrument clips (DPA Mic University)",
+          "https://www.dpamicrophones.com/mic-university/how-to-mic/how-to-use-the-dpa-instrument-clips/"
+        ]
+      ]
     },
     {
       "n": "DPA Mic Adapter for Sennheiser - Reserve",
@@ -996,7 +1038,13 @@
       "d": "",
       "h": "50b5d0",
       "u": "AUDW",
-      "s": 6
+      "s": 6,
+      "r": [
+        [
+          "How to use the DPA instrument clips (DPA Mic University)",
+          "https://www.dpamicrophones.com/mic-university/how-to-mic/how-to-use-the-dpa-instrument-clips/"
+        ]
+      ]
     },
     {
       "n": "DPA MIC - Reserve",
@@ -1009,7 +1057,13 @@
       "d": "",
       "h": "b65e84",
       "u": "AUDW",
-      "s": 6
+      "s": 6,
+      "r": [
+        [
+          "How to use the DPA instrument clips (DPA Mic University)",
+          "https://www.dpamicrophones.com/mic-university/how-to-mic/how-to-use-the-dpa-instrument-clips/"
+        ]
+      ]
     },
     {
       "n": "Dual-Channel Wireless Microphone System",
@@ -1352,7 +1406,13 @@
       "d": "Studio monitor, for mixing",
       "h": "ba2ce8",
       "u": "AUDW",
-      "s": 1
+      "s": 1,
+      "r": [
+        [
+          "M-Audio BX8 D3 studio monitor: product page and user guide (M-Audio). Check which BX8 yours is",
+          "https://m-audio.com/bx8d3"
+        ]
+      ]
     },
     {
       "n": "Bose S1 Pro+ PA System",
@@ -3107,7 +3167,17 @@
       "d": "Small and portable",
       "h": "ea63c2",
       "u": "LP",
-      "s": 1
+      "s": 1,
+      "r": [
+        [
+          "How to connect a laptop to a projector with HDMI (Soundcore)",
+          "https://www.soundcore.com/blogs/projectors/how-to-connect-laptop-to-projector-with-hdmi"
+        ],
+        [
+          "Connecting a computer by HDMI (Epson support; the steps are the same on most projectors)",
+          "https://files.support.epson.com/docid/cpd6/cpd65964/source/setup/tasks/new/connecting_computer_hdmi_new.html"
+        ]
+      ]
     },
     {
       "n": "Casio Projector",
@@ -3120,7 +3190,17 @@
       "d": "Classroom size",
       "h": "bee51a",
       "u": "LP",
-      "s": 1
+      "s": 1,
+      "r": [
+        [
+          "How to connect a laptop to a projector with HDMI (Soundcore)",
+          "https://www.soundcore.com/blogs/projectors/how-to-connect-laptop-to-projector-with-hdmi"
+        ],
+        [
+          "Connecting a computer by HDMI (Epson support; the steps are the same on most projectors)",
+          "https://files.support.epson.com/docid/cpd6/cpd65964/source/setup/tasks/new/connecting_computer_hdmi_new.html"
+        ]
+      ]
     },
     {
       "n": "Epson EF-11 Mini LCD Projector",
@@ -3194,7 +3274,17 @@
       "d": "Classroom size",
       "h": "a61619",
       "u": "LP",
-      "s": 1
+      "s": 1,
+      "r": [
+        [
+          "How to connect a laptop to a projector with HDMI (Soundcore)",
+          "https://www.soundcore.com/blogs/projectors/how-to-connect-laptop-to-projector-with-hdmi"
+        ],
+        [
+          "Connecting a computer by HDMI (Epson support; the steps are the same on most projectors)",
+          "https://files.support.epson.com/docid/cpd6/cpd65964/source/setup/tasks/new/connecting_computer_hdmi_new.html"
+        ]
+      ]
     },
     {
       "n": "Optoma Projector",
@@ -3207,7 +3297,17 @@
       "d": "Classroom size",
       "h": "a15de1",
       "u": "LP",
-      "s": 1
+      "s": 1,
+      "r": [
+        [
+          "How to connect a laptop to a projector with HDMI (Soundcore)",
+          "https://www.soundcore.com/blogs/projectors/how-to-connect-laptop-to-projector-with-hdmi"
+        ],
+        [
+          "Connecting a computer by HDMI (Epson support; the steps are the same on most projectors)",
+          "https://files.support.epson.com/docid/cpd6/cpd65964/source/setup/tasks/new/connecting_computer_hdmi_new.html"
+        ]
+      ]
     },
     {
       "n": "Panasonic PT-RZ470",
@@ -3239,7 +3339,17 @@
       "d": "Small and portable",
       "h": "8d3ad2",
       "u": "LP",
-      "s": 1
+      "s": 1,
+      "r": [
+        [
+          "How to connect a laptop to a projector with HDMI (Soundcore)",
+          "https://www.soundcore.com/blogs/projectors/how-to-connect-laptop-to-projector-with-hdmi"
+        ],
+        [
+          "Connecting a computer by HDMI (Epson support; the steps are the same on most projectors)",
+          "https://files.support.epson.com/docid/cpd6/cpd65964/source/setup/tasks/new/connecting_computer_hdmi_new.html"
+        ]
+      ]
     },
     {
       "n": "Backlight Base",
@@ -3479,7 +3589,13 @@
       "d": "",
       "h": "8d7fec",
       "u": "PV",
-      "s": 5
+      "s": 5,
+      "r": [
+        [
+          "Manfrotto 244N variable friction arm (Manfrotto)",
+          "https://www.manfrotto.com/be-en/photo-variable-friction-arm-italian-craftsmanship-244n/"
+        ]
+      ]
     },
     {
       "n": "Manfrotto 244 RC Magic Arm",
@@ -3492,7 +3608,13 @@
       "d": "",
       "h": "ea098b",
       "u": "PV",
-      "s": 5
+      "s": 5,
+      "r": [
+        [
+          "Manfrotto 244N variable friction arm (Manfrotto)",
+          "https://www.manfrotto.com/be-en/photo-variable-friction-arm-italian-craftsmanship-244n/"
+        ]
+      ]
     },
     {
       "n": "Mini Clamp Arm",
@@ -3976,7 +4098,13 @@
       "d": "Telephoto zoom, far-away subjects, for Sony",
       "h": "6d2eea",
       "u": "PV",
-      "s": 4
+      "s": 4,
+      "r": [
+        [
+          "Sigma 100-400mm F5-6.3 DG DN OS Contemporary: product page and manual (Sigma)",
+          "https://www.sigma-global.com/en/lenses/c020_100_400_5_63"
+        ]
+      ]
     },
     {
       "n": "12mm f/2.0 wide-angle lens (Sony E-mount)",
@@ -3989,7 +4117,13 @@
       "d": "Wide angle, rooms and landscapes, for Sony",
       "h": "6b66a5",
       "u": "PV",
-      "s": 4
+      "s": 4,
+      "r": [
+        [
+          "Rokinon lens manuals, by model (ManualsLib)",
+          "https://www.manualslib.com/brand/rokinon/lenses.html"
+        ]
+      ]
     },
     {
       "n": "4mm f/2.8 Circular Fisheye Lens (Sony E-mount)",
@@ -4060,7 +4194,13 @@
       "d": "Fast prime, low light and blurry backgrounds, for Canon mirrorless",
       "h": "817a92",
       "u": "PV",
-      "s": 4
+      "s": 4,
+      "r": [
+        [
+          "Canon RF 35mm F1.8 Macro IS STM support and manual (Canon)",
+          "https://www.canon.co.uk/support/consumer/products/lenses/rf/rf-35mm-f18-macro-is-stm.html"
+        ]
+      ]
     },
     {
       "n": "Canon RF 50mm f/1.8",
@@ -4150,7 +4290,13 @@
       "d": "Macro, close-ups of small things",
       "h": "34839b",
       "u": "PV",
-      "s": 4
+      "s": 4,
+      "r": [
+        [
+          "Rokinon lens manuals, by model (ManualsLib)",
+          "https://www.manualslib.com/brand/rokinon/lenses.html"
+        ]
+      ]
     },
     {
       "n": "Rokinon AF 18mm f/2.8 FE Lens",
@@ -4163,7 +4309,13 @@
       "d": "Wide angle, rooms and landscapes, for Sony",
       "h": "47db09",
       "u": "PV",
-      "s": 4
+      "s": 4,
+      "r": [
+        [
+          "Rokinon lens manuals, by model (ManualsLib)",
+          "https://www.manualslib.com/brand/rokinon/lenses.html"
+        ]
+      ]
     },
     {
       "n": "Sony E 30mm f/3.5 Macro Lens",
@@ -5676,7 +5828,13 @@
       "d": "",
       "h": "544847",
       "u": "VR",
-      "s": 2
+      "s": 2,
+      "r": [
+        [
+          "How to connect an Xbox wireless controller to a PC (How-To Geek)",
+          "https://www.howtogeek.com/729937/how-to-connect-an-xbox-wireless-controller-to-a-pc"
+        ]
+      ]
     },
     {
       "n": "Xbox Control Wireless",
@@ -5689,7 +5847,13 @@
       "d": "",
       "h": "b72173",
       "u": "VR",
-      "s": 2
+      "s": 2,
+      "r": [
+        [
+          "How to connect an Xbox wireless controller to a PC (How-To Geek)",
+          "https://www.howtogeek.com/729937/how-to-connect-an-xbox-wireless-controller-to-a-pc"
+        ]
+      ]
     },
     {
       "n": "Acer Mixed Reality Headset and Controllers",
