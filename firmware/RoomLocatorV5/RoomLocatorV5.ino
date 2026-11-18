@@ -136,6 +136,9 @@
  (v5.16): we wanted the dog to fall asleep when nobody has used the console for a while, and to show up only where
  it fits: asleep on an idle Home screen, barking at a code it cannot use, a hop when a batch is all in. New pictures
  are Diana's, made in ChatGPT's image tool from a request Claude wrote; Claude wrote the code and tools/mkdog.py.
+ (v5.17): we asked Claude to hunt for bugs everywhere. It wrote a test that presses, types and scans at random in the
+ simulator, which found one: a search left half typed when a staff code was scanned could later draw the map from the
+ wrong list. Claude fixed it (two lines, in entered() and liveSearch()) and added a size check for the dog pictures.
   _____
 
  Diana Caballero and Gauri Sharma
@@ -208,7 +211,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.16";
+const char VERSION[] PROGMEM = "5.17";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -428,6 +431,7 @@ void drawDog(int x, int y, const uint8_t* pic, byte w, byte h, byte scale) {
   }
   tft.setAddrWindow(0, 0, tft.width() - 1, tft.height() - 1);
 }
+static_assert(SLEEP_W * 2 <= 200 && WAKE_W * 2 <= 200 && WALK_W <= 200 && SIT_W <= 200 && BARK_W <= 200 && HOP_W <= 200, "a dog picture is wider than the row buffer in drawDog");
 bool somethingWaiting() { return keyCount || missedPress || Serial1.available() || Serial.available(); }   // the dog never makes a person wait
 
 // On the screen of a thing that was just scanned (and only then, so it stays a small surprise): once the QR is up
@@ -2186,7 +2190,7 @@ void entered(char* textIn) {
   if (mode == ADDNEW) { addScanned(textIn); return; }
   if (strncasecmp_P(textIn, PSTR("RL:KIT:"), 7) == 0) { kitCode(textIn + 7); return; }      // a kit from the website: lights only, no PIN
   if (strncasecmp_P(textIn, PSTR("RL:"), 3) == 0) {                            // a code made on the website's staff page
-    queryLen = 0; query[0] = '\0';
+    queryLen = 0; query[0] = '\0'; live = false; livePending = false;   // a staff code ends any search that was being typed
     if (staffOK()) runCode(textIn);
     else { copyText(pendingCode, textIn, sizeof(pendingCode)); askPin(AFTER_CODE); }
     return;
@@ -2202,7 +2206,7 @@ void entered(char* textIn) {
 }
 void liveSearch() {                              // show what matches the letters typed so far
   if (mode == PUTAWAY) clearPutAway();
-  if (!live) { openResults(); live = true; }
+  if (!live || mode != RESULTS) { openResults(); live = true; }   // (also when a search was left open and another screen is up now)
   loadResults();
   if (keyCount) { livePending = true; liveAt = millis(); return; }   // more letters arrived while it searched: wait for them, then search once
   cursor = 0; draw();
