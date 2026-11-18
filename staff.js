@@ -39,17 +39,28 @@ async function lockKey(pass, slot) {
   const box = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await lockBytes(pass, salt), new TextEncoder().encode(keep.get('rl-key')));
   const all = (await readLocked()) || {}; const out = { note: 'The site key, locked. Made by the staff page.' };
   if (all.salt) out.pass = { salt: all.salt, iv: all.iv, box: all.box };          // (the first version of this file had one copy at the top)
-  for (const name of ['pass', 'console']) if (all[name]) out[name] = all[name];
+  for (const name of ['pass', 'console', 'expires']) if (all[name]) out[name] = all[name];
   out[slot] = { salt: b64(salt), iv: b64(iv), box: b64(box) };
   return out;
 }
-async function unlockKey(pass, slot = 'pass') {
-  const all = await readLocked(), locked = all && (all[slot] || (slot === 'pass' && all.salt ? all : null));
-  if (!locked) return slot === 'pass' ? 'No passcode has been set up for this site yet. Paste the key instead, then set one up.' : 'This console is not linked to the website yet.';
-  try { const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(locked.iv) }, await lockBytes(pass, unb64(locked.salt)), unb64(locked.box)); keep.set('rl-key', new TextDecoder().decode(plain)); return ''; }
-  catch (e) { return slot === 'pass' ? 'That passcode is not right.' : 'The console\'s website pass does not match the website any more. Link the console again.'; }
+const slotOf = (all, slot) => all && (all[slot] || (slot === 'pass' && all.salt ? all : null));
+// what a locked copy holds, or null when the pass does not open it (nothing on this device changes)
+async function openLocked(all, pass, slot) {
+  const locked = slotOf(all, slot); if (!locked) return null;
+  try { return new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(locked.iv) }, await lockBytes(pass, unb64(locked.salt)), unb64(locked.box))); } catch (e) { return null; }
 }
-let afterKey = null;
+async function unlockKey(pass, slot = 'pass') {
+  const all = await readLocked();
+  if (!slotOf(all, slot)) return slot === 'pass' ? 'No passcode has been set up for this site yet. Paste the key instead, then set one up.' : 'This console is not linked to the website yet.';
+  const plain = await openLocked(all, pass, slot);
+  if (plain === null) return slot === 'pass' ? 'That passcode is not right.' : 'The console\'s website pass does not match the website any more. Link the console again.';
+  keep.set('rl-key', plain); return '';
+}
+// After a passcode or the console's pass opened the locked copy: does GitHub still take the key inside? A key that has
+// run out (or was deleted on GitHub) is the one thing a passcode cannot fix, so the message says what to do.
+const DEAD_KEY = 'The passcode is right, but the site key behind it has run out or was replaced on GitHub. Someone with the GitHub account needs to paste a new key: open "Check everything" on this page for the steps.';
+const checkUnlocked = async () => { const r = await gh('').catch(() => null); if (!r) return 'Could not reach GitHub. Check the internet connection.'; if (r.status === 401) return DEAD_KEY; return checkKey(); };
+let afterKey = null, cameWithPass = false;
 function askForKey(why) { const box = $('connect'); box.hidden = false; $('connect-pass').focus({ preventScroll: true }); $('connect-why').textContent = why || ''; box.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
 async function checkKey() {
   const r = await gh('');
@@ -85,14 +96,32 @@ $('connect-save').addEventListener('click', async () => {
   keep.set('rl-key', value); $('connect-why').textContent = 'Checking...';
   const problem = await checkKey().catch(() => 'Could not reach GitHub. Check the internet connection.');
   if (problem) { keep.set('rl-key', null); $('connect-why').textContent = problem; return; }
-  $('connect').hidden = true; $('connect-key').value = ''; status.textContent = 'This device can now save to the website.'; dispatchEvent(new Event('rl-key-changed'));
+  $('connect-key').value = ''; dispatchEvent(new Event('rl-key-changed'));
+  // A new key makes the locked copies on the site stale (they hold the old key). Renew what this device can:
+  // the passcode copy if the passcode was typed here too, the console's copy if this phone came from the console's code.
+  const all = (await readLocked()) || {}, pass = $('connect-newpass').value, cpass = keep.get('rl-cpass'), expires = $('connect-expires').value, did = [], left = [];
+  let out = null;
+  try {
+    if (pass.length >= 4) { out = await lockKey(pass, 'pass'); did.push('the staff passcode'); } else if (slotOf(all, 'pass')) left.push('The staff passcode still opens the OLD key: set the passcode again under "Link the console, or set a passcode".');
+    if (cpass && (!slotOf(all, 'console') || await openLocked(all, cpass, 'console') !== null)) {
+      const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
+      const box = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await lockBytes(cpass, salt), new TextEncoder().encode(value));
+      out = out || await lockKey(cpass, 'console'); out.console = { salt: b64(salt), iv: b64(iv), box: b64(box) }; did.push('the console\'s link (nothing to do at the console)');
+    } else if (slotOf(all, 'console')) left.push('The console\'s link still holds the OLD key: press "Link the console" and show the new code to the console, or open this page from the console\'s Staff page code and paste the key there.');
+    if (/^\d{4}-\d\d-\d\d$/.test(expires)) { out = out || { note: 'The site key, locked. Made by the staff page.', ...Object.fromEntries(['pass', 'console'].filter(n => slotOf(all, n)).map(n => [n, slotOf(all, n)])) }; out.expires = expires; }
+    else if (out) delete out.expires;                              // a new key with no date given: the old date no longer applies
+  } catch (e) { out = null; left.push('The locked copies could not be renewed on this browser.'); }
+  $('connect-newpass').value = ''; $('connect').hidden = true;
+  const saved = out ? await publish({ 'key.json': out }, 'Site key renewed (staff page)') : true;
+  status.textContent = 'This device can now save to the website.' + (out && saved && did.length ? ' Renewed for everyone else too: ' + did.join(' and ') + '.' : '') + (out && !saved ? ' The locked copies were NOT renewed: try again from "Check everything".' : '') + (left.length ? ' ' + left.join(' ') : '');
+  dispatchEvent(new Event('rl-key-changed'));
   if (afterKey) { const go = afterKey; afterKey = null; go(); }
 });
 const keyReady = () => { $('connect').hidden = true; status.textContent = 'This device can now save to the website.'; dispatchEvent(new Event('rl-key-changed')); if (afterKey) { const go = afterKey; afterKey = null; go(); } };
 $('connect-unlock').addEventListener('click', async () => {
   const pass = $('connect-pass').value; if (!pass) return;
   $('connect-why').textContent = 'Checking...';
-  const problem = await unlockKey(pass) || await checkKey().catch(() => 'Could not reach GitHub. Check the internet connection.');
+  const problem = await unlockKey(pass) || await checkUnlocked();
   if (problem) { keep.set('rl-key', null); $('connect-why').textContent = problem; return; }
   $('connect-pass').value = ''; keyReady();
 });
@@ -108,7 +137,7 @@ $('link-console').addEventListener('click', async e => {
   const letters = 'abcdefghjkmnpqrstuvwxyz23456789', pick = crypto.getRandomValues(new Uint8Array(20));
   const pass = [...pick].map(n => letters[n % letters.length]).join('');
   if (!(await publish({ 'key.json': await lockKey(pass, 'console') }, 'Site key locked with the console\'s website pass (staff page)', e.target))) return;
-  $('link-code').hidden = false;
+  $('link-code').hidden = false; keep.set('rl-cpass', pass);
   const qr = qrcode(0, 'M'); qr.addData('RL:WEB:' + pass); qr.make(); $('link-qr').innerHTML = qr.createSvgTag({ cellSize: 8, margin: 4, scalable: true });
   $('share-why').textContent = 'Saved. Now show this code to the console\'s scanner and type the staff PIN there.';
 });
@@ -566,14 +595,94 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   $('home-key-set').addEventListener('click', () => { if (keep.get('rl-key')) { keep.set('rl-key', null); drawHomeStatus(); } else askForKey('Type the staff passcode and this device can save.'); });
   $('home-share').addEventListener('click', () => { $('share').hidden = !$('share').hidden; });
   addEventListener('rl-key-changed', drawHomeStatus);
+  // ---- "Check everything": one button that looks at each link in the chain and says in plain words what is fine and
+  // what is not. It only reads; the one thing it can change (renewing the locked copies of the key) has its own button.
+  const health = $('health'), line = (state, text) => { const li = document.createElement('li'); li.className = 'health-' + state; li.textContent = (state === 'ok' ? 'OK: ' : state === 'bad' ? 'Problem: ' : state === 'warn' ? 'Look at this: ' : '') + text; health.appendChild(li); };
+  const dayText = d => new Date(d + 'T12:00:00').toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
+  const daysTo = d => Math.ceil((new Date(d + 'T23:59:59') - Date.now()) / 86400000);
+  async function checkEverything() {
+    health.innerHTML = ''; $('health-renew').hidden = true; $('health-steps').hidden = true; const go = $('health-go'); go.disabled = true; go.textContent = 'Checking...';
+    const get = (path) => fetch(path + '?x=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null);
+    // 1. the files every page reads
+    const [d, r, p, h, k] = await Promise.all(['data.json', 'room.json', 'photos.json', 'howto.json', 'kits.json'].map(get));
+    const missing = [['data.json', d], ['room.json', r], ['photos.json', p], ['howto.json', h], ['kits.json', k]].filter(x => !x[1]).map(x => x[0]);
+    if (missing.length) line('bad', 'The website could not load ' + missing.join(', ') + '. Check the internet connection; if it stays, put the Nov 16 setup back from the "From the console" tab.');
+    else line('ok', 'The website\'s files load: ' + d.kinds.length + ' items, ' + r.units.length + ' units, ' + k.kits.length + ' kits.');
+    // 2. the inventory agrees with itself, and with the codes the console makes
+    if (d && r) {
+      const units = new Map(r.units.map(u => [u.code, u])), codes = new Map(), wrong = [];
+      for (const it of d.kinds) {
+        const u = units.get(it.u);
+        if (!u) wrong.push(it.n + ' is on a unit that does not exist (' + it.u + ')'); else if (u.shelves ? it.s < 1 || it.s > u.shelves : it.s > 0) wrong.push(it.n + ' is on shelf ' + it.s + ' of ' + u.name + ', which has ' + u.shelves);
+        if (it.h !== nameCode(it.n) && it.h !== nameCode(it.n.slice(0, 58))) wrong.push(it.n + ' has a page code that does not match its name');   // (the console keeps the first 58 letters of a name)
+        if (codes.has(it.h)) wrong.push(it.n + ' and ' + codes.get(it.h) + ' share a page code'); codes.set(it.h, it.n);
+      }
+      if (k) for (const kit of k.kits) for (const part of kit.parts) for (const name of part.pick || []) if (!d.kinds.some(it => it.n === name)) wrong.push('the kit "' + kit.name + '" lists ' + name + ', which is not in the inventory');
+      if (wrong.length) line('bad', wrong.length + (wrong.length === 1 ? ' item needs fixing: ' : ' items need fixing: ') + wrong.slice(0, 5).join('; ') + (wrong.length > 5 ? '; and ' + (wrong.length - 5) + ' more' : '') + '.');
+      else line('ok', 'Every item is on a real shelf, every page code matches the code the console makes, and every kit part exists.');
+    }
+    // 3. the site key on this device
+    const locked = await readLocked(); let keyWorks = false;
+    if (!keep.get('rl-key')) line('note', 'This device is not signed in, so it cannot save. Type the staff passcode (or open this page from the console\'s Staff page code) to check the key.');
+    else {
+      const res = await gh('').catch(() => null);
+      if (!res) line('warn', 'GitHub could not be reached, so the key could not be checked. Check the internet connection and try again.');
+      else if (res.status === 401) { line('bad', 'GitHub no longer takes the site key (it ran out or was deleted). Nobody can save until a new one is pasted: the steps are below.'); $('health-steps').hidden = false; $('health-steps').open = true; }
+      else if (!res.ok) line('bad', 'GitHub answered ' + res.status + ' for the site key. It may be for a different repository: the steps to make a new one are below.');
+      else { const info = await res.json(); if (info.permissions && info.permissions.push) { keyWorks = true; line('ok', 'The site key works: this device can save to the website.'); } else line('bad', 'The site key can read the site but not change it. It needs Contents: Read and write. Make a new one with the steps below.'); }
+      if (res && !res.ok) $('health-steps').hidden = false;
+    }
+    // 4. when the key runs out (GitHub does not tell a web page, so the date is the one typed when the key was pasted)
+    if (locked && locked.expires) { const n = daysTo(locked.expires);
+      if (n < 0) line(keyWorks ? 'warn' : 'bad', 'The site key was due to run out on ' + dayText(locked.expires) + '.' + (keyWorks ? ' It still works, so the date on file is old: paste the key again with its real date.' : ''));
+      else if (n <= 21) { line('warn', 'The site key runs out on ' + dayText(locked.expires) + ' (' + n + (n === 1 ? ' day' : ' days') + '). Make a new one before then: the steps are below.'); $('health-steps').hidden = false; }
+      else line('ok', 'The site key is good until ' + dayText(locked.expires) + '.'); }
+    else line('note', 'No run-out date is on file for the site key. GitHub emails the account owner about a week before a key runs out. To get a warning here too, paste the key again with its date (steps below).');
+    // 5. the locked copies other devices use
+    const me = keep.get('rl-key'), cpass = keep.get('rl-cpass'); let stale = false;
+    if (!slotOf(locked, 'pass')) line('note', 'No staff passcode is set up. That is fine if staff always come in through the console\'s code.');
+    else line('ok', 'A staff passcode is set up for devices away from the console.' + (keyWorks ? ' (This page cannot tell whether it still opens the current key without the passcode: if a device says the key has run out, set the passcode again.)' : ''));
+    if (!slotOf(locked, 'console')) line('warn', 'The console is not linked to the website. Phones that scan its codes cannot save until someone presses "Link the console" and shows the code to the console.');
+    else if (!cpass) line('note', 'The console has been linked. To test that link, scan the console\'s Staff page code (the last spots on its map) with this phone and press Check everything again.');
+    else { const inside = await openLocked(locked, cpass, 'console');
+      if (inside === null) line('bad', 'The console\'s website pass does not open the website\'s copy any more. Press "Link the console" and show the new code to the console.');
+      else if (keyWorks && inside !== me) { stale = true; line('bad', 'The console\'s link holds an older site key than this device. Press "Renew the console\'s link" below (nothing to do at the console).'); }
+      else if (!keyWorks) line('note', 'The console\'s pass opens the website\'s copy. Whether the key inside still works is checked once this device is signed in.');
+      else line('ok', 'The console\'s link works: a phone that scans the console\'s Staff page code or To the website code can save.'); }
+    $('health-renew').hidden = !stale;
+    // 6. is the live site showing the last save
+    if (keyWorks && d) { const res = await gh('/contents/data.json?ref=' + BRANCH, { headers: { Accept: 'application/vnd.github.raw+json' } }).catch(() => null), saved = res && res.ok ? await res.json().catch(() => null) : null;
+      if (!saved) line('warn', 'Could not compare the live site with the last save.');
+      else if ((saved.published || '') === (d.published || '')) line('ok', 'The live website is showing the latest save' + (d.published ? ' (' + new Date(d.published).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ')' : '') + '.');
+      else { const mins = saved.published ? Math.round((Date.now() - new Date(saved.published)) / 60000) : 0; line(mins > 10 ? 'bad' : 'warn', mins > 10 ? 'A save made ' + mins + ' minutes ago is still not showing on the live website. GitHub may be having trouble publishing: check the repository\'s Actions tab.' : 'A save from the last few minutes is still on its way to the live website. Check again in a minute.'); } }
+    // 7. the counter for "What students open"
+    const count = await fetch('https://abacus.jasoncameron.dev/get/roomlocator-ideate/from-site').then(x => x.ok || x.status === 404).catch(() => false);
+    line(count ? 'ok' : 'warn', count ? 'The page-open counter answers.' : 'The page-open counter did not answer. Item pages still work; only "What students open" is affected.');
+    // 8. what this page cannot see
+    const sy = r && r.synced;
+    line('note', 'This page cannot see the console itself. ' + (sy && sy.at ? 'The website last matched it ' + new Date(sy.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '. ' : '') + 'On the console, the "Send to website" spot on the map shows how many changes are waiting: 0 means the two match.');
+    go.disabled = false; go.textContent = 'Check again';
+  }
+  $('health-go').addEventListener('click', () => checkEverything().catch(e => { line('bad', 'The check itself stopped: ' + e.message); $('health-go').disabled = false; $('health-go').textContent = 'Check again'; }));
+  $('health-renew').addEventListener('click', async e => {
+    const cpass = keep.get('rl-cpass'); if (!cpass || !keep.get('rl-key')) return;
+    if (await publish({ 'key.json': await lockKey(cpass, 'console') }, 'Console link renewed with the current site key (staff page)', e.target)) { status.textContent = 'The console\'s link was renewed. Phones that scan its codes can save again in about a minute.'; e.target.hidden = true; }
+  });
+  $('health-paste').addEventListener('click', () => { askForKey('Paste the new key below, with its run-out date and the staff passcode.'); document.querySelector('#connect details').open = true; });
+  // a quiet warning at the top when the key is close to running out, without anyone pressing anything
+  readLocked().then(all => { if (all && all.expires && daysTo(all.expires) <= 21) { $('home-expiry').hidden = false; $('home-expiry').textContent = daysTo(all.expires) < 0 ? 'The site key was due to run out on ' + dayText(all.expires) + '. Press Check everything.' : 'The site key runs out on ' + dayText(all.expires) + '. Press Check everything for how to renew it.'; } });
   const unlockFromAddress = async () => {
     const m = /(?:^#|&)k=([A-Za-z0-9]{8,20})(?:&|$)/.exec(location.hash); if (!m) return;
     const rest = location.hash.slice(1).split('&').filter(part => !part.startsWith('k=')).join('&');
     history.replaceState(null, '', location.pathname + (rest ? '#' + rest : ''));          // the pass does not stay in the address bar or the history
-    if (keep.get('rl-key')) return;
+    keep.set('rl-cpass', m[1]); cameWithPass = true;                 // remembered so a new site key can be locked for the console again from this phone
+    if (keep.get('rl-key')) {                                      // this phone already has a key: keep it unless GitHub no longer takes it
+      const r = await gh('').catch(() => null); if (!r || r.status !== 401) return;
+      keep.set('rl-key', null);
+    }
     status.textContent = 'Opened from the console. Unlocking...';
-    const problem = await unlockKey(m[1], 'console') || await checkKey().catch(() => 'Could not reach GitHub. Check the internet connection.');
-    if (problem) { keep.set('rl-key', null); status.textContent = problem; return; }
+    const problem = await unlockKey(m[1], 'console') || await checkUnlocked();
+    if (problem) { keep.set('rl-key', null); status.textContent = problem; dispatchEvent(new Event('rl-key-changed')); return; }
     status.textContent = 'Opened from the console: this phone can save to the website.'; dispatchEvent(new Event('rl-key-changed'));
   };
   const takeAddress = () => {

@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="stylesheet" href="styles.css?v=20261117j"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="stylesheet" href="styles.css?v=20261118e"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
 <main class="staff-main">
 <p class="eyebrow">For lending staff</p>
 <h1>Staff tools</h1>
@@ -18,6 +18,20 @@
 <p><button type="button" id="home-sync-go" class="button-secondary">Bring in the console's changes</button></p>
 <p><span id="home-key"></span> <button type="button" id="home-key-set" class="link-button"></button></p>
 <p><button type="button" id="home-share" class="link-button" hidden>Link the console, or set a passcode</button></p>
+<p id="home-expiry" class="health-warn" hidden></p>
+<p><button type="button" id="health-go" class="button-secondary">Check everything</button> <a href="console-dog.html">See the dog on the console</a></p>
+<ul id="health" class="health" aria-live="polite"></ul>
+<p><button type="button" id="health-renew" hidden>Renew the console's link</button></p>
+<details id="health-steps" class="sync-paste" hidden><summary>How to put in a new site key</summary>
+<ol>
+<li>On a phone, scan the console's Staff page code (the last spots on its map, after the staff PIN). That way the console's link is renewed in the same step. A laptop works too, but then press Link the console afterwards.</li>
+<li>Sign in to GitHub with the account that owns the room-locator repository and open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">New fine-grained token &#8599;</a></li>
+<li>Repository access: Only select repositories, room-locator. Permissions: Contents, Read and write. Pick the longest expiration GitHub allows and note the date.</li>
+<li>Generate it, copy it, come back here and press the button below. Paste it with its date and the staff passcode.</li>
+<li>Press Check everything again. Every line should say OK.</li>
+</ol>
+<p><button type="button" id="health-paste" class="button-secondary">Paste the new key</button></p>
+</details>
 <div id="share" class="connect" hidden>
 <h2>Link the console: nothing to type on phones</h2>
 <p class="tool-note">After this, any phone that scans the console's Staff page code (on its map) or a To the website code can save. Both sit behind the console's staff PIN, so the PIN is the only thing staff need to know.</p>
@@ -184,6 +198,8 @@
 <li>Generate it, copy it, paste it here</li>
 </ol>
 <label>Site key<input id="connect-key" type="password" autocomplete="off" placeholder="github_pat_..."></label>
+<label>The date GitHub says it expires, if it has one<input id="connect-expires" type="date"></label>
+<label>Staff passcode, to keep it working for other devices (leave empty to skip)<input id="connect-newpass" type="password" autocomplete="off"></label>
 <div class="sync-actions"><button type="button" id="connect-save">Use this key on this device</button></div>
 </details>
 <p class="note">Signing in stays in this browser until you sign the device out.</p>
@@ -256,4 +272,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="room3d.js?v=20261116g"></script>
-<script src="staff.js?v=20261118a" defer></script></body></html>
+<script src="staff.js?v=20261118b" defer></script></body></html>
