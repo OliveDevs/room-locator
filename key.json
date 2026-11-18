@@ -4,5 +4,10 @@
     "salt": "YjmjlTbwsYAs90Utxqg8ww==",
     "iv": "mji7Kueoy5OrbQXR",
     "box": "2xoQEtSfC/INxn/jjb0We7PbisruUiRzUYOrWEfI/L3pwy7VNkdaYcJRfpp2sPK3Y3jHBpZFejGDYlwx4+BJChZiUeVMUkyVeF95D8xlgAMVX1U/rIEd5xWnYSEEvjuiRa85X4+FXvxopvJRGQ=="
+  },
+  "console": {
+    "salt": "r4iFFfdjtAZXpNvQMFVJHQ==",
+    "iv": "4yjKcxfay41/fRNT",
+    "box": "ErV3qPZCobUXkB6FKdXFUzCOVvOoZZF0qGh0nVEVtmsmRjGg2DOjL+vu1BUYKun6B2Fk9W/fSJs7gkL7U+GF2ihSvb/jBlwzvPkoqzwkGpO+0KNo7hU/pu7ZvmZTJ0EhQhjvfox4dZcAgoOB6A=="
   }
 }
