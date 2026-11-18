@@ -139,7 +139,7 @@ function attachCalendar(k,fromConsole){
     link.download='Return '+k.n.replace(/[^A-Za-z0-9 ._-]+/g,' ').replace(/\s+/g,' ').replace(/[ .]+$/,'').trim().slice(0,60)+'.ics';
     document.body.appendChild(link); link.click(); link.remove();
     setTimeout(()=>URL.revokeObjectURL(link.href),60000);
-    status.textContent='A calendar file was made. Open it and choose Add: your calendar will alert you the day before and 2 hours before it is due.'+(rememberLoan(k,due)?' It is also on My loans on this phone.':'');
+    status.textContent='A calendar file was made. Open it and choose Add: your calendar will alert you the day before and 2 hours before it is due.'+(rememberLoan(k,due)?' It is also on My loans on this phone.':'');calendarPup(status);
   });
   button.addEventListener('click',()=>{
     const due=dueOrAsk(); if(!due)return;
@@ -149,7 +149,7 @@ function attachCalendar(k,fromConsole){
     const zone=Intl.DateTimeFormat().resolvedOptions().timeZone||'America/New_York';
     const by=due.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
     const params=new URLSearchParams({action:'TEMPLATE',text:'Return '+k.n+' to IDeATe Lending by '+by,dates:calendarStamp(start)+'/'+calendarStamp(due),stz:zone,etz:zone,details:'Due back at '+by+' on '+due.toLocaleDateString([], {weekday:'long',month:'long',day:'numeric'})+'. This event covers the last 2 hours before the deadline. Hand the item to staff in Hunt Library A29.\n\nLoans cannot be renewed. For illness or an emergency, email help@ideate.cmu.edu before it is due. Late fees are charged by the day.\n\nFor a warning the day before, choose Add notification and set 1 day before you save.\n\nItem guide: '+location.origin+location.pathname+'?i='+(k.h||''),location:'IDeATe Lending, Hunt Library A29, Carnegie Mellon University'});
-    status.textContent='Google Calendar opened with the last 2 hours before the deadline blocked out. It uses your own alert setting, so add a 1 day notification there if you want one, then save.'+(rememberLoan(k,due)?' It is also on My loans on this phone.':'');
+    status.textContent='Google Calendar opened with the last 2 hours before the deadline blocked out. It uses your own alert setting, so add a 1 day notification there if you want one, then save.'+(rememberLoan(k,due)?' It is also on My loans on this phone.':'');calendarPup(status);
     window.open('https://calendar.google.com/calendar/r/eventedit?'+params.toString(),'_blank','noopener,noreferrer');
   });
 }
@@ -294,7 +294,7 @@ function manualHtml(k,manual){
 function reminderHtml(top,name){
   // one compact row at the top of a page opened from the console; the fuller box in the side column otherwise
   if(top)return '<div class="reminder-top"><label for="return-date">Return reminder for '+esc(String(name).replace(/[\s.\/]+$/,''))+'</label><div class="reminder-row"><input id="return-date" type="datetime-local" aria-describedby="calendar-status"><button id="ics-button" type="button">Add to calendar</button><button id="calendar-button" class="button-secondary" type="button">Google Calendar ↗</button></div><button id="estimate-button" type="button" hidden></button><p id="calendar-status" class="calendar-status" role="status"></p><p class="extend-note">No renewals. Illness or an emergency? <a id="extend-link" href="mailto:help@ideate.cmu.edu">Ask for an extension by email</a> before it is due.</p></div>';
-  return '<div class="side-block">'+pup('calendar','pup-side')+'<h2>Return reminder</h2><p>Use the exact due date and time from your checkout email.</p><label for="return-date">Return date and time</label><input id="return-date" type="datetime-local" aria-describedby="calendar-status"><div class="reminder-buttons"><button id="estimate-button" class="button-secondary" type="button">Fill normal 3-day estimate</button><button id="ics-button" type="button">Add to calendar</button><button id="calendar-button" class="button-secondary" type="button">Google Calendar ↗</button></div><p id="calendar-status" class="calendar-status" role="status">Add to calendar alerts you the day before and 2 hours before. Google Calendar uses your own alert setting.</p><p class="extend-note">Cannot make it back in time? Loans cannot be renewed, but for illness or an emergency you can ask for more time before it is due.</p><a class="source-link" id="extend-link" href="mailto:help@ideate.cmu.edu">Ask for an extension by email \u2192</a></div>';
+  return '<div class="side-block"><h2>Return reminder</h2><p>Use the exact due date and time from your checkout email.</p><label for="return-date">Return date and time</label><input id="return-date" type="datetime-local" aria-describedby="calendar-status"><div class="reminder-buttons"><button id="estimate-button" class="button-secondary" type="button">Fill normal 3-day estimate</button><button id="ics-button" type="button">Add to calendar</button><button id="calendar-button" class="button-secondary" type="button">Google Calendar ↗</button></div><p id="calendar-status" class="calendar-status" role="status">Add to calendar alerts you the day before and 2 hours before. Google Calendar uses your own alert setting.</p><p class="extend-note">Cannot make it back in time? Loans cannot be renewed, but for illness or an emergency you can ask for more time before it is due.</p><a class="source-link" id="extend-link" href="mailto:help@ideate.cmu.edu">Ask for an extension by email \u2192</a></div>';
 }
 
 // The console's QR ends in &w=AUD-3: the unit and shelf the console has for the thing at that moment. The page trusts
@@ -330,15 +330,13 @@ function countOpen(k,fromConsole){
     hit('i-'+k.h); hit(fromConsole?'from-console':'from-site');
   }catch(e){}
 }
-// a few kinds of item get the dog holding the matching thing, beside the first section of the guide
+// the dog shows on an item page only where it is holding that very thing: the tape measure and the headphones
 function itemPose(k){
   if(k.n.startsWith('Measuring Tape'))return 'tape';
   if(k.t==='Headphones')return 'headphones';
-  if(k.c==='Photo & Video'&&/Camera|Camcorder|Tripod/.test(k.t))return 'camera';
-  if(k.c==='Shop & Tools'&&/Wrench|Pliers|Screwdriver|Socket/.test(k.n))return 'wrench';
-  if(['XLR Cable','Guitar Cable','MIDI Cable','HDMI Cable','Extension Cord'].includes(k.n))return 'cable';
   return '';
 }
+function calendarPup(status){if(!document.querySelector('.pup-made'))status.insertAdjacentHTML('afterend',pup('calendar','pup-made'))}
 function itemView(k,fromConsole){
   const live=fromConsole?consolePlace():null;
   const guide=guideFor(k), howto=howtoFor(k), group=k.c+'/'+k.t, related=(DATA.goes[group]||[]).filter(g=>K.some(a=>a.c+'/'+a.t===g));
@@ -362,7 +360,7 @@ function renderCards(rows){const target=document.getElementById('results');docum
 function listing(category='',type=''){
   document.title='IDeATe Lending · Item guides';
   const categories=[...new Set(K.map(k=>k.c))].sort();
-  app.innerHTML='<p class="eyebrow">CMU / Hunt Library A29</p><div class="hero-row"><div><h1>Equipment for what you make</h1><p class="intro">All '+K.length+' things you can borrow from IDeATe Lending. Search by name or by what you need to do. Each page shows the shelf, how to use the thing and a return reminder.</p></div>'+(loans().length?'':pup('peek','pup-peek'))+'</div>'+loansHtml()+'<div class="search-mode" role="group" aria-label="How to search"><button type="button" data-mode="name" aria-pressed="true">Find an item</button><button type="button" data-mode="use" aria-pressed="false">What it is good for</button><a href="#kits">Kits for a whole project \u2192</a></div><div class="search-tools"><input id="query" type="search" placeholder="Item name: tripod, HDMI, Zoom..." aria-label="Search" autocomplete="off"><select id="category" aria-label="Filter by category"><option value="">All categories</option>'+categories.map(c=>'<option value="'+esc(c)+'"'+(c===category?' selected':'')+'>'+esc(categoryName(c))+'</option>').join('')+'</select></div><div id="kit-hits"></div><p class="result-count" id="count"></p><div class="item-grid" id="results"></div>';
+  app.innerHTML='<p class="eyebrow">CMU / Hunt Library A29</p><div class="hero-row"><div><h1>Equipment for what you make</h1><p class="intro">All '+K.length+' things you can borrow from IDeATe Lending. Search by name or by what you need to do. Each page shows the shelf, how to use the thing and a return reminder.</p></div>'+(loans().some(x=>x.due<Date.now())?'':pup('peek','pup-peek'))+'</div>'+loansHtml()+'<div class="search-mode" role="group" aria-label="How to search"><button type="button" data-mode="name" aria-pressed="true">Find an item</button><button type="button" data-mode="use" aria-pressed="false">What it is good for</button><a href="#kits">Kits for a whole project \u2192</a></div><div class="search-tools"><input id="query" type="search" placeholder="Item name: tripod, HDMI, Zoom..." aria-label="Search" autocomplete="off"><select id="category" aria-label="Filter by category"><option value="">All categories</option>'+categories.map(c=>'<option value="'+esc(c)+'"'+(c===category?' selected':'')+'>'+esc(categoryName(c))+'</option>').join('')+'</select></div><div id="kit-hits"></div><p class="result-count" id="count"></p><div class="item-grid" id="results"></div>';
   attachLoans(app);
   const q=document.getElementById('query'),c=document.getElementById('category');
   // Two ways to look. "Find an item" reads names and types only; a word nobody spelled that way gets one slip per word
@@ -440,7 +438,7 @@ function rememberLoan(k,due){const v=loans().filter(x=>x.h!==k.h);v.push({h:k.h,
 function loansHtml(){
   const v=loans();if(!v.length)return '';
   const now=Date.now(),when=t=>new Date(t).toLocaleString([], {weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
-  return '<section class="my-loans" aria-label="My loans">'+pup(v.some(x=>x.due<now)?'sad':'thanks','pup-loans')+'<h2>My loans</h2><ul>'+v.map(x=>'<li'+(x.due<now?' class="late"':'')+'><a href="#i'+esc(x.h)+'">'+esc(x.n)+'</a><span>'+(x.due<now?'Was due ':'Due ')+esc(when(x.due))+'</span><button type="button" data-returned="'+esc(x.h)+'">Returned</button></li>').join('')+'</ul><p class="note">Remembered on this phone only. Loans cannot be renewed; hand each one to staff in A29.</p></section>';
+  return '<section class="my-loans" aria-label="My loans">'+(v.some(x=>x.due<now)?pup('sad','pup-loans'):'')+'<h2>My loans</h2><ul>'+v.map(x=>'<li'+(x.due<now?' class="late"':'')+'><a href="#i'+esc(x.h)+'">'+esc(x.n)+'</a><span>'+(x.due<now?'Was due ':'Due ')+esc(when(x.due))+'</span><button type="button" data-returned="'+esc(x.h)+'">Returned</button></li>').join('')+'</ul><p class="note">Remembered on this phone only. Loans cannot be renewed; hand each one to staff in A29.</p></section>';
 }
 function attachLoans(root){root.querySelectorAll('[data-returned]').forEach(b=>b.addEventListener('click',()=>{saveLoans(loans().filter(x=>x.h!==b.dataset.returned));const box=root.querySelector('.my-loans');if(box){box.outerHTML=loansHtml();attachLoans(root)}thanksNote()}))}
 // a small "thanks" in the corner for a few seconds after Returned is pressed, with the tail-wag animation
@@ -464,8 +462,7 @@ function kitsView(id){
   if(!kit){document.title='Kits \u00b7 IDeATe Lending';
     app.innerHTML='<a class="back" href="./">\u2190 All items</a><div class="hero-row"><div><h1>Kits for a whole project</h1><p class="intro">Pick what you are trying to do and get the full list to ask for, with the shelf for each piece.</p></div>'+pup('wave','pup-wave')+'</div><div class="item-grid">'+KITS.map(x=>'<a class="item-card kit-card" href="#kit-'+esc(x.id)+'"><div><strong>'+esc(x.name)+'</strong><span class="card-where">'+x.parts.length+' pieces</span></div><span class="arrow" aria-hidden="true">\u2197</span></a>').join('')+'</div>';return}
   document.title=kit.name+' \u00b7 IDeATe Lending';
-  const kitPose={interview:'headphones',music:'headphones',video:'camera',photo:'camera',phone:'camera',stopmotion:'camera',build:'wrench'}[kit.id]||'tilt';
-  app.innerHTML='<a class="back" href="#kits">\u2190 All kits</a><div class="hero-row"><div><h1>'+esc(kit.name)+'</h1><p class="intro">'+esc(kit.why)+'</p></div>'+pup(kitPose,'pup-wave')+'</div><div class="kit-list">'+kit.parts.map(p=>{const items=p.pick.map(find).filter(Boolean);if(!items.length)return '';const first=items[0];
+  app.innerHTML='<a class="back" href="#kits">\u2190 All kits</a><div class="hero-row"><div><h1>'+esc(kit.name)+'</h1><p class="intro">'+esc(kit.why)+'</p></div></div><div class="kit-list">'+kit.parts.map(p=>{const items=p.pick.map(find).filter(Boolean);if(!items.length)return '';const first=items[0];
     return '<div class="kit-row"><p class="kit-role">'+esc(p.role)+'</p><a class="item-card" href="#i'+first.h+'">'+thumbHtml(first)+'<div><strong>'+esc(first.n)+'</strong><span class="card-where">'+esc(first.in?first.w:'Ask at the desk')+'</span></div><span class="arrow" aria-hidden="true">\u2197</span></a>'+(items.length>1?'<p class="kit-or">or '+items.slice(1).map(k=>'<a href="#i'+k.h+'">'+esc(k.n)+'</a> ('+esc(k.in?k.w:'ask at the desk')+')').join(', or ')+'</p>':'')+'</div>'}).join('')+'</div><div class="guide-section kit-tip"><h2>Light the shelves in Lending</h2><p><button type="button" id="kit-code-go" class="kit-code-go">Show the code for the console</button></p><div id="kit-code" aria-live="polite"></div></div><div class="guide-section kit-tip"><h2>Before you go</h2><p>'+esc(kit.tip)+'</p><p class="note">Each piece is checked out separately and may already be on loan. The desk has what is in today.</p></div>';
   document.getElementById('kit-code-go').addEventListener('click',e=>{e.target.hidden=true;showKitCode(kit,document.getElementById('kit-code'))});
 }
