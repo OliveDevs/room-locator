@@ -139,6 +139,8 @@
  (v5.17): we asked Claude to hunt for bugs everywhere. It wrote a test that presses, types and scans at random in the
  simulator, which found one: a search left half typed when a staff code was scanned could later draw the map from the
  wrong list. Claude fixed it (two lines, in entered() and liveSearch()) and added a size check for the dog pictures.
+ (v5.18): the dog is now Loki, Diana's own dog, from drawings she had made in ChatGPT's image tool. Claude ran them
+ through tools/mkdog.py to make dog.h. No code changed.
   _____
 
  Diana Caballero and Gauri Sharma
@@ -211,7 +213,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.17";
+const char VERSION[] PROGMEM = "5.18";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool

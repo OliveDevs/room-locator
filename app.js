@@ -333,7 +333,8 @@ function countOpen(k,fromConsole){
 // the dog shows on an item page only where it is holding that very thing: the tape measure and the headphones
 function itemPose(k){
   if(k.n.startsWith('Measuring Tape'))return 'tape';
-  if(k.t==='Headphones')return 'headphones';
+  if(k.n.startsWith('Shure SM-58'))return 'mic';
+  if(k.n==='XLR Cable')return 'cable';
   return '';
 }
 function calendarPup(status){if(!document.querySelector('.pup-made'))status.insertAdjacentHTML('afterend',pup('calendar','pup-made'))}
@@ -355,7 +356,7 @@ function itemView(k,fromConsole){
   const img=app.querySelector('.item-photo img');
   if(img)img.addEventListener('error',()=>{img.hidden=true;img.parentElement?.classList.add('photo-unavailable')});
 }
-const pup=(pose,cls)=>'<img class="pup '+(cls||'')+'" src="dog/'+pose+'.png" alt="" aria-hidden="true" loading="lazy">';   // Diana's dog drawings, as decoration
+const pup=(pose,cls)=>'<img class="pup '+(cls||'')+'" src="dog/'+pose+'.png?v=2" alt="" aria-hidden="true" loading="lazy">';   // drawings of Loki, Diana's dog, as decoration
 function renderCards(rows){const target=document.getElementById('results');document.getElementById('count').textContent=rows.length+' of '+K.length+' items';target.innerHTML=rows.length?rows.map(k=>'<a class="item-card" href="#i'+k.h+'">'+thumbHtml(k)+'<div><small>'+esc(categoryName(k.c))+' / '+esc(k.t)+'</small><br><strong>'+esc(k.n)+'</strong><span class="card-where">'+esc(k.in?k.w:'Ask at the desk')+'</span></div><span class="arrow" aria-hidden="true">↗</span></a>').join(''):'<div class="empty-state">'+pup('dig')+'<p>Dug around and found nothing. Try a shorter name or another category.</p></div>'}
 function listing(category='',type=''){
   document.title='IDeATe Lending · Item guides';
@@ -446,7 +447,7 @@ function thanksNote(){
   document.querySelector('.thanks-note')?.remove();
   const still=matchMedia('(prefers-reduced-motion: reduce)').matches, n=document.createElement('div');
   n.className='thanks-note';n.setAttribute('role','status');
-  n.innerHTML='<img src="dog/'+(still?'thanks.png':'thanks-wag.webp')+'" alt="" aria-hidden="true"><p><strong>Thanks for bringing it back.</strong> Hand it to staff in A29 so it is checked in.</p>';
+  n.innerHTML='<img src="dog/'+(still?'thanks.png?v=2':'thanks-wag.webp?v=2')+'" alt="" aria-hidden="true"><p><strong>Thanks for bringing it back.</strong> Hand it to staff in A29 so it is checked in.</p>';
   document.body.appendChild(n);setTimeout(()=>n.remove(),5200);
 }
 // ---------- The code a kit page shows for the console: RL:KIT: and the page code of each first-choice piece

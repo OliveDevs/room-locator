@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="stylesheet" href="styles.css?v=20261118e"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="stylesheet" href="styles.css?v=20261118f"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
 <main class="staff-main">
 <p class="eyebrow">For lending staff</p>
 <h1>Staff tools</h1>
@@ -36,7 +36,7 @@
 <h2>Link the console: nothing to type on phones</h2>
 <p class="tool-note">After this, any phone that scans the console's Staff page code (on its map) or a To the website code can save. Both sit behind the console's staff PIN, so the PIN is the only thing staff need to know.</p>
 <div class="sync-actions"><button type="button" id="link-console">Link the console</button></div>
-<div id="link-code" hidden><div id="link-qr" class="qr"></div><p class="note">Show this to the console once. It is not shown again: if the console is ever replaced or its card wiped, press Link the console again.</p></div>
+<div id="link-code" hidden><div id="link-qr" class="qr"></div><p class="note">Last step, once: show this to the console's scanner (unlock the console with its staff PIN first). It is not shown again: if the console is ever replaced or its card wiped, press Link the console again.</p></div>
 <h2>Or a staff passcode to type</h2>
 <p class="tool-note">For a laptop away from the console. Anyone who types it on the staff page can save to the website. It is separate from the console's PIN.</p>
 <p class="note">A locked copy of the site key is stored on the public site. A 4-digit passcode can be guessed by a program that tries all 10,000, so a longer one is safer. The key can only change this website's files.</p>
@@ -188,9 +188,10 @@
 <section id="connect" class="connect" hidden>
 <h2>Let this device save to the website</h2>
 <p id="connect-why" class="tool-note"></p>
-<label>Staff passcode<input id="connect-pass" type="password" inputmode="numeric" autocomplete="off"></label>
+<p id="connect-how"></p>
+<label id="connect-passrow">Staff passcode (not the console's PIN)<input id="connect-pass" type="password" autocomplete="off"></label>
 <div class="sync-actions"><button type="button" id="connect-unlock">Unlock saving</button><button type="button" id="connect-forget" class="button-secondary">Sign this device out</button></div>
-<details class="sync-paste"><summary>No passcode set up yet, or it stopped working: paste the site key</summary>
+<details class="sync-paste"><summary>First-time setup, or the key stopped working: paste the site key</summary>
 <ol>
 <li>Sign in to GitHub with an account that can edit the room-locator repository, then open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">New fine-grained token &#8599;</a></li>
 <li>Repository access: Only select repositories, then pick room-locator</li>
@@ -272,4 +273,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="room3d.js?v=20261116g"></script>
-<script src="staff.js?v=20261118b" defer></script></body></html>
+<script src="staff.js?v=20261118c" defer></script></body></html>
