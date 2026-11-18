@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>The dog on the console</title>
+<style>
+:root{--bg:#f6f4ef;--ink:#1d1d1b;--muted:#5d5a55}
+@media (prefers-color-scheme: dark){:root{--bg:#141414;--ink:#f1efe9;--muted:#a8a49c}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1040px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:30px;line-height:1.2;margin:0 0 8px}
+h2{font-size:20px;margin:0 0 4px}
+p{margin:0 0 12px;max-width:62ch}
+.lead{color:var(--muted);margin-bottom:32px}
+.scenes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:40px 32px}
+.screen{display:block;width:100%;max-width:480px;height:auto;aspect-ratio:3/2;background:#0f141a;image-rendering:pixelated;border:10px solid #23262b;border-radius:6px}
+button{font:inherit;margin-top:10px;padding:8px 14px;background:transparent;color:inherit;border:1px solid currentColor;border-radius:4px;cursor:pointer}
+.when{color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+<h1>The dog on the console</h1>
+<p class="lead">These are recordings of the console's 480 by 320 screen, taken from the simulator running the real v5.17 code at the real timing. Colours on the actual screen will look a little different.</p>
+<div class="scenes">
+<section><h2>Asleep on Home</h2><p class="when">After 5 minutes with nobody touching the console. A button wakes it with a stretch; a key or a scan wakes it at once.</p><img class="screen" src="preview/sleep.webp" width="480" height="320" alt="The Home screen goes dark, the dog curls up asleep with z's floating up, then stretches awake and Home comes back"><br><button type="button">Play from the start</button></section>
+<section><h2>Walks in when a thing is scanned</h2><p class="when">Only after a barcode scan, and only when there is room under the shelf box.</p><img class="screen" src="preview/walk.webp" width="480" height="320" alt="An item's screen: once the QR code appears the dog walks in from the left and sits down"><br><button type="button">Play from the start</button></section>
+<section><h2>Barks at a code it cannot use</h2><p class="when">In the corner of the message, so the message stays readable.</p><img class="screen" src="preview/bark.webp" width="480" height="320" alt="A message saying the code could not be used, with the dog barking in the bottom right corner"><br><button type="button">Play from the start</button></section>
+<section><h2>Hops when a batch is all in</h2><p class="when">When the last change sent from the staff page has arrived.</p><img class="screen" src="preview/hop.webp" width="480" height="320" alt="The batch screen counts the changes received, then the dog hops in the corner when all are in"><br><button type="button">Play from the start</button></section>
+</div>
+</main>
+<script>
+document.querySelectorAll('section').forEach(s=>{const img=s.querySelector('img'),src=img.getAttribute('src');s.querySelector('button').addEventListener('click',()=>{img.src='';img.src=src+'?t='+Date.now()})});
+</script>
+</body>
+</html>
