@@ -99,14 +99,16 @@
 .empty-state .pup{width:128px;margin:0 auto 14px}.empty-state{text-align:center}
 
 @media(max-width:580px){.pup-peek{width:84px}.pup-wave{width:76px}}
-.pup-move{display:block;background-repeat:no-repeat;background-size:400% 100%;animation:pup-frames 1.6s steps(4,jump-none) infinite}
-.pup-pant{background-image:url(dog/pant.png);aspect-ratio:173/200}.pup-bark{background-image:url(dog/bark.png);aspect-ratio:163/200;animation-duration:.9s}
-@keyframes pup-frames{from{background-position:0 0}to{background-position:100% 0}}
 .my-loans{position:relative}.pup-loans{position:absolute;right:20px;top:-62px;width:58px}
 .pup-room{width:104px;float:right;margin:4px 0 8px 24px}
 .lost-link{display:flex;align-items:center;gap:18px;background:var(--white);padding:16px 22px;margin-bottom:28px}.lost-link .pup{width:64px;flex:none}.lost-link p{margin:0}
 @media(max-width:580px){.pup-loans{width:48px;top:-52px;right:14px}.pup-room{width:72px}}
-@media(prefers-reduced-motion:reduce){.pup-move{animation:none}}
 .code-all,.code-play{margin-top:18px}.code-all h3{margin:0 0 6px}.code-all-list{margin:10px 0 16px;padding-left:20px;max-height:220px;overflow:auto;font-size:14px}.code-all-list li{margin:4px 0}
 .code-play-count{font-size:22px;font-weight:700;margin:0 0 10px}.code-play button{margin:6px 8px 0 0}
 .many-list{display:grid;gap:6px}.many-item{display:flex;gap:10px;align-items:baseline;font-weight:400}.many-item input{width:auto;flex:none}
+.pup-peek{width:118px;margin-right:-24px}.pup-loans{width:64px;top:-70px}.pup-room{width:118px}
+.side-block{position:relative}.pup-side{position:absolute;right:14px;top:-34px;width:66px}
+.pup-item{float:right;width:96px;margin:-6px 0 6px 18px}
+.sleep-row{max-width:1160px;margin:-74px auto 0;padding:0 24px;display:flex;justify-content:flex-end;line-height:0}.pup-sleep{width:132px}
+.thanks-note{position:fixed;right:18px;bottom:18px;z-index:30;display:flex;align-items:center;gap:14px;max-width:340px;background:var(--white);padding:12px 18px;box-shadow:0 6px 24px #0003}.thanks-note img{width:72px;height:auto;flex:none}.thanks-note p{margin:0;font-size:14px}
+@media(max-width:580px){.pup-peek{width:86px;margin-right:-18px}.pup-loans{width:52px;top:-58px}.pup-side{width:54px;top:-28px}.pup-item{width:72px}.pup-sleep{width:104px}.thanks-note{left:12px;right:12px;max-width:none}}
