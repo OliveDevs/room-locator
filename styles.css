@@ -189,3 +189,15 @@ a.kit-card{background:var(--soft)!important;border-radius:12px;border:0!importan
 @media(max-width:480px){.cat-tile strong{font-size:14px;overflow-wrap:anywhere}.cat-tile{padding:9px 8px}.search-mode a{margin-left:0}}
 @media(max-width:480px){.cat-tile strong{font-size:13px;overflow-wrap:normal}.cat-tile{padding:9px 7px}}
 .kit-card .arrow,.item-card .arrow{display:none}
+
+/* ---- Carnegie Mellon's colours (brand.cmu.edu/visual-identity/colors): Carnegie Red, black, Iron Gray, Steel Gray,
+   and for the eight categories the tartan threads plus two campus colours. Same set as the console. */
+:root{--ink:#000;--muted:#6d6e71;--soft:#f2f2f2;--line:#e0e0e0;--red:#c41230;--cat:#c41230;--cat-ink:#000}
+.site-header{background:#c41230}.site-footer{background:#000}
+.header-nav a:hover{text-decoration-color:#fff}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline-color:#007bc0}
+.search-mode a{text-decoration-color:#c41230}
+.cat-tile{color:var(--cat-ink)}
+.item-summary .location,.item-summary .location small,.item-summary .location p,.item-summary .location strong{color:var(--cat-ink)}
+.room-unit:hover,.room-unit.selected{background:#c41230}
+.my-loans .late span{color:#c41230}

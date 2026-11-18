@@ -145,7 +145,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.22";
+const char VERSION[] PROGMEM = "5.23";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -168,18 +168,23 @@ const char STAFF_URL[] PROGMEM = "https://olivedevs.github.io/room-locator/staff
 
 // colours: RGB() turns red, green, blue (0 to 255) into the screen's format
 #define RGB(r, g, b) ((uint16_t)((((r) & 0xF8) << 8) | (((g) & 0xFC) << 3) | ((b) >> 3)))
-const uint16_t BG = RGB(18, 22, 28), PANEL = RGB(30, 36, 45), PICKED = RGB(52, 64, 84), WHITE = 0xFFFF,
-               DIM = RGB(154, 163, 178), ACCENT = RGB(255, 210, 74), BLACK = 0x0000, GREEN = RGB(62, 207, 142);
-const uint16_t CAT_COLOR[8] = {RGB(79, 140, 255), RGB(62, 207, 142), RGB(255, 176, 32), RGB(179, 136, 255),
-                               RGB(255, 107, 157), RGB(247, 140, 108), RGB(160, 170, 185), RGB(90, 209, 230)};
+// Carnegie Mellon's colours (brand.cmu.edu/visual-identity/colors), v5.23. Core: Carnegie Red C41230, black, Iron Gray
+// 6D6E71, Steel Gray E0E0E0. The eight categories use the tartan threads and two campus colours.
+const uint16_t BG = RGB(0, 0, 0), PANEL = RGB(40, 40, 42), PICKED = RGB(74, 74, 78), WHITE = 0xFFFF,
+               DIM = RGB(176, 177, 180), ACCENT = RGB(253, 181, 21), BLACK = 0x0000, GREEN = RGB(0, 150, 71),
+               CMU_RED = RGB(196, 18, 48);
+//                             Highlands Sky Blue  Green Thread       Gold Thread         Steel Gray
+const uint16_t CAT_COLOR[8] = {RGB(0, 123, 192),   RGB(0, 150, 71),   RGB(253, 181, 21),  RGB(224, 224, 224),
+//                             Scots Rose          Machinery Hall Tan  Iron Gray           Teal Thread
+                               RGB(239, 58, 71),   RGB(188, 180, 158), RGB(109, 110, 113), RGB(0, 143, 145)};
 const char CAT_NAME[8][12] PROGMEM = {"Photo/Video", "Audio", "Lighting", "Computing", "VR", "Soft Tech", "Tools", "Cables"};
 
 // light colours (0xRRGGBB)
 const uint32_t LIGHT_ITEM = 0x00FF00;          // where a thing is now, on the move screens (old spot green, new spot blue)
 // On an item's own screen the shelf lights in its category's colour, the same colour as the category's picture on Home
 // and the box on the screen (v5.22). Bright, plain colours, because the lights cannot show soft ones.
-const uint32_t CAT_LIGHT[8] PROGMEM = {0x0050FF, 0x00FF00, 0xFFB000, 0x9000FF, 0xFF2080, 0xFF5000, 0xFFFFFF, 0x00E0FF};
-const char CAT_LIGHT_NAME[8][11] PROGMEM = {"blue", "green", "yellow", "purple", "pink", "orange", "white", "light blue"};
+const uint32_t CAT_LIGHT[8] PROGMEM = {0x0050FF, 0x00FF00, 0xFFB000, 0xFFFFFF, 0xFF1030, 0xFF5000, 0x9000FF, 0x00E0A0};
+const char CAT_LIGHT_NAME[8][11] PROGMEM = {"blue", "green", "yellow", "white", "red", "orange", "purple", "teal"};   // (grey and tan cannot be shown by a light, so Tools is purple and Soft Tech orange)
 #define itemLight(cat) ((uint32_t)pgm_read_dword(&CAT_LIGHT[(cat) & 7]))   // (not a function: the Arduino builder puts its list of functions before the first one, and it must stay below the type definitions)
 const uint32_t LIGHT_SHELF = 0xFFFFFF;         // a scanned shelf label
 const uint32_t LIGHT_NEW_SPOT = 0x0050FF;      // where a moved item will go
@@ -327,8 +332,9 @@ byte paragraph(int x, int y, const char* s, uint16_t color, int maxW, byte maxLi
 }
 void header(const char* title, const char* right) {       // clears the screen and draws the title (and a grey note on the right)
   tft.fillScreen(BG);
-  text(14, 30, title, WHITE, TITLE, right ? 330 : 450);
-  if (right) rightText(right);
+  tft.fillRect(0, 0, 480, 40, CMU_RED);                    // the title sits on a Carnegie Red band
+  text(14, 29, title, WHITE, TITLE, right ? 330 : 450);
+  if (right) { useFont(SMALL); text(466 - textWidth(right), 27, right, WHITE, SMALL); }
 }
 void footer(const __FlashStringHelper* hint) {            // the grey bar at the bottom
   tft.fillRect(0, 294, 480, 26, PANEL);
