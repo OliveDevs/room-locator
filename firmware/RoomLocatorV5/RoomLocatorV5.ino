@@ -133,6 +133,9 @@
  pictures are Diana's (made with ChatGPT's image tool, in dog.h); Claude shrank them for the screen and wrote dogTick().
  (v5.15): we wanted staff to line up many changes on the staff page and send them over in one go. The page shows the
  codes one after another as RL:B parts; the console saves each as it arrives and counts them. Claude's design and code.
+ (v5.16): we wanted the dog to fall asleep when nobody has used the console for a while, and to show up only where
+ it fits: asleep on an idle Home screen, barking at a code it cannot use, a hop when a batch is all in. New pictures
+ are Diana's, made in ChatGPT's image tool from a request Claude wrote; Claude wrote the code and tools/mkdog.py.
   _____
 
  Diana Caballero and Gauri Sharma
@@ -205,7 +208,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.15";
+const char VERSION[] PROGMEM = "5.16";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -270,7 +273,7 @@ char query[32]; byte queryLen = 0;              // what is being typed
 volatile byte missedPress = 0;                   // buttons pressed while the console was busy, one bit each (see readButtons)
 byte keyQueue[16]; byte keyHead = 0, keyCount = 0;   // keys typed while the console was busy, oldest first
 bool dogFree = false; byte dogStep = 0; int dogX = 0; unsigned long dogAt = 0;   // the dog on the item screen: dogStep 0 = not moving
-const int DOG_Y = 234, DOG_STOP = 212;           // where it walks (under the shelf box) and where it sits down
+const int DOG_Y = 234, DOG_STOP = 212;           // where it walks (under the shelf box) and where it sits down. The dog code is further down.
 byte qrWanted = 0; unsigned long qrAt = 0;        // a QR is still to be drawn: 1 = the item page's (see drawItem), 2 = the staff page's on the map
 bool live = false, livePending = false;         // live = the list on screen is a search that updates as you type
 unsigned long liveAt = 0;
@@ -408,32 +411,91 @@ void icon(byte cat, int cx, int cy, uint16_t c) {
 
 // ============================== Lights ==============================
 // ============================== The dog ==============================
-// One picture from dog.h onto the screen. Each byte holds two pixels, each a number that picks a colour from DOG_COLOR.
-// A whole row is sent at once, which is far quicker than one pixel at a time.
-void drawDog(int x, int y, const uint8_t* pic, byte w, byte h) {
-  uint16_t color[16], rowOf[72];
+// One picture from dog.h onto the screen, at its own size (scale 1) or twice as big (scale 2). A picture is stored as
+// runs of one colour (see dog.h). A whole row is sent to the screen at once, which is far quicker than single pixels.
+void drawDog(int x, int y, const uint8_t* pic, byte w, byte h, byte scale) {
+  uint16_t color[16], rowOf[200];                                 // the widest picture drawn double size is 200 pixels
   for (byte i = 0; i < 16; i++) color[i] = pgm_read_word(&DOG_COLOR[i]);
-  tft.setAddrWindow(x, y, x + w - 1, y + h - 1);
+  tft.setAddrWindow(x, y, x + w * scale - 1, y + h * scale - 1);
+  byte left = 0; uint16_t c = 0; bool first = true;
   for (byte r = 0; r < h; r++) {
-    for (byte c = 0; c < w; c += 2) { byte two = pgm_read_byte(pic++); rowOf[c] = color[two >> 4]; rowOf[c + 1] = color[two & 15]; }
-    tft.pushColors(rowOf, w, r == 0);
+    byte n = 0;
+    for (byte i = 0; i < w; i++) {
+      if (!left) { byte run = pgm_read_byte(pic++); left = (run >> 4) + 1; c = color[run & 15]; }
+      left--; rowOf[n++] = c; if (scale == 2) rowOf[n++] = c;
+    }
+    for (byte k = 0; k < scale; k++) { tft.pushColors(rowOf, n, first); first = false; }
   }
   tft.setAddrWindow(0, 0, tft.width() - 1, tft.height() - 1);
 }
-// Called from loop(). Once an item's QR is on the screen the dog walks in from the left, 8 pixels every 70 ms, and
-// sits. It waits whenever a key, a button or a scan is on its way, and stops if the screen changes.
+bool somethingWaiting() { return keyCount || missedPress || Serial1.available() || Serial.available(); }   // the dog never makes a person wait
+
+// On the screen of a thing that was just scanned (and only then, so it stays a small surprise): once the QR is up
+// the dog walks in from the left, 8 pixels every 70 ms, and sits. It needs room under the shelf box, and it stops
+// if the screen changes.
 void dogTick() {
   if (!dogStep) return;
   if (mode != ITEM) { dogStep = 0; return; }
-  if (millis() - dogAt < 70 || keyCount || missedPress || Serial1.available() || Serial.available()) return;
+  if (millis() - dogAt < 70 || somethingWaiting()) return;
   dogAt = millis();
   if (dogX >= DOG_STOP) {                                          // arrived: wipe the last step and sit
-    tft.fillRect(dogX - 8, DOG_Y, DOG_W, DOG_H, BG);
-    drawDog(DOG_STOP + 10, DOG_Y - 4, DOG_SIT, SIT_W, SIT_H);
+    tft.fillRect(dogX - 8, DOG_Y, WALK_W, WALK_H, BG);
+    drawDog(DOG_STOP + 10, DOG_Y - 4, (const uint8_t*)pgm_read_ptr(&SIT[0]), SIT_W, SIT_H, 1);
     dogStep = 0; return;
   }
-  drawDog(dogX, DOG_Y, (const uint8_t*)pgm_read_ptr(&DOG_WALK[(dogStep >> 1) & 3]), DOG_W, DOG_H);   // each picture stays for two steps
+  drawDog(dogX, DOG_Y, (const uint8_t*)pgm_read_ptr(&WALK[(dogStep >> 1) % WALK_N]), WALK_W, WALK_H, 1);   // each picture stays for two steps
   dogX += 8; dogStep++;
+}
+
+// Asleep: when the Home screen has not been touched for 5 minutes the dog curls up on it, breathing, with z's
+// floating up. A button wakes it with a stretch (that press does nothing else). A key or a scan wakes it at once
+// and is used as normal, so nobody types or scans twice.
+const unsigned long SLEEP_MS = 300000UL;
+bool asleep = false; byte sleepStep = 0; unsigned long sleepAt = 0;
+void draw(); void lightsOff();                    // (both are written further down)
+const int SLEEP_X = 240 - SLEEP_W, SLEEP_Y = 150 - SLEEP_H;       // drawn double size, in the middle
+void drawSleepFrame() {
+  drawDog(SLEEP_X, SLEEP_Y, (const uint8_t*)pgm_read_ptr(&SLEEP[sleepStep % SLEEP_N]), SLEEP_W, SLEEP_H, 2);
+  int zx = SLEEP_X + SLEEP_W * 2 - 6, zy = SLEEP_Y - 8;           // up to three z's, one more each step, then none
+  tft.fillRect(zx, zy - 62, 70, 70, BG);
+  byte zs = sleepStep % 4;
+  if (zs >= 1) textF(zx + 4, zy, F("z"), DIM, SMALL);
+  if (zs >= 2) textF(zx + 20, zy - 20, F("z"), DIM, BOLD);
+  if (zs >= 3) textF(zx + 38, zy - 42, F("Z"), WHITE, TITLE);
+}
+void drawSleep() {
+  lightsOff(); tft.fillScreen(BG);
+  textF(150, 300, F("Press any button"), DIM, SMALL);
+  asleep = true; sleepStep = 0; sleepAt = millis(); drawSleepFrame();
+}
+void sleepTick() {
+  if (!asleep) return;
+  if (millis() - sleepAt < 900 || somethingWaiting()) return;
+  sleepAt = millis(); sleepStep++; drawSleepFrame();
+}
+void wakeUp(bool stretch) {
+  if (!asleep) return;
+  asleep = false;
+  if (stretch) {
+    tft.fillRect(SLEEP_X - 4, SLEEP_Y - 72, SLEEP_W * 2 + 80, SLEEP_H * 2 + 76, BG);
+    for (byte i = 0; i < WAKE_N && !somethingWaiting(); i++) { drawDog(240 - WAKE_W, 246 - WAKE_H * 2, (const uint8_t*)pgm_read_ptr(&WAKE[i]), WAKE_W, WAKE_H, 2); delay(i == WAKE_N - 1 ? 420 : 200); }
+  }
+  draw();
+}
+
+// A short animation in the corner of a message screen: a bark at a code that cannot be used, a hop when a batch is in.
+const uint8_t* const* showPics = NULL; byte showN = 0, showW = 0, showH = 0, showStep = 0, showSteps = 0, showLast = 0; unsigned long showAt = 0;
+void startShow(const uint8_t* const* pics, byte n, byte w, byte h, byte loops, byte last) {
+  showPics = pics; showN = n; showW = w; showH = h; showStep = 0; showSteps = n * loops; showLast = last; showAt = millis() - 200;
+}
+void showTick() {
+  if (!showPics) return;
+  if (!(mode == HOME && homeMessage)) { showPics = NULL; return; }
+  if (millis() - showAt < 160 || somethingWaiting()) return;
+  showAt = millis();
+  byte f = showStep < showSteps ? showStep % showN : showLast;
+  drawDog(464 - showW, 286 - showH, (const uint8_t*)pgm_read_ptr(&showPics[f]), showW, showH, 1);
+  if (showStep++ >= showSteps) showPics = NULL;                    // the last picture stays
 }
 void lightsOff() { strip.clear(); strip.show(); }
 void lightOne(int led, uint32_t color) { strip.clear(); if (led >= 0) strip.setPixelColor(led, color); strip.show(); }
@@ -1375,6 +1437,7 @@ void drawResetAsk() {
   footer(F("Up / Down to choose, Select.   Back = no"));
 }
 void draw() {
+  asleep = false; showPics = NULL;
   if (mode == HOME) drawHome();
   else if (mode == RESETASK) drawResetAsk();
   else if (mode == ITEM) drawItem();
@@ -1614,6 +1677,7 @@ void codeProblem(const __FlashStringHelper* what) {      // a phone code that ca
   header("Phone code not used", NULL); textF(18, 90, what, WHITE, SMALL);
   textF(18, 130, F("Nothing was changed. Make a new code on the"), DIM, SMALL); textF(18, 154, F("website and scan it again."), DIM, SMALL);
   footer(F("Any button = Home"));
+  startShow(BARK, BARK_N, BARK_W, BARK_H, 2, 0);
 }
 // RL:WEB:<pass>               (made once by the website's "Link the console": see "the website pass" above)
 // RL:COUNT:<code6>:<copies>   (made by the website's "Edit an item" when the count changes)
@@ -1682,6 +1746,7 @@ void drawBatch() {
   } else {
     textF(18, 190, F("All of them are in. Each one is on Recent"), WHITE, SMALL); textF(18, 214, F("changes, where it can be undone."), WHITE, SMALL);
     footer(F("Any button = Home"));
+    startShow(HOP, HOP_N, HOP_W, HOP_H, 2, HOP_N - 1);
   }
 }
 void batchCode(char* c) {
@@ -2039,6 +2104,7 @@ void moveCursor(byte b) {                       // Up or Down in a list
 }
 void pressed(byte b) {                          // Up, Down, Select or Back, from a button, the keyboard or the laptop
   lastActivity = millis();
+  if (asleep) { wakeUp(true); return; }                           // the first press only wakes the dog
   if (mode == ADDNEW && b == B_BACK && addStep > 1) { addStep--; addProblem[0] = '\0'; draw(); return; }
   if (mode == PIN && b == B_BACK && pinLen > 0) { pinLen--; pinDigit = 0; drawPinStep(); return; }
   if (b == B_BACK) { back(); return; }
@@ -2112,6 +2178,7 @@ void scannedShelf(char* label) {
 // everything that arrives as text ends up here: a scan, a typed search, or a line from the laptop
 void entered(char* textIn) {
   lastActivity = millis();
+  wakeUp(false);
   while (*textIn == ' ') textIn++;
   if (!*textIn) return;
   if (strcasecmp_P(textIn, PSTR("CLEAR")) == 0) { clearPutAway(); homeCursor = 0; goHome(); return; }
@@ -2143,6 +2210,7 @@ void liveSearch() {                              // show what matches the letter
 }
 void typed(byte c) {                            // one key from the keyboard
   lastActivity = millis();
+  wakeUp(false);
   if (c == 0x7F) c = 0x08;                                       // some keyboards send DEL (0x7F) for the delete key: treat it as backspace
   if (c == 0x1B) { pressed(B_BACK); return; }                    // Esc works like the Back button
   if (mode == ADDNEW) { if (c == 0x0D || c == 0x0A) pressed(B_SELECT); else if (c == 0x08) pressed(B_BACK); return; }
@@ -2342,10 +2410,11 @@ void loop() {
   if ((qrWanted == 1 && mode != ITEM) || (qrWanted == 2 && mode != MAP)) qrWanted = 0;
   if (qrWanted && millis() - qrAt > 350 && !keyCount && !missedPress && !Serial1.available() && !Serial.available()) {
     byte which = qrWanted; qrWanted = 0;
-    if (which == 1) { loadKind(currentKind); drawQR(312, 82); if (dogFree) { dogStep = 1; dogX = 2; dogAt = millis(); } }   // the QR is up: the dog may come in
+    if (which == 1) { loadKind(currentKind); drawQR(312, 82); if (dogFree && itemWasScanned) { dogStep = 1; dogX = 2; dogAt = millis(); } }   // the QR is up: for a thing that was scanned, the dog comes in
     else if (rowCount && row[cursor] == ROW_PHONE) drawStaffQR();
   }
-  dogTick();
+  dogTick(); sleepTick(); showTick();
+  if (!asleep && mode == HOME && !homeMessage && !backDepth && !queryLen && !live && millis() - lastActivity > SLEEP_MS) drawSleep();
   if (livePending && millis() - liveAt > 250 && !Serial1.available()) { livePending = false; if (queryLen >= 2) liveSearch(); }
   if (staffUntil && millis() - lastActivity > IDLE_MS) staffUntil = 0;          // nobody touched it for 2 minutes: changes lock again
   if (mode == PIN && pinRestUntil && !pinResting()) draw();                     // the minute of rest is over: the message goes away
