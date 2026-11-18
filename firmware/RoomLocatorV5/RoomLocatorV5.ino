@@ -180,7 +180,7 @@ const uint32_t LIGHT_ITEM = 0x00FF00;          // where a thing is now, on the m
 // and the box on the screen (v5.22). Bright, plain colours, because the lights cannot show soft ones.
 const uint32_t CAT_LIGHT[8] PROGMEM = {0x0050FF, 0x00FF00, 0xFFB000, 0x9000FF, 0xFF2080, 0xFF5000, 0xFFFFFF, 0x00E0FF};
 const char CAT_LIGHT_NAME[8][11] PROGMEM = {"blue", "green", "yellow", "purple", "pink", "orange", "white", "light blue"};
-uint32_t itemLight(byte cat) { return pgm_read_dword(&CAT_LIGHT[cat & 7]); }
+#define itemLight(cat) ((uint32_t)pgm_read_dword(&CAT_LIGHT[(cat) & 7]))   // (not a function: the Arduino builder puts its list of functions before the first one, and it must stay below the type definitions)
 const uint32_t LIGHT_SHELF = 0xFFFFFF;         // a scanned shelf label
 const uint32_t LIGHT_NEW_SPOT = 0x0050FF;      // where a moved item will go
 const uint32_t LIGHT_SWEEP = 0x8000FF;         // the start-up check
