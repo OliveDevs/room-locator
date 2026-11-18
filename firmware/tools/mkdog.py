@@ -6,7 +6,7 @@
 import sys, os
 from PIL import Image, ImageFilter, ImageEnhance, ImageDraw
 src, out = sys.argv[1], sys.argv[2]
-BG = (18, 22, 28); EDGE = (214, 218, 224)
+BG = (0, 0, 0); EDGE = (224, 224, 224)      # the console's background (black) and the pale outline (CMU Steel Gray)
 def have(n): return os.path.exists(os.path.join(src, n))
 def frames(prefix, count, fallback):
     names = ['%s-%d.png' % (prefix, i) for i in range(1, count + 1)]
@@ -44,9 +44,9 @@ ANIMS = [  # name, frames, height on screen, left pad
  ('WAKE',  frames('console-wake', 4, None), 60, 3, True),
  ('BARK',  frames('console-bark-word', 3, frames('console-bark', 3, None)), 60, 3, True),   # the set with the word "Bark!" when it is there
  ('HOP',   frames('console-hop', 3, None), 72, 3, True),
- ('WAVE',  frames('console-wave', 4, None), 52, 3, True),
- ('TILT',  frames('console-head-tilt', 4, None), 52, 3, True),
- ('SNIFF', frames('console-sniff', 4, None), 48, 3, True),
+ ('WAVE',  frames('console-wave', 4, None), 50, 3, True),
+ ('TILT',  frames('console-head-tilt', 4, None), 48, 3, True),
+ ('SNIFF', frames('console-sniff', 4, None), 44, 3, True),
 ]
 missing = [a[0] for a in ANIMS if not a[1]]
 if missing: sys.exit('frames missing for: ' + ', '.join(missing))

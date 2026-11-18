@@ -90,10 +90,12 @@ const CATEGORY_NAME = {'Cables & More':'Cables & Accessories','Lighting':'Lighti
 const categoryName = c => CATEGORY_NAME[c] || c;
 // The eight colours of the console's Home screen. A thing's shelf lights in its category's colour on the console,
 // so the same colour marks it here: on its card, on its page and on the category tiles.
-const CAT_COLOR = {'Photo & Video':'#4f8cff','Audio':'#3ecf8e','Lighting':'#ffb020','Computing':'#b388ff','Virtual Reality':'#ff6b9d','Soft Tech':'#f78c6c','Shop & Tools':'#a0aab9','Cables & More':'#5ad1e6'};
+const CAT_COLOR = {'Photo & Video':'#007bc0','Audio':'#009647','Lighting':'#fdb515','Computing':'#e0e0e0','Virtual Reality':'#ef3a47','Soft Tech':'#bcb49e','Shop & Tools':'#6d6e71','Cables & More':'#008f91'};   // CMU's tartan and campus colours, the same ones the console uses
+const CAT_INK = {'Shop & Tools':'#fff'};          // text on the colour: black, except on Iron Gray
 const CAT_ORDER = ['Photo & Video','Audio','Lighting','Computing','Virtual Reality','Soft Tech','Shop & Tools','Cables & More'];
 const CAT_SHORT = {'Photo & Video':'Photo and video','Virtual Reality':'VR','Shop & Tools':'Tools','Cables & More':'Cables','Soft Tech':'Soft tech'};
-const catColor = c => CAT_COLOR[c] || '#a0aab9';
+const catColor = c => CAT_COLOR[c] || '#e0e0e0';
+const catStyle = c => '--cat:'+catColor(c)+';--cat-ink:'+(CAT_INK[c]||'#000');
 const COLLECTION_ID = {'Audio':'81406189450004436','Computing':'81406189430004436','Virtual Reality':'81406189440004436','Lighting':'81406189420004436','Cables & More':'81406189380004436','Photo & Video':'81406189410004436','Soft Tech':'81406189370004436','Shop & Tools':'81406189360004436'};
 const collectionUrl = c => 'https://cmu.primo.exlibrisgroup.com/discovery/collectionDiscovery?collectionId='+COLLECTION_ID[c]+'&lang=en&vid=01CMU_INST%3A01CMU';
 const localDateTime = date => {
@@ -345,7 +347,7 @@ function itemPose(k){
 }
 function calendarPup(status){if(!document.querySelector('.pup-made'))status.insertAdjacentHTML('afterend',pup('calendar','pup-made'))}
 function itemView(k,fromConsole){
-  app.style.setProperty('--cat',catColor(k.c));
+  app.style.setProperty('--cat',catColor(k.c));app.style.setProperty('--cat-ink',CAT_INK[k.c]||'#000');
   const live=fromConsole?consolePlace():null;
   const guide=guideFor(k), howto=howtoFor(k), group=k.c+'/'+k.t, related=(DATA.goes[group]||[]).filter(g=>K.some(a=>a.c+'/'+a.t===g));
   const manual=(k.r||[]).filter(r=>Array.isArray(r)&&/^https:\/\//.test(r[1]));
@@ -364,11 +366,11 @@ function itemView(k,fromConsole){
   if(img)img.addEventListener('error',()=>{img.hidden=true;img.parentElement?.classList.add('photo-unavailable')});
 }
 const pup=(pose,cls)=>'<img class="pup '+(cls||'')+'" src="dog/'+pose+'.png?v=2" alt="" aria-hidden="true" loading="lazy">';   // drawings of Loki, Diana's dog, as decoration
-function renderCards(rows){const target=document.getElementById('results');document.getElementById('count').textContent=rows.length+' of '+K.length+' items';target.innerHTML=rows.length?rows.map(k=>'<a class="item-card" style="--cat:'+catColor(k.c)+'" href="#i'+k.h+'"><span class="card-photo">'+thumbHtml(k)+'</span><div><strong>'+esc(k.n)+'</strong><small>'+esc(k.t)+'</small><span class="card-where"><i class="led" aria-hidden="true"></i>'+esc(k.in?k.w:'Ask at the desk')+'</span></div></a>').join(''):'<div class="empty-state">'+pup('dig')+'<p>Dug around and found nothing. Try a shorter name or another category.</p></div>'}
+function renderCards(rows){const target=document.getElementById('results');document.getElementById('count').textContent=rows.length+' of '+K.length+' items';target.innerHTML=rows.length?rows.map(k=>'<a class="item-card" style="'+catStyle(k.c)+'" href="#i'+k.h+'"><span class="card-photo">'+thumbHtml(k)+'</span><div><strong>'+esc(k.n)+'</strong><small>'+esc(k.t)+'</small><span class="card-where"><i class="led" aria-hidden="true"></i>'+esc(k.in?k.w:'Ask at the desk')+'</span></div></a>').join(''):'<div class="empty-state">'+pup('dig')+'<p>Dug around and found nothing. Try a shorter name or another category.</p></div>'}
 function listing(category='',type=''){
   document.title='IDeATe Lending · Item guides';
   const categories=[...new Set(K.map(k=>k.c))].sort();
-  app.innerHTML='<div class="hero-row"><div><h1>Find it in Lending</h1><p class="intro">'+K.length+' things to borrow in Hunt Library A29, each with its shelf, how to use it and a return reminder.</p></div>'+(loans().some(x=>x.due<Date.now())?'':pup('peek','pup-peek'))+'</div>'+loansHtml()+'<div class="search-mode" role="group" aria-label="How to search"><button type="button" data-mode="name" aria-pressed="true">Find an item</button><button type="button" data-mode="use" aria-pressed="false">What it is good for</button><a href="#kits">Kits for a whole project</a></div><div class="search-tools"><input id="query" type="search" placeholder="Item name: tripod, HDMI, Zoom..." aria-label="Search" autocomplete="off"><select id="category" class="visually-hidden" aria-label="Filter by category" tabindex="-1"><option value="">All categories</option>'+categories.map(c=>'<option value="'+esc(c)+'"'+(c===category?' selected':'')+'>'+esc(categoryName(c))+'</option>').join('')+'</select></div><div class="cat-tiles" role="group" aria-label="Category">'+CAT_ORDER.filter(x=>categories.includes(x)).map(x=>'<button type="button" class="cat-tile" style="--cat:'+catColor(x)+'" data-cat="'+esc(x)+'" aria-pressed="'+(x===category)+'"><strong>'+esc(CAT_SHORT[x]||x)+'</strong><span>'+K.filter(k=>k.c===x).length+'</span></button>').join('')+'</div><div id="kit-hits"></div><p class="result-count" id="count"></p><div class="item-grid" id="results"></div>';
+  app.innerHTML='<div class="hero-row"><div><h1>Find it in Lending</h1><p class="intro">'+K.length+' things to borrow in Hunt Library A29, each with its shelf, how to use it and a return reminder.</p></div>'+(loans().some(x=>x.due<Date.now())?'':pup('peek','pup-peek'))+'</div>'+loansHtml()+'<div class="search-mode" role="group" aria-label="How to search"><button type="button" data-mode="name" aria-pressed="true">Find an item</button><button type="button" data-mode="use" aria-pressed="false">What it is good for</button><a href="#kits">Kits for a whole project</a></div><div class="search-tools"><input id="query" type="search" placeholder="Item name: tripod, HDMI, Zoom..." aria-label="Search" autocomplete="off"><select id="category" class="visually-hidden" aria-label="Filter by category" tabindex="-1"><option value="">All categories</option>'+categories.map(c=>'<option value="'+esc(c)+'"'+(c===category?' selected':'')+'>'+esc(categoryName(c))+'</option>').join('')+'</select></div><div class="cat-tiles" role="group" aria-label="Category">'+CAT_ORDER.filter(x=>categories.includes(x)).map(x=>'<button type="button" class="cat-tile" style="'+catStyle(x)+'" data-cat="'+esc(x)+'" aria-pressed="'+(x===category)+'"><strong>'+esc(CAT_SHORT[x]||x)+'</strong><span>'+K.filter(k=>k.c===x).length+'</span></button>').join('')+'</div><div id="kit-hits"></div><p class="result-count" id="count"></p><div class="item-grid" id="results"></div>';
   attachLoans(app);
   const q=document.getElementById('query'),c=document.getElementById('category');
   // the colour tiles drive the (hidden) category list: tap one to filter, tap it again for everything
@@ -476,7 +478,7 @@ function kitsView(id){
     return '<div class="kit-row"><p class="kit-role">'+esc(p.role)+'</p><a class="item-card" href="#i'+first.h+'">'+thumbHtml(first)+'<div><strong>'+esc(first.n)+'</strong><span class="card-where">'+esc(first.in?first.w:'Ask at the desk')+'</span></div><span class="arrow" aria-hidden="true">\u2197</span></a>'+(items.length>1?'<p class="kit-or">or '+items.slice(1).map(k=>'<a href="#i'+k.h+'">'+esc(k.n)+'</a> ('+esc(k.in?k.w:'ask at the desk')+')').join(', or ')+'</p>':'')+'</div>'}).join('')+'</div><div class="guide-section kit-tip"><h2>Light the shelves in Lending</h2><p><button type="button" id="kit-code-go" class="kit-code-go">Show the code for the console</button></p><div id="kit-code" aria-live="polite"></div></div><div class="guide-section kit-tip"><h2>Before you go</h2><p>'+esc(kit.tip)+'</p><p class="note">Each piece is checked out separately and may already be on loan. The desk has what is in today.</p></div>';
   document.getElementById('kit-code-go').addEventListener('click',e=>{e.target.hidden=true;showKitCode(kit,document.getElementById('kit-code'))});
 }
-function route(){if(!DATA)return;app.style.removeProperty('--cat');const hash=decodeURIComponent(location.hash.slice(1));const query=new URLSearchParams(location.search).get('i');let k;
+function route(){if(!DATA)return;app.style.removeProperty('--cat');app.style.removeProperty('--cat-ink');const hash=decodeURIComponent(location.hash.slice(1));const query=new URLSearchParams(location.search).get('i');let k;
   if(/^i[0-9a-f]{6}$/.test(hash))k=K.find(x=>x.h===hash.slice(1));   // links carry the item's own code, so they keep working when the list changes
   else if(/^k\d+$/.test(hash))k=K[Number(hash.slice(1))];             // (old links by position still open)
   else if(query&&!hash)k=K.find(x=>x.h===query.toLowerCase());
