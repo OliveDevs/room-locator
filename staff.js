@@ -171,19 +171,39 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   // ---- send the whole list in one go (console v5.15): each code becomes a numbered part, RL:B:<id>:<part>/<parts>:<code>,
   // and the parts are shown one after another, round and round, until staff say the console has them all.
   const canBatch = c => /^RL:(MOVE|SHELF|COUNT):/.test(c.code);
-  let playTimer = null, playAt = 0, playParts = [];
+  let playTimer = null, playAt = 0, playParts = [], playSent = [], lastBatch = 0;
+  // The console saves each part as it arrives, in whatever order the scanner catches them. So one round only holds changes
+  // whose order cannot matter: the same item is not moved or counted twice, and a whole-shelf move never shares a round
+  // with a single-item move or with another shelf move that touches the same shelf. Whatever is left goes in the next round.
+  const touches = code => { const f = code.split(':'); return f[1] === 'MOVE' ? ['item ' + f[2], 'single'] : f[1] === 'COUNT' ? ['count ' + f[2]] : ['shelf ' + f[2], 'shelf ' + f[3], 'whole']; };
+  function nextRound() {
+    const round = [], used = new Set();
+    for (const c of made.filter(canBatch)) {
+      const t = touches(c.code);
+      if (round.length === 64 || t.some(k => k === 'single' ? used.has('whole') : k === 'whole' ? used.has('single') : used.has(k))) break;
+      t.forEach(k => used.add(k)); round.push(c);
+    }
+    return round;
+  }
   function drawAll() {
     const ok = made.filter(canBatch), box = $('code-all');
     box.hidden = ok.length < 2 || !!playTimer;
     if (box.hidden) return;
+    const first = nextRound().length;
     $('code-all-title').textContent = ok.length + ' changes are lined up';
-    $('code-all-what').textContent = made.length > ok.length ? (made.length - ok.length) + ' other code' + (made.length - ok.length === 1 ? '' : 's') + ' (new items, linking) cannot go in a batch: show ' + (made.length - ok.length === 1 ? 'it' : 'them') + ' on ' + (made.length - ok.length === 1 ? 'its' : 'their') + ' own.' : '';
+    $('code-all-go').textContent = first < ok.length ? 'Send the first ' + first + ' to the console' : 'Send them all to the console';
+    $('code-all-what').textContent = (first < ok.length ? (first === 64 ? 'The console takes 64 at a time. ' : 'Some of these build on earlier ones, so they go in turns. ') + 'After the first ' + first + (first === 1 ? ' is' : ' are') + ' in, send the rest the same way. ' : '') + (made.length > ok.length ? (made.length - ok.length) + ' other code' + (made.length - ok.length === 1 ? '' : 's') + ' (new items, linking) cannot go in a batch: show ' + (made.length - ok.length === 1 ? 'it' : 'them') + ' on ' + (made.length - ok.length === 1 ? 'its' : 'their') + ' own.' : '');
     $('code-all-list').innerHTML = ok.map(c => '<li><strong>' + esc(c.title) + '</strong> ' + esc(c.what) + '</li>').join('');
   }
   function stopPlay(finished) {
     if (playTimer) clearInterval(playTimer); playTimer = null;
     $('code-play').hidden = true; document.querySelector('#code-out .code-steps > ol').hidden = false;
-    if (finished) { for (let i = made.length - 1; i >= 0; i--) if (canBatch(made[i])) made.splice(i, 1); madeAt = made.length ? 0 : -1; status.textContent = 'Sent. On the console, open the map and choose "To the website" to bring the website up to date.'; }
+    if (finished) {
+      for (let i = made.length - 1; i >= 0; i--) if (playSent.includes(made[i])) made.splice(i, 1);
+      madeAt = made.length ? 0 : -1; const left = made.filter(canBatch).length;
+      status.textContent = left === 1 ? 'Sent. One more is left: show the code below to the console too.' : left ? 'Sent. ' + left + ' more to send: press the send button again.' : 'Sent. On the console, open the map and choose "To the website" to bring the website up to date.';
+    }
+    playSent = [];
     drawCode();
   }
   function showPart() {
@@ -194,10 +214,15 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     $('code-play-count').textContent = 'Showing ' + (playAt + 1) + ' of ' + playParts.length;
   }
   $('code-all-go').addEventListener('click', () => {
-    const ok = made.filter(canBatch).slice(0, 64), id = Math.floor(Math.random() * 255 + 1).toString(16).padStart(2, '0');
+    const ok = nextRound();
+    // each round gets a number the console has not just seen (it tells a new round from a repeat by this number), remembered across reloads
+    let last = 0; try { last = Number(localStorage.getItem('rl-batch')) || 0; } catch (e) { }
+    if (!(last >= 1 && last <= 255)) last = lastBatch;
+    const idNumber = (last + Math.floor(Math.random() * 254)) % 255 + 1; lastBatch = idNumber; try { localStorage.setItem('rl-batch', String(idNumber)); } catch (e) { }
+    const id = idNumber.toString(16).padStart(2, '0');
     playParts = ok.map((c, i) => ({ code: 'RL:B:' + id + ':' + (i + 1) + '/' + ok.length + ':' + c.code.slice(3), title: c.title, what: c.what }));
     const long = playParts.find(p => p.code.length > 71); if (long) { status.textContent = 'One change is too long to send in a batch: ' + long.title + '. Show that one on its own.'; return; }
-    playAt = 0; $('code-all').hidden = true; $('code-many').hidden = true; $('code-play').hidden = false; document.querySelector('#code-out .code-steps > ol').hidden = true;
+    playSent = ok; playAt = 0; $('code-all').hidden = true; $('code-many').hidden = true; $('code-play').hidden = false; document.querySelector('#code-out .code-steps > ol').hidden = true;
     showPart(); playTimer = setInterval(() => { playAt = (playAt + 1) % playParts.length; showPart(); }, 2300);   // the scanner ignores a repeat of the same code within 2 seconds
     $('code-out').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });

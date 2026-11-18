@@ -432,7 +432,7 @@ function roomView(){
 }
 // Kits: everything for one kind of project, each piece with its shelf. The first choice in each row is shown large; the others are alternatives.
 // ---------- My loans: what this phone was reminded about, until someone presses Returned. Kept in this browser only.
-function loans(){try{const v=JSON.parse(localStorage.getItem('rl-loans')||'[]');return Array.isArray(v)?v:[]}catch(e){return []}}
+function loans(){try{const v=JSON.parse(localStorage.getItem('rl-loans')||'[]');return Array.isArray(v)?v.filter(x=>x&&typeof x.h==='string'&&typeof x.n==='string'&&Number.isFinite(x.due)):[]}catch(e){return []}}
 function saveLoans(v){try{localStorage.setItem('rl-loans',JSON.stringify(v));return true}catch(e){return false}}
 function rememberLoan(k,due){const v=loans().filter(x=>x.h!==k.h);v.push({h:k.h,n:k.n,due:due.getTime()});v.sort((a,b)=>a.due-b.due);return saveLoans(v)}
 function loansHtml(){
