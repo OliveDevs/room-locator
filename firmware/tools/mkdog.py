@@ -42,8 +42,11 @@ ANIMS = [  # name, frames, height on screen, left pad
  ('SIT',   frames('console-sit', 2, None), 60, 3, True),
  ('SLEEP', frames('console-sleep', 4, None), 48, 3, True),
  ('WAKE',  frames('console-wake', 4, None), 60, 3, True),
- ('BARK',  frames('console-bark', 3, None), 60, 3, True),
+ ('BARK',  frames('console-bark-word', 3, frames('console-bark', 3, None)), 60, 3, True),   # the set with the word "Bark!" when it is there
  ('HOP',   frames('console-hop', 3, None), 72, 3, True),
+ ('WAVE',  frames('console-wave', 4, None), 52, 3, True),
+ ('TILT',  frames('console-head-tilt', 4, None), 52, 3, True),
+ ('SNIFF', frames('console-sniff', 4, None), 48, 3, True),
 ]
 missing = [a[0] for a in ANIMS if not a[1]]
 if missing: sys.exit('frames missing for: ' + ', '.join(missing))
@@ -71,13 +74,17 @@ h = '''// The dog's pictures for the console screen. The drawings are Diana's (m
 #pragma once
 const uint16_t DOG_COLOR[16] PROGMEM = { %s };
 ''' % ', '.join('0x%04X' % rgb565(p) for p in pal)
-x = 0; total = 0
+x = 0; total = 0; seen = {}
 for name, cells in built:
     W, H = cells[0].size
     h += 'const byte %s_W = %d, %s_H = %d, %s_N = %d;\n' % (name, W, name, H, name, len(cells))
+    names = []
     for i, c in enumerate(cells):
-        d = runs(q.crop((x, 0, x + W, H))); x += W; total += len(d)
+        d = tuple(runs(q.crop((x, 0, x + W, H)))); x += W
+        if (W, H, d) in seen: names.append(seen[(W, H, d)]); continue          # the same picture again (a pose an animation returns to): stored once
+        seen[(W, H, d)] = '%s_%d' % (name, i); names.append(seen[(W, H, d)]); total += len(d)
         h += 'const uint8_t %s_%d[] PROGMEM = {\n  ' % (name, i) + ',\n  '.join(', '.join('0x%02X' % v for v in d[k:k + 24]) for k in range(0, len(d), 24)) + '\n};\n'
-    h += 'const uint8_t* const %s[] PROGMEM = { %s };\n' % (name, ', '.join('%s_%d' % (name, i) for i in range(len(cells))))
+    h += 'const uint8_t* const %s[] PROGMEM = { %s };\n' % (name, ', '.join(names))
 open(out, 'w').write(h)
-print('pictures:', sum(len(c) for _, c in built), ' bytes on the board:', total + 32, ' widths:', {n: c[0].size for n, c in built})
+if total + 32 > 40600: sys.exit('too big: %d bytes. The pictures and the screen texts must stay inside the first 64 KB of the board.' % (total + 32))
+print('pictures:', sum(len(c) for _, c in built), 'stored:', len(seen), ' bytes on the board:', total + 32, ' widths:', {n: c[0].size for n, c in built})

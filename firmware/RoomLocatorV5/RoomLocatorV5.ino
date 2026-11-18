@@ -143,6 +143,10 @@
  through tools/mkdog.py to make dog.h. No code changed.
  (v5.19): Diana wanted Loki on every item she opens, not only scanned ones. Claude changed the one condition in loop().
  (v5.20): Diana wanted him to walk back and forth. Claude rewrote dogTick() and gave drawDog() a mirrored mode.
+ (v5.21): Diana said yes to all of Claude's ideas for her other Loki drawings: a wave while the console starts, a head
+ tilt when a search finds nothing, sniffing beside a short put-away list, the "Bark!" pictures, and a blink while he
+ sits. Claude added them (setup(), startShow()/showTick(), the list screen, dogTick()) and taught tools/mkdog.py to
+ store a repeated picture once so they all fit.
   _____
 
  Diana Caballero and Gauri Sharma
@@ -215,7 +219,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.20";
+const char VERSION[] PROGMEM = "5.21";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -279,7 +283,7 @@ char shelfUnit[5]; byte shelfNumber = 0;        // the shelf a scanned label poi
 char query[32]; byte queryLen = 0;              // what is being typed
 volatile byte missedPress = 0;                   // buttons pressed while the console was busy, one bit each (see readButtons)
 byte keyQueue[16]; byte keyHead = 0, keyCount = 0;   // keys typed while the console was busy, oldest first
-bool dogFree = false, dogLeft = false; byte dogStep = 0; int dogX = 0; unsigned long dogAt = 0;   // the dog on the item screen: dogStep 0 = not moving
+bool dogFree = false, dogLeft = false; byte dogStep = 0, dogBlink = 0; int dogX = 0; unsigned long dogAt = 0;   // the dog on the item screen: dogStep 0 = not moving
 const int DOG_Y = 234, DOG_STOP = 212;           // where it walks (under the shelf box) and where it sits down. The dog code is further down.
 byte qrWanted = 0; unsigned long qrAt = 0;        // a QR is still to be drawn: 1 = the item page's (see drawItem), 2 = the staff page's on the map
 bool live = false, livePending = false;         // live = the list on screen is a search that updates as you type
@@ -436,7 +440,7 @@ void drawDog(int x, int y, const uint8_t* pic, byte w, byte h, byte scale, bool 
   }
   tft.setAddrWindow(0, 0, tft.width() - 1, tft.height() - 1);
 }
-static_assert(SLEEP_W * 2 <= 200 && WAKE_W * 2 <= 200 && WALK_W <= 200 && SIT_W <= 200 && BARK_W <= 200 && HOP_W <= 200, "a dog picture is wider than the row buffer in drawDog");
+static_assert(WAVE_W * 2 <= 200 && TILT_W <= 200 && SNIFF_W <= 200 && SLEEP_W * 2 <= 200 && WAKE_W * 2 <= 200 && WALK_W <= 200 && SIT_W <= 200 && BARK_W <= 200 && HOP_W <= 200, "a dog picture is wider than the row buffer in drawDog");
 bool somethingWaiting() { return keyCount || missedPress || Serial1.available() || Serial.available(); }   // the dog never makes a person wait
 
 // On an item's screen: once the QR is up the dog walks in from the left, 8 pixels every 70 ms, and sits by the QR.
@@ -449,7 +453,10 @@ void dogTick() {
   if (mode != ITEM) { dogStep = 0; return; }
   if (somethingWaiting()) return;
   if (dogStep == DOG_REST) {                                       // sitting: after the rest, stand up and go the other way
-    if (millis() - dogAt < DOG_REST_MS) return;
+    unsigned long sat = millis() - dogAt;
+    byte want = sat >= 1500 && sat < 1750;                         // one blink in the middle of the rest
+    if (want != dogBlink) { dogBlink = want; drawDog(dogLeft ? 2 : DOG_STOP + 10, DOG_Y - 4, (const uint8_t*)pgm_read_ptr(&SIT[want]), SIT_W, SIT_H, 1); }
+    if (sat < DOG_REST_MS) return;
     tft.fillRect(dogLeft ? 2 : DOG_STOP + 10, DOG_Y - 4, SIT_W, SIT_H, BG);
     dogLeft = !dogLeft; dogX = dogLeft ? DOG_STOP : 2; dogStep = 1; dogAt = millis() - 70;
   }
@@ -458,7 +465,7 @@ void dogTick() {
   if (dogLeft ? dogX < 2 : dogX >= DOG_STOP) {                     // arrived: wipe the last step and sit
     tft.fillRect(dogLeft ? dogX + 8 : dogX - 8, DOG_Y, WALK_W, WALK_H, BG);
     drawDog(dogLeft ? 2 : DOG_STOP + 10, DOG_Y - 4, (const uint8_t*)pgm_read_ptr(&SIT[0]), SIT_W, SIT_H, 1);
-    dogStep = DOG_REST; return;
+    dogStep = DOG_REST; dogBlink = 0; return;
   }
   drawDog(dogX, DOG_Y, (const uint8_t*)pgm_read_ptr(&WALK[(dogStep >> 1) % WALK_N]), WALK_W, WALK_H, 1, dogLeft);   // each picture stays for two steps
   dogX += dogLeft ? -8 : 8; dogStep++;
@@ -502,12 +509,13 @@ void wakeUp(bool stretch) {
 
 // A short animation in the corner of a message screen: a bark at a code that cannot be used, a hop when a batch is in.
 const uint8_t* const* showPics = NULL; byte showN = 0, showW = 0, showH = 0, showStep = 0, showSteps = 0, showLast = 0; unsigned long showAt = 0;
-void startShow(const uint8_t* const* pics, byte n, byte w, byte h, byte loops, byte last) {
-  showPics = pics; showN = n; showW = w; showH = h; showStep = 0; showSteps = n * loops; showLast = last; showAt = millis() - 200;
+byte showWhere = 0;                                                // which screen the little show belongs to: 0 a Home message, 1 a search with no matches, 2 the put-away list
+void startShow(const uint8_t* const* pics, byte n, byte w, byte h, byte loops, byte last, byte where = 0) {
+  showPics = pics; showN = n; showW = w; showH = h; showStep = 0; showSteps = n * loops; showLast = last; showWhere = where; showAt = millis() - 200;
 }
 void showTick() {
   if (!showPics) return;
-  if (!(mode == HOME && homeMessage)) { showPics = NULL; return; }
+  if (!(showWhere == 0 ? mode == HOME && homeMessage : showWhere == 1 ? mode == RESULTS && rowCount == 0 : mode == PUTAWAY)) { showPics = NULL; return; }
   if (millis() - showAt < 160 || somethingWaiting()) return;
   showAt = millis();
   byte f = showStep < showSteps ? showStep % showN : showLast;
@@ -1117,7 +1125,9 @@ void drawList() {
     else if (mode == ACTIONS) textF(18, 90, F("The bottom shelf is empty. Nothing to change here."), DIM, SMALL);
     else if (mode == RECENT) textF(18, 90, F("No changes since the laptop last collected them."), DIM, SMALL);
     else textF(18, 90, mode == RESULTS ? F("Nothing matches. Try another word.") : F("Nothing here."), DIM, SMALL);
+    if (mode == RESULTS) startShow(TILT, TILT_N, TILT_W, TILT_H, 2, 1, 1);             // nothing found: the dog tilts its head
   }
+  if (mode == PUTAWAY && rowCount > 0 && rowCount <= 3) startShow(SNIFF, SNIFF_N, SNIFF_W, SNIFF_H, 3, 1, 2);   // a short list leaves the corner free: the dog sniffs along
   if (mode == PUTAWAY) footer(listIsKit ? F("Each piece has its own light.  Back = lights off") : F("Scan the next thing.  Back = done, lights off"));
   else if (justChanged) { justChanged = false; doneFooter(); }
   else if (mode == UNITVIEW && stage == ST_TO) footer(F("Up / Down, Select = put it here"));
@@ -2414,7 +2424,11 @@ void setup() {
     stopWith(F("Waiting for the laptop"), F("The SD card needs the data files (push_card.py)"));
     while (!kindsFile || unitTotal == 0) readLaptop();
   }
-  for (int i = 0; i < NUM_LEDS; i++) { strip.clear(); strip.setPixelColor(i, LIGHT_SWEEP); strip.show(); delay(12); }   // sweep: every light works
+  tft.fillScreen(BG);                                              // hello: the dog waves while the lights are checked
+  for (int i = 0; i < NUM_LEDS || i < 96; i++) {                   // sweep: every light works (and at least three waves on a short strip)
+    if (i % 8 == 0) drawDog(240 - WAVE_W, 160 - WAVE_H, (const uint8_t*)pgm_read_ptr(&WAVE[(i / 8) % WAVE_N]), WAVE_W, WAVE_H, 2);
+    strip.clear(); if (i < NUM_LEDS) strip.setPixelColor(i, LIGHT_SWEEP); strip.show(); delay(12);
+  }
   Serial.print(F("Room Locator ")); Serial.print((const __FlashStringHelper*)VERSION); Serial.println(F(" ready"));
   goHome();
 }
