@@ -141,6 +141,7 @@
  wrong list. Claude fixed it (two lines, in entered() and liveSearch()) and added a size check for the dog pictures.
  (v5.18): the dog is now Loki, Diana's own dog, from drawings she had made in ChatGPT's image tool. Claude ran them
  through tools/mkdog.py to make dog.h. No code changed.
+ (v5.19): Diana wanted Loki on every item she opens, not only scanned ones. Claude changed the one condition in loop().
   _____
 
  Diana Caballero and Gauri Sharma
@@ -213,7 +214,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.18";
+const char VERSION[] PROGMEM = "5.19";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -2416,7 +2417,7 @@ void loop() {
   if ((qrWanted == 1 && mode != ITEM) || (qrWanted == 2 && mode != MAP)) qrWanted = 0;
   if (qrWanted && millis() - qrAt > 350 && !keyCount && !missedPress && !Serial1.available() && !Serial.available()) {
     byte which = qrWanted; qrWanted = 0;
-    if (which == 1) { loadKind(currentKind); drawQR(312, 82); if (dogFree && itemWasScanned) { dogStep = 1; dogX = 2; dogAt = millis(); } }   // the QR is up: for a thing that was scanned, the dog comes in
+    if (which == 1) { loadKind(currentKind); drawQR(312, 82); if (dogFree) { dogStep = 1; dogX = 2; dogAt = millis(); } }   // the QR is up: the dog comes in (v5.19: for any item, however it was opened)
     else if (rowCount && row[cursor] == ROW_PHONE) drawStaffQR();
   }
   dogTick(); sleepTick(); showTick();
