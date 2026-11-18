@@ -147,6 +147,8 @@
  tilt when a search finds nothing, sniffing beside a short put-away list, the "Bark!" pictures, and a blink while he
  sits. Claude added them (setup(), startShow()/showTick(), the list screen, dogTick()) and taught tools/mkdog.py to
  store a repeated picture once so they all fit.
+ (v5.22): Diana noticed every item lit green and wanted different colours. Claude's suggestion, which she can change:
+ the shelf lights in the item's category colour (the Home picture's colour), and the box and its line say that colour.
   _____
 
  Diana Caballero and Gauri Sharma
@@ -219,7 +221,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.21";
+const char VERSION[] PROGMEM = "5.22";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -249,7 +251,12 @@ const uint16_t CAT_COLOR[8] = {RGB(79, 140, 255), RGB(62, 207, 142), RGB(255, 17
 const char CAT_NAME[8][12] PROGMEM = {"Photo/Video", "Audio", "Lighting", "Computing", "VR", "Soft Tech", "Tools", "Cables"};
 
 // light colours (0xRRGGBB)
-const uint32_t LIGHT_ITEM = 0x00FF00;          // where an item lives
+const uint32_t LIGHT_ITEM = 0x00FF00;          // where a thing is now, on the move screens (old spot green, new spot blue)
+// On an item's own screen the shelf lights in its category's colour, the same colour as the category's picture on Home
+// and the box on the screen (v5.22). Bright, plain colours, because the lights cannot show soft ones.
+const uint32_t CAT_LIGHT[8] PROGMEM = {0x0050FF, 0x00FF00, 0xFFB000, 0x9000FF, 0xFF2080, 0xFF5000, 0xFFFFFF, 0x00E0FF};
+const char CAT_LIGHT_NAME[8][11] PROGMEM = {"blue", "green", "yellow", "purple", "pink", "orange", "white", "light blue"};
+uint32_t itemLight(byte cat) { return pgm_read_dword(&CAT_LIGHT[cat & 7]); }
 const uint32_t LIGHT_SHELF = 0xFFFFFF;         // a scanned shelf label
 const uint32_t LIGHT_NEW_SPOT = 0x0050FF;      // where a moved item will go
 const uint32_t LIGHT_SWEEP = 0x8000FF;         // the start-up check
@@ -1195,9 +1202,9 @@ void drawQR(int x, int y) {                     // the item's guide page
 }
 void drawItem() {
   loadKind(currentKind);
-  strip.clear(); addPlace(field[K_UNIT], atoi(field[K_SHELF]), LIGHT_ITEM); strip.show();   // the shelf lights up first: the screen takes a moment to draw
-  char buf[64];
   byte cat = constrain(atoi(field[K_CAT]), 0, 7);
+  strip.clear(); addPlace(field[K_UNIT], atoi(field[K_SHELF]), itemLight(cat)); strip.show();   // the shelf lights up first: the screen takes a moment to draw
+  char buf[64];
   const int LEFT_W = 286;                                         // the left column; the QR takes the right
   tft.fillScreen(BG);
   tft.fillRect(0, 0, 480, 6, CAT_COLOR[cat]);
@@ -1211,12 +1218,12 @@ void drawItem() {
   whereText(buf, sizeof(buf));
   char kept[40] = "";                                             // no light: "Ask at the desk" big, the place it is kept under it
   if (led < 0) { char* open = strchr(buf, '('); if (open) { snprintf_P(kept, sizeof(kept), PSTR("Kept in: %s"), open + 1); kept[strlen(kept) - 1] = '\0'; *(open - 1) = '\0'; } }
-  tft.fillRect(14, 82, LEFT_W, 70, led >= 0 ? GREEN : PANEL);
+  tft.fillRect(14, 82, LEFT_W, 70, led >= 0 ? CAT_COLOR[cat] : PANEL);
   Font f = HUGE_FONT;                                             // the biggest letters that fit
   useFont(f); if (textWidth(buf) > LEFT_W - 28) { f = TITLE; useFont(f); }
   if (textWidth(buf) > LEFT_W - 28) f = BOLD;
   text(28, 116, buf, led >= 0 ? BLACK : WHITE, f, LEFT_W - 28);
-  if (led >= 0) textF(28, 142, F("Its shelf is lit green in the room"), BLACK, SMALL);
+  if (led >= 0) { char colour[11]; strcpy_P(colour, CAT_LIGHT_NAME[cat]); snprintf_P(buf, sizeof(buf), PSTR("Its shelf is lit %s in the room"), colour); text(28, 142, buf, BLACK, SMALL, LEFT_W - 28); }
   else if (kept[0]) text(28, 142, kept, DIM, SMALL, LEFT_W - 28);
   else textF(28, 142, F("Not on the shelves in this room"), DIM, SMALL);
   int y = 180;                                                    // the two notes stack under the shelf, each as long as it needs
