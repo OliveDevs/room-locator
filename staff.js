@@ -33,7 +33,10 @@ const lockBytes = async (pass, salt) => crypto.subtle.deriveKey({ name: 'PBKDF2'
 const b64 = bytes => btoa(String.fromCharCode(...new Uint8Array(bytes))), unb64 = text => Uint8Array.from(atob(text), c => c.charCodeAt(0));
 // key.json holds up to two locked copies: "pass" opens with a passcode someone types, "console" opens with the long
 // website pass the console carries in its staff codes (so nobody types anything).
-const readLocked = () => fetch('key.json?x=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null);
+// The live site takes about a minute to show a file this page just saved. Until then, use the copy that was saved
+// (remembered for 5 minutes), so a second save right after the first cannot drop what the first one wrote.
+let justLocked = null, justLockedAt = 0;
+const readLocked = () => justLocked && Date.now() - justLockedAt < 300000 ? Promise.resolve(JSON.parse(justLocked)) : fetch('key.json?x=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null);
 async function lockKey(pass, slot) {
   const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
   const box = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await lockBytes(pass, salt), new TextEncoder().encode(keep.get('rl-key')));
@@ -61,7 +64,18 @@ async function unlockKey(pass, slot = 'pass') {
 const DEAD_KEY = 'The passcode is right, but the site key behind it has run out or was replaced on GitHub. Someone with the GitHub account needs to paste a new key: open "Check everything" on this page for the steps.';
 const checkUnlocked = async () => { const r = await gh('').catch(() => null); if (!r) return 'Could not reach GitHub. Check the internet connection.'; if (r.status === 401) return DEAD_KEY; return checkKey(); };
 let afterKey = null, cameWithPass = false;
-function askForKey(why) { const box = $('connect'); box.hidden = false; $('connect-pass').focus({ preventScroll: true }); $('connect-why').textContent = why || ''; box.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+function askForKey(why) {
+  const box = $('connect'); box.hidden = false; $('connect-pass').focus({ preventScroll: true }); $('connect-why').textContent = why || ''; box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  // Say what will actually work on this site right now, so nobody types a passcode that was never set up
+  readLocked().then(all => {
+    const hasPass = !!slotOf(all, 'pass'), hasConsole = !!slotOf(all, 'console');
+    $('connect-passrow').hidden = !hasPass; $('connect-unlock').hidden = !hasPass;
+    $('connect-how').textContent = hasConsole ? 'Easiest: on the console, open the map, go to the Staff page spot (after the staff PIN) and scan that code with this phone. It signs this phone in by itself and it stays signed in.' + (hasPass ? ' Or type the staff passcode below (it is not the console\'s PIN).' : '')
+      : hasPass ? 'Type the staff passcode. It is not the console\'s PIN.'
+      : 'Saving has not been set up on this site yet, so there is no passcode to type (the console\'s PIN does not work here). The person with the GitHub account does this once: open the line below and paste the site key. The page then shows a code for the console, and after that phones sign in just by scanning the console.';
+    if (!hasPass && !hasConsole) box.querySelector('details').open = true;
+  });
+}
 async function checkKey() {
   const r = await gh('');
   if (r.status === 401) return 'GitHub does not know this key. Copy it again, all of it.';
@@ -86,6 +100,7 @@ async function publish(files, message, button) {
     // the site itself takes about a minute to show new files; until then this browser uses the copy it just saved
     const fresh = JSON.parse(keep.get('rl-fresh') || '{}'); fresh.at = Date.now(); Object.assign(fresh, Object.fromEntries(Object.entries(files).filter(([p]) => p === 'data.json' || p === 'room.json')));
     keep.set('rl-fresh', JSON.stringify(fresh));
+    if (files['key.json']) { justLocked = JSON.stringify(files['key.json']); justLockedAt = Date.now(); }
     status.textContent = 'Saved to the website. Everyone sees it in about a minute.';
     return true;
   } catch (err) { status.textContent = 'Not saved: ' + err.message + '. Nothing on the website changed for that file. Try again, or use the download.'; return false; }
@@ -100,14 +115,15 @@ $('connect-save').addEventListener('click', async () => {
   // A new key makes the locked copies on the site stale (they hold the old key). Renew what this device can:
   // the passcode copy if the passcode was typed here too, the console's copy if this phone came from the console's code.
   const all = (await readLocked()) || {}, pass = $('connect-newpass').value, cpass = keep.get('rl-cpass'), expires = $('connect-expires').value, did = [], left = [];
-  let out = null;
+  let out = null, firstLink = false;
   try {
     if (pass.length >= 4) { out = await lockKey(pass, 'pass'); did.push('the staff passcode'); } else if (slotOf(all, 'pass')) left.push('The staff passcode still opens the OLD key: set the passcode again under "Link the console, or set a passcode".');
     if (cpass && (!slotOf(all, 'console') || await openLocked(all, cpass, 'console') !== null)) {
       const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
       const box = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await lockBytes(cpass, salt), new TextEncoder().encode(value));
       out = out || await lockKey(cpass, 'console'); out.console = { salt: b64(salt), iv: b64(iv), box: b64(box) }; did.push('the console\'s link (nothing to do at the console)');
-    } else if (slotOf(all, 'console')) left.push('The console\'s link still holds the OLD key: press "Link the console" and show the new code to the console, or open this page from the console\'s Staff page code and paste the key there.');
+    } else if (!slotOf(all, 'console')) firstLink = true;
+    else if (slotOf(all, 'console')) left.push('The console\'s link still holds the OLD key: press "Link the console" and show the new code to the console, or open this page from the console\'s Staff page code and paste the key there.');
     if (/^\d{4}-\d\d-\d\d$/.test(expires)) { out = out || { note: 'The site key, locked. Made by the staff page.', ...Object.fromEntries(['pass', 'console'].filter(n => slotOf(all, n)).map(n => [n, slotOf(all, n)])) }; out.expires = expires; }
     else if (out) delete out.expires;                              // a new key with no date given: the old date no longer applies
   } catch (e) { out = null; left.push('The locked copies could not be renewed on this browser.'); }
@@ -116,6 +132,9 @@ $('connect-save').addEventListener('click', async () => {
   status.textContent = 'This device can now save to the website.' + (out && saved && did.length ? ' Renewed for everyone else too: ' + did.join(' and ') + '.' : '') + (out && !saved ? ' The locked copies were NOT renewed: try again from "Check everything".' : '') + (left.length ? ' ' + left.join(' ') : '');
   dispatchEvent(new Event('rl-key-changed'));
   if (afterKey) { const go = afterKey; afterKey = null; go(); }
+  else if (firstLink) {                                            // first time on this site: go straight on to linking the console, the step that makes every phone automatic
+    $('share').hidden = false; $('link-console').click(); $('share').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 });
 const keyReady = () => { $('connect').hidden = true; status.textContent = 'This device can now save to the website.'; dispatchEvent(new Event('rl-key-changed')); if (afterKey) { const go = afterKey; afterKey = null; go(); } };
 $('connect-unlock').addEventListener('click', async () => {
