@@ -213,3 +213,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .staff-fold{border-top:2px solid var(--soft);padding:14px 0}.staff-fold>summary{font:700 19px var(--display);cursor:pointer}.staff-fold[open]>summary{margin-bottom:12px}.staff-fold:last-of-type{border-bottom:2px solid var(--soft)}
 .staff-folds{margin-top:48px}
 #share{background:var(--soft);padding:20px;margin-top:12px}#share h2{font-size:19px;margin:0 0 6px}#share h2+p{margin-top:0}
+
+/* an item's page: the banner takes the colour its shelf lights in */
+body.in-cat .site-header{background:var(--cat)}body.in-cat .site-header .brand,body.in-cat .site-header .header-nav a{color:var(--cat-ink)}
+body.in-cat .header-nav a:hover{text-decoration-color:var(--cat-ink)}
+/* kit cards: room around the words, both lines together */
+a.item-card.kit-card{padding:18px 20px!important;justify-content:center;min-height:104px!important}a.kit-card>div{gap:6px}
+.kit-card .card-where{font-weight:500;color:var(--muted);margin:0}
+.pup-peek{width:150px;margin:0}@media(max-width:580px){.pup-peek{width:104px;margin:0}}

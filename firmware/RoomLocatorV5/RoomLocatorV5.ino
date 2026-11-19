@@ -153,6 +153,8 @@
  Red title band, black background, and the tartan and campus colours for the eight categories.
  (v5.24): the console is rarely switched off, so the start-up wave would hardly be seen. Diana pointed that out; Claude
  added the same wave to the end of the wake-up stretch in wakeUp().
+ (v5.25): Diana wanted the banner of an item's screen to be the colour its shelf lights in. Claude changed drawItem(),
+ and made Tools light white so that its grey banner and its light agree.
   _____
 
  Diana Caballero and Gauri Sharma
@@ -225,7 +227,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.24";
+const char VERSION[] PROGMEM = "5.25";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -263,8 +265,8 @@ const char CAT_NAME[8][12] PROGMEM = {"Photo/Video", "Audio", "Lighting", "Compu
 const uint32_t LIGHT_ITEM = 0x00FF00;          // where a thing is now, on the move screens (old spot green, new spot blue)
 // On an item's own screen the shelf lights in its category's colour, the same colour as the category's picture on Home
 // and the box on the screen (v5.22). Bright, plain colours, because the lights cannot show soft ones.
-const uint32_t CAT_LIGHT[8] PROGMEM = {0x0050FF, 0x00FF00, 0xFFB000, 0xFFFFFF, 0xFF1030, 0xFF5000, 0x9000FF, 0x00E0A0};
-const char CAT_LIGHT_NAME[8][11] PROGMEM = {"blue", "green", "yellow", "white", "red", "orange", "purple", "teal"};   // (grey and tan cannot be shown by a light, so Tools is purple and Soft Tech orange)
+const uint32_t CAT_LIGHT[8] PROGMEM = {0x0050FF, 0x00FF00, 0xFFB000, 0xFFFFFF, 0xFF1030, 0xFF5000, 0xFFFFFF, 0x00E0A0};
+const char CAT_LIGHT_NAME[8][11] PROGMEM = {"blue", "green", "yellow", "white", "red", "orange", "white", "teal"};   // (a light cannot show grey or tan: the two greys light white, tan lights orange)
 #define itemLight(cat) ((uint32_t)pgm_read_dword(&CAT_LIGHT[(cat) & 7]))   // (not a function: the Arduino builder puts its list of functions before the first one, and it must stay below the type definitions)
 const uint32_t LIGHT_SHELF = 0xFFFFFF;         // a scanned shelf label
 const uint32_t LIGHT_NEW_SPOT = 0x0050FF;      // where a moved item will go
@@ -1219,23 +1221,25 @@ void drawItem() {
   char buf[64];
   const int LEFT_W = 286;                                         // the left column; the QR takes the right
   tft.fillScreen(BG);
-  tft.fillRect(0, 0, 480, 6, CAT_COLOR[cat]);
+  uint16_t onCat = cat == 6 ? WHITE : BLACK;                      // black words on the colour, white on Iron Gray
+  tft.fillRect(0, 0, 480, 37, CAT_COLOR[cat]);                    // the banner is the colour the shelf lights in (v5.25)
   char catName[12]; strcpy_P(catName, CAT_NAME[cat]);
   snprintf_P(buf, sizeof(buf), PSTR("%s  -  %s"), catName, field[K_TYPE]);
-  text(14, 28, buf, DIM, SMALL, 280);
+  text(14, 25, buf, onCat, SMALL, 280);
   int copies = atoi(field[K_COPIES]);
-  if (copies > 1) { snprintf_P(buf, sizeof(buf), PSTR("Lending has %d"), copies); rightText(buf); }
+  if (copies > 1) { snprintf_P(buf, sizeof(buf), PSTR("Lending has %d"), copies); useFont(SMALL); text(466 - textWidth(buf), 25, buf, onCat, SMALL); }
   drawItemName(field[K_NAME]);
   int led = ledFor(field[K_UNIT], atoi(field[K_SHELF]));
   whereText(buf, sizeof(buf));
   char kept[40] = "";                                             // no light: "Ask at the desk" big, the place it is kept under it
   if (led < 0) { char* open = strchr(buf, '('); if (open) { snprintf_P(kept, sizeof(kept), PSTR("Kept in: %s"), open + 1); kept[strlen(kept) - 1] = '\0'; *(open - 1) = '\0'; } }
   tft.fillRect(14, 82, LEFT_W, 70, led >= 0 ? CAT_COLOR[cat] : PANEL);
+  uint16_t onBox = led >= 0 ? onCat : WHITE;
   Font f = HUGE_FONT;                                             // the biggest letters that fit
   useFont(f); if (textWidth(buf) > LEFT_W - 28) { f = TITLE; useFont(f); }
   if (textWidth(buf) > LEFT_W - 28) f = BOLD;
-  text(28, 116, buf, led >= 0 ? BLACK : WHITE, f, LEFT_W - 28);
-  if (led >= 0) { char colour[11]; strcpy_P(colour, CAT_LIGHT_NAME[cat]); snprintf_P(buf, sizeof(buf), PSTR("Its shelf is lit %s in the room"), colour); text(28, 142, buf, BLACK, SMALL, LEFT_W - 28); }
+  text(28, 116, buf, onBox, f, LEFT_W - 28);
+  if (led >= 0) { char colour[11]; strcpy_P(colour, CAT_LIGHT_NAME[cat]); snprintf_P(buf, sizeof(buf), PSTR("Its shelf is lit %s in the room"), colour); text(28, 142, buf, onBox, SMALL, LEFT_W - 28); }
   else if (kept[0]) text(28, 142, kept, DIM, SMALL, LEFT_W - 28);
   else textF(28, 142, F("Not on the shelves in this room"), DIM, SMALL);
   int y = 180;                                                    // the two notes stack under the shelf, each as long as it needs
