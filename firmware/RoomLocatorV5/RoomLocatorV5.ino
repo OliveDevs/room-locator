@@ -145,7 +145,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.25";
+const char VERSION[] PROGMEM = "5.26";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -219,7 +219,7 @@ char shelfUnit[5]; byte shelfNumber = 0;        // the shelf a scanned label poi
 char query[32]; byte queryLen = 0;              // what is being typed
 volatile byte missedPress = 0;                   // buttons pressed while the console was busy, one bit each (see readButtons)
 byte keyQueue[16]; byte keyHead = 0, keyCount = 0;   // keys typed while the console was busy, oldest first
-bool dogFree = false, dogLeft = false; byte dogStep = 0, dogBlink = 0; int dogX = 0; unsigned long dogAt = 0;   // the dog on the item screen: dogStep 0 = not moving
+bool dogFree = false, dogLeft = false, dogHopOK = false; byte dogStep = 0, dogBlink = 0, dogTrips = 0, dogHopStep = 0; int dogX = 0; unsigned long dogAt = 0;   // the dog on the item screen: dogStep 0 = not moving
 const int DOG_Y = 234, DOG_STOP = 212;           // where it walks (under the shelf box) and where it sits down. The dog code is further down.
 byte qrWanted = 0; unsigned long qrAt = 0;        // a QR is still to be drawn: 1 = the item page's (see drawItem), 2 = the staff page's on the map
 bool live = false, livePending = false;         // live = the list on screen is a search that updates as you type
@@ -241,7 +241,7 @@ byte fromCount = 0;                             // things on the shelf being mov
 byte moveFromDepth = 0;                         // where Back returns once an item move is done
 byte doneNote = 0;                               // what the "Done" footer adds: 1 = move the label card, 2 = swap the bodies, 3 = undone
 byte syncPage = 0, syncPages = 1;                 // the QR pages for the website
-bool justCounted = false;                        // the next item screen says "Count changed"
+byte justCounted = 0;     // 1 = changed, 2 = it was that number already                        // the next item screen says "Count changed"
 bool justMoved = false, justChanged = false, justAdded = false;    // the next screen says "Moved" / "Done" / "Added" once
 // the staff PIN
 const unsigned long STAFF_MS = 300000UL;        // once the PIN is right, changes are open for 5 minutes at most...
@@ -258,6 +258,8 @@ bool pinWrong = false, pinMismatch = false;
 byte pinMisses = 0;                             // wrong PINs in a row
 unsigned long pinRestUntil = 0;                 // 0 = the PIN screen is not resting
 char pendingCode[72];                           // a phone QR code waiting for the PIN
+bool webDirty = false;                           // something changed since the To the website code was last shown (v5.26)
+bool offerSync = false;                          // the screen says "Select = update the website": the next Select opens that code
 bool homeMessage = false;                        // a message is on the screen in place of Home: the next button just shows Home
 // a new item from the phone (RL:ADD), set up in 3 steps
 byte addStep = 1, addCat = 0, addUnit = 0, addShelf = 0, addCopies = 1;
@@ -308,6 +310,7 @@ void textF(int x, int y, const __FlashStringHelper* s, uint16_t color, Font f) {
   text(x, y, buf, color, f);
 }
 void rightText(const char* s) { useFont(SMALL); text(466 - textWidth(s), 28, s, DIM, SMALL); }     // grey text at the top right
+void headRight(const char* s) { tft.fillRect(330, 0, 150, 40, CMU_RED); useFont(SMALL); text(466 - textWidth(s), 27, s, WHITE, SMALL); }   // the "3 of 31" on the red title band, drawn again as the cursor moves
 // a paragraph: breaks at spaces, at most maxLines lines. Returns how many lines it used
 byte paragraph(int x, int y, const char* s, uint16_t color, int maxW, byte maxLines) {
   char lineBuf[64]; byte len = 0, lines = 0;
@@ -384,25 +387,32 @@ bool somethingWaiting() { return keyCount || missedPress || Serial1.available() 
 // After a rest it walks back to the left edge (the same pictures, mirrored), sits, and comes back again, for as long
 // as the screen stays up. It needs room under the shelf box, and it stops if the screen changes.
 // dogStep: 0 = not there, 1..200 = walking, DOG_REST = sitting until it is time to turn round.
-const byte DOG_REST = 255; const unsigned int DOG_REST_MS = 3500;
+const byte DOG_REST = 255; const unsigned int DOG_REST_MS = 3500, DOG_STEP_MS = 105;   // (v5.26: a step every 105 ms; 70 looked rushed)
 void dogTick() {
   if (!dogStep) return;
   if (mode != ITEM) { dogStep = 0; return; }
   if (somethingWaiting()) return;
   if (dogStep == DOG_REST) {                                       // sitting: after the rest, stand up and go the other way
     unsigned long sat = millis() - dogAt;
+    if (dogHopOK && !dogLeft && (dogTrips & 1) && dogHopStep < 4) {   // every other time it reaches the QR: a little hop first
+      if (sat < 500 + dogHopStep * 170UL) return;
+      if (dogHopStep == 0) tft.fillRect(DOG_STOP + 10, DOG_Y - 4, SIT_W, SIT_H, BG);
+      if (dogHopStep < 3) drawDog(DOG_STOP + 4, 290 - HOP_H, (const uint8_t*)pgm_read_ptr(&HOP[dogHopStep]), HOP_W, HOP_H, 1);
+      else { tft.fillRect(DOG_STOP + 4, 290 - HOP_H, HOP_W, HOP_H, BG); drawDog(DOG_STOP + 10, DOG_Y - 4, (const uint8_t*)pgm_read_ptr(&SIT[0]), SIT_W, SIT_H, 1); }
+      dogHopStep++; return;
+    }
     byte want = sat >= 1500 && sat < 1750;                         // one blink in the middle of the rest
     if (want != dogBlink) { dogBlink = want; drawDog(dogLeft ? 2 : DOG_STOP + 10, DOG_Y - 4, (const uint8_t*)pgm_read_ptr(&SIT[want]), SIT_W, SIT_H, 1); }
     if (sat < DOG_REST_MS) return;
     tft.fillRect(dogLeft ? 2 : DOG_STOP + 10, DOG_Y - 4, SIT_W, SIT_H, BG);
-    dogLeft = !dogLeft; dogX = dogLeft ? DOG_STOP : 2; dogStep = 1; dogAt = millis() - 70;
+    dogLeft = !dogLeft; dogX = dogLeft ? DOG_STOP : 2; dogStep = 1; dogAt = millis() - DOG_STEP_MS;
   }
-  if (millis() - dogAt < 70) return;
+  if (millis() - dogAt < DOG_STEP_MS) return;
   dogAt = millis();
   if (dogLeft ? dogX < 2 : dogX >= DOG_STOP) {                     // arrived: wipe the last step and sit
     tft.fillRect(dogLeft ? dogX + 8 : dogX - 8, DOG_Y, WALK_W, WALK_H, BG);
     drawDog(dogLeft ? 2 : DOG_STOP + 10, DOG_Y - 4, (const uint8_t*)pgm_read_ptr(&SIT[0]), SIT_W, SIT_H, 1);
-    dogStep = DOG_REST; dogBlink = 0; return;
+    dogStep = DOG_REST; dogBlink = 0; dogHopStep = 0; if (!dogLeft) dogTrips++; return;
   }
   drawDog(dogX, DOG_Y, (const uint8_t*)pgm_read_ptr(&WALK[(dogStep >> 1) % WALK_N]), WALK_W, WALK_H, 1, dogLeft);   // each picture stays for two steps
   dogX += dogLeft ? -8 : 8; dogStep++;
@@ -413,8 +423,8 @@ void dogTick() {
 // and is used as normal, so nobody types or scans twice.
 const unsigned long SLEEP_MS = 300000UL;
 bool asleep = false; byte sleepStep = 0; unsigned long sleepAt = 0;
-void draw(); void lightsOff();                    // (both are written further down)
-const int SLEEP_X = 240 - SLEEP_W, SLEEP_Y = 150 - SLEEP_H;       // drawn double size, in the middle
+void draw(); void lightsOff(); bool drawQRText(int x, int y, const char* url); byte firstVisibleRow();   // (written further down)
+const int SLEEP_MID = 318, SLEEP_X = SLEEP_MID - SLEEP_W, SLEEP_Y = 150 - SLEEP_H;   // drawn double size, right of the website's code
 void drawSleepFrame() {
   drawDog(SLEEP_X, SLEEP_Y, (const uint8_t*)pgm_read_ptr(&SLEEP[sleepStep % SLEEP_N]), SLEEP_W, SLEEP_H, 2);
   int zx = SLEEP_X + SLEEP_W * 2 - 6, zy = SLEEP_Y - 8;           // up to three z's, one more each step, then none
@@ -426,7 +436,9 @@ void drawSleepFrame() {
 }
 void drawSleep() {
   lightsOff(); tft.fillScreen(BG);
-  textF(150, 300, F("Press any button"), DIM, SMALL);
+  { char url[48]; strcpy_P(url, MANUAL_URL); char* q = strchr(url, '?'); if (q) *q = '\0';      // the website's front page, for anyone walking past
+    if (drawQRText(10, 62, url)) textF(12, 244, F("The website: scan me"), DIM, SMALL); }
+  textF(SLEEP_MID - 66, 300, F("Press any button"), DIM, SMALL);
   asleep = true; sleepStep = 0; sleepAt = millis(); drawSleepFrame();
 }
 void sleepTick() {
@@ -438,10 +450,10 @@ void wakeUp(bool stretch) {
   if (!asleep) return;
   asleep = false;
   if (stretch) {
-    tft.fillRect(SLEEP_X - 4, SLEEP_Y - 72, SLEEP_W * 2 + 80, SLEEP_H * 2 + 76, BG);
-    for (byte i = 0; i < WAKE_N && !somethingWaiting(); i++) { drawDog(240 - WAKE_W, 246 - WAKE_H * 2, (const uint8_t*)pgm_read_ptr(&WAKE[i]), WAKE_W, WAKE_H, 2); delay(i == WAKE_N - 1 ? 420 : 200); }
-    if (!somethingWaiting()) tft.fillRect(240 - WAKE_W, 246 - WAKE_H * 2, WAKE_W * 2, WAKE_H * 2, BG);   // awake: a wave hello before Home comes back (v5.24)
-    for (byte i = 0; i < WAVE_N * 2 && !somethingWaiting(); i++) { drawDog(240 - WAVE_W, 246 - WAVE_H * 2, (const uint8_t*)pgm_read_ptr(&WAVE[i % WAVE_N]), WAVE_W, WAVE_H, 2); delay(150); }
+    tft.fillRect(SLEEP_X - 4, SLEEP_Y - 72, 480 - (SLEEP_X - 4), SLEEP_H * 2 + 76, BG);
+    for (byte i = 0; i < WAKE_N && !somethingWaiting(); i++) { drawDog(SLEEP_MID - WAKE_W, 246 - WAKE_H * 2, (const uint8_t*)pgm_read_ptr(&WAKE[i]), WAKE_W, WAKE_H, 2); delay(i == WAKE_N - 1 ? 700 : 450); }   // (v5.26: slow enough to see)
+    if (!somethingWaiting()) tft.fillRect(SLEEP_MID - WAKE_W, 246 - WAKE_H * 2, WAKE_W * 2, WAKE_H * 2, BG);   // awake: a wave hello before Home comes back (v5.24)
+    for (byte i = 0; i < WAVE_N * 2 && !somethingWaiting(); i++) { drawDog(SLEEP_MID - WAVE_W, 246 - WAVE_H * 2, (const uint8_t*)pgm_read_ptr(&WAVE[i % WAVE_N]), WAVE_W, WAVE_H, 2); delay(260); }
   }
   draw();
 }
@@ -490,6 +502,12 @@ void blinkTick() {
   strip.clear();
   for (byte i = 0; i < listCount; i++) if (mask & (1 << i)) addLights(listLed[i], listSpan[i], LIST_RGB[listColor[i]]);
   strip.show();
+  byte first = firstVisibleRow();                                 // the dot beside each row goes on and off with its light (v5.26)
+  for (byte sl = 0; sl < ROWS_ON_SCREEN; sl++) {
+    byte i = first + sl; if (i >= listCount || listLed[i] < 0) continue;
+    uint32_t c = LIST_RGB[listColor[i]];
+    tft.fillCircle(30, 44 + sl * 50 + 24, 10, (mask & (1 << i)) ? RGB((c >> 16) & 255, (c >> 8) & 255, c & 255) : RGB(56, 56, 58));
+  }
 }
 
 // ============================== Data files on the SD card ==============================
@@ -519,6 +537,7 @@ bool moveListHasRoom(char type, unsigned long key) {   // a thing already on the
   return false;
 }
 void rememberChange(char type, const byte* a) {          // call moveListHasRoom() first. A thing moved again: its old line goes, the new one is last
+  webDirty = true;
   if (type == 'I' || type == 'C') {                          // (a new count for a thing replaces its older new count the same way)
     for (byte i = 0; i < moveTotal; i++) if (changes[i].type == type && changes[i].a[0] == a[0] && changes[i].a[1] == a[1] && changes[i].a[2] == a[2]) {
       for (byte j = i; j + 1 < moveTotal; j++) changes[j] = changes[j + 1];
@@ -952,6 +971,7 @@ void drawTyping() {                             // the bottom bar while someone 
 }
 
 void doneFooter() {                              // after a change: say it is saved, and what to do by hand
+  webDirty = true;                                     // (an undo counts too)
   if (doneNote == 1) footer(F("Done. Saved on the card."));
   else if (doneNote == 2) footer(F("Done. Now swap the two unit bodies."));
   else if (doneNote == 3) footer(F("Undone. Saved on the card."));
@@ -974,7 +994,7 @@ void drawHomeTile(byte i) {                     // one of the 8 pictures
   useFont(SMALL); text(x + 54 - textWidth(name) / 2, y + 98, name, WHITE, SMALL);
 }
 void drawHome() {
-  header("IDeATe Lending", "What do you need?");
+  header("IDeATe Lending", webDirty ? "Website needs an update" : "What do you need?");
   for (byte i = 0; i < 8; i++) drawHomeTile(i);
   drawHomeBar();
 }
@@ -1163,12 +1183,12 @@ void drawItem() {
   int y = 180;                                                    // the two notes stack under the shelf, each as long as it needs
   if (field[K_WHAT][0]) { textF(14, y, F("What it is"), DIM, SMALL); y += 22; y += 20 * paragraph(14, y, field[K_WHAT], WHITE, LEFT_W, 3) + 16; }
   if (field[K_GOOD][0]) { textF(14, y, F("Good for"), DIM, SMALL); y += 22; y += 20 * paragraph(14, y, field[K_GOOD], WHITE, LEFT_W, (284 - y) / 20 + 1); }
-  dogFree = y <= 226; dogStep = 0;                               // room for the dog only when the notes end above its strip
+  dogFree = y <= 226; dogHopOK = y <= 204; dogStep = 0;                               // room for the dog only when the notes end above its strip
   // Working out a QR takes the Mega over a second, and nothing else can happen meanwhile. So the page is drawn
   // without it, and loop() adds the QR once nobody has pressed anything for a moment: flicking through items stays quick.
   tft.fillRect(312, 82, 156, 156, PANEL); qrWanted = 1; qrAt = millis();
-  if (justCounted) { justCounted = false; footer(F("Count changed. Saved on the card.")); }
-  else if (justMoved) { justMoved = false; footer(F("Moved. Its new spot is saved on the card.")); }
+  if (justCounted) { footer(justCounted == 2 ? F("It already says that. Nothing was changed.") : F("Count changed.   Select = update the website")); offerSync = justCounted == 1; justCounted = 0; }
+  else if (justMoved) { justMoved = false; footer(F("Moved and saved.   Select = update the website")); offerSync = true; }
   else if (justAdded) { justAdded = false; footer(F("Added. It is saved on the card.")); }
   else footer(itemWasScanned ? F("Down: move it     Scan more: a list") : F("Down: move it     Back"));
 }
@@ -1202,7 +1222,7 @@ void drawMapBody(int was = -1) {                 // was = the row the cursor jus
   if (!rowCount) { textF(316, 72, F("No unit fits"), DIM, SMALL); return; }
   byte u = row[cursor];
   char right[16]; snprintf_P(right, sizeof(right), PSTR("%d of %d"), cursor + 1, rowCount);
-  tft.fillRect(360, 8, 120, 30, BG); rightText(right);
+  headRight(right);
   if (u == ROW_PHONE) {                                         // the staff page as a QR: scan it with a phone to make move codes
     tft.fillRect(MAP_X, MAP_Y, 288, 216, PANEL);
     if (staffQRReady) drawStaffQR();                            // (the first time it is worked out a moment later, by loop())
@@ -1405,7 +1425,7 @@ void drawResetAsk() {
   footer(F("Up / Down to choose, Select.   Back = no"));
 }
 void draw() {
-  asleep = false; showPics = NULL;
+  asleep = false; showPics = NULL; offerSync = false;      // (the item screen turns the offer back on when it has just saved something)
   if (mode == HOME) drawHome();
   else if (mode == RESETASK) drawResetAsk();
   else if (mode == ITEM) drawItem();
@@ -1641,11 +1661,12 @@ void loadWeb() {
   staffQRReady = false;
 }
 void codeProblem(const __FlashStringHelper* what) {      // a phone code that cannot be used
-  backDepth = 0; mode = HOME; homeMessage = true;
+  backDepth = 0; mode = HOME; homeMessage = true; offerSync = false;
   header("Phone code not used", NULL); textF(18, 90, what, WHITE, SMALL);
   textF(18, 130, F("Nothing was changed. Make a new code on the"), DIM, SMALL); textF(18, 154, F("website and scan it again."), DIM, SMALL);
   footer(F("Any button = Home"));
   startShow(BARK, BARK_N, BARK_W, BARK_H, 2, 0);
+  textF(464 - BARK_W - 74, 286 - BARK_H + 24, F("Bark!"), ACCENT, TITLE);   // (the word in the drawing was too small to read)
 }
 // RL:WEB:<pass>               (made once by the website's "Link the console": see "the website pass" above)
 // RL:COUNT:<code6>:<copies>   (made by the website's "Edit an item" when the count changes)
@@ -1700,7 +1721,7 @@ bool batchApply(char* c, const __FlashStringHelper** why) {       // true = save
 }
 void drawBatch() {
   char lineOut[48];
-  backDepth = 0; mode = HOME; homeMessage = true; lightsOff();
+  backDepth = 0; mode = HOME; homeMessage = true; offerSync = false; lightsOff();
   header("From the staff page", NULL);
   snprintf_P(lineOut, sizeof(lineOut), PSTR("%d of %d changes received"), batchIn, batchParts); text(18, 84, lineOut, WHITE, TITLE);
   snprintf_P(lineOut, sizeof(lineOut), PSTR("%d saved, %d not used"), batchSaved, batchSkipped); text(18, 122, lineOut, batchSkipped ? ACCENT : GREEN, SMALL);
@@ -1713,7 +1734,7 @@ void drawBatch() {
     footer(F("Keep the phone at the scanner"));
   } else {
     textF(18, 190, F("All of them are in. Each one is on Recent"), WHITE, SMALL); textF(18, 214, F("changes, where it can be undone."), WHITE, SMALL);
-    footer(F("Any button = Home"));
+    footer(F("Select = update the website    Other = Home")); offerSync = true;
     startShow(HOP, HOP_N, HOP_W, HOP_H, 2, HOP_N - 1);
   }
 }
@@ -1740,7 +1761,7 @@ void runCode(char* c) {
     cardRemove("WEB.TSV"); File f = cardOpen("WEB.TSV", FILE_WRITE);
     if (!f) { codeProblem(F("The SD card would not write. Is it locked?")); return; }
     f.println(c + 4); f.close(); loadWeb();
-    backDepth = 0; mode = HOME; homeMessage = true;
+    backDepth = 0; mode = HOME; homeMessage = true; offerSync = false;
     header("Website linked", NULL);
     textF(18, 90, F("From now on, a phone that scans the Staff page"), WHITE, SMALL); textF(18, 114, F("code or a To the website code on this console"), WHITE, SMALL);
     textF(18, 138, F("can save to the website with nothing to type."), WHITE, SMALL);
@@ -1753,10 +1774,12 @@ void runCode(char* c) {
     unsigned long key = strtoul(c + 6, NULL, 16); long kind = findNameCode(key); int n = atoi(num);
     if (kind < 0) { codeProblem(F("That item is not in this console's list.")); return; }
     if (n < 1 || n > 250) { codeProblem(F("The count has to be between 1 and 250.")); return; }
+    loadKind(kind);
+    if (atoi(field[K_COPIES]) == n) { staffUntil = millis() + STAFF_MS; backDepth = 0; mode = HOME; justCounted = 2; openItem(kind, false); return; }   // the same code again: nothing to write, nothing new on Recent changes
     byte a[6] = {(byte)((key >> 16) & 255), (byte)((key >> 8) & 255), (byte)(key & 255), (byte)n, 0, 0};
     if (!saveOrSay('C', a, key)) return;
     staffUntil = millis() + STAFF_MS;
-    backDepth = 0; mode = HOME; justCounted = true; openItem(kind, false); return;
+    backDepth = 0; mode = HOME; justCounted = 1; openItem(kind, false); return;
   }
   if (strncasecmp_P(c, PSTR("MOVE:"), 5) == 0) {
     char* place = strchr(c + 5, ':'); if (!place) { codeProblem(F("The code is not complete.")); return; }
@@ -2046,6 +2069,7 @@ void drawSync() {
   textF(18, 90, F("Making the code. About 3 seconds..."), DIM, SMALL);     // this big QR takes the Mega a while: say so
   QRCode qr;
   bool made = qrcode_initText(&qr, qrData, SYNC_QR, ECC_LOW, qtext) == 0;
+  if (made && syncPage + 1 >= syncPages) webDirty = false;      // the last page is up: take it that the phone has it
   tft.fillRect(0, 60, 480, 50, BG);
   if (!made) { textF(18, 90, F("Too much for one code."), WHITE, SMALL); footer(F("Back")); return; }
   const int PX = 4, QUIET = 4, SIDE = (qr.size + 2 * QUIET) * PX, X = 14, Y = 50;
@@ -2068,7 +2092,7 @@ void moveCursor(byte b) {                       // Up or Down in a list
   preview();
   drawRows(was, cursor);                                       // same page: only the two rows that changed are drawn again
   char right[16]; snprintf_P(right, sizeof(right), PSTR("%d of %d"), cursor + 1, rowCount);
-  tft.fillRect(360, 8, 120, 30, BG); rightText(right);
+  headRight(right);
 }
 void pressed(byte b) {                          // Up, Down, Select or Back, from a button, the keyboard or the laptop
   lastActivity = millis();
@@ -2090,7 +2114,10 @@ void pressed(byte b) {                          // Up, Down, Select or Back, fro
   if (mode == SYNC) { if (b == B_DOWN && syncPage + 1 < syncPages) syncPage++; else if (b == B_UP && syncPage > 0) syncPage--; else return; draw(); return; }
   if (mode == ADDNEW) { if (b == B_SELECT) { if (addStep < 3) { addStep++; addProblem[0] = '\0'; draw(); } else saveNewItem(); } return; }
   if (mode == HOME) {
-    if (homeMessage) { homeMessage = false; staffUntil = 0; draw(); return; }
+    if (homeMessage) {
+      if (b == B_SELECT && offerSync && staffOK()) { offerSync = false; homeMessage = false; go(SYNC); syncPage = 0; syncPages = countSyncPages(); draw(); lightsOff(); return; }
+      offerSync = false; homeMessage = false; staffUntil = 0; draw(); return;
+    }
     byte was = homeCursor;
     if (b == B_UP) homeCursor = (homeCursor + 8) % 9;              // 9 spots: the 8 pictures, then the grey bar
     if (b == B_DOWN) homeCursor = (homeCursor + 1) % 9;
@@ -2101,7 +2128,12 @@ void pressed(byte b) {                          // Up, Down, Select or Back, fro
     if (queryLen) drawTyping();
     return;
   }
-  if (mode == ITEM) { if (b == B_DOWN) { if (staffOK()) startMove(); else askPin(AFTER_MOVE); } return; }   // Down: move it (staff PIN first)
+  if (mode == ITEM) {
+    if (b == B_SELECT && offerSync && staffOK()) { offerSync = false; go(SYNC); syncPage = 0; syncPages = countSyncPages(); draw(); lightsOff(); return; }   // straight to the code that updates the website
+    offerSync = false;
+    if (b == B_DOWN) { if (staffOK()) startMove(); else askPin(AFTER_MOVE); }
+    return;
+  }   // Down: move it (staff PIN first)
   if (mode == MOVEOK) { if (b == B_SELECT) { if (atMoveTarget()) back(); else doMove(); } return; }
   if (rowCount == 0) return;
   if (b == B_UP || b == B_DOWN) { moveCursor(b); return; }
@@ -2382,7 +2414,7 @@ void loop() {
   if ((qrWanted == 1 && mode != ITEM) || (qrWanted == 2 && mode != MAP)) qrWanted = 0;
   if (qrWanted && millis() - qrAt > 350 && !keyCount && !missedPress && !Serial1.available() && !Serial.available()) {
     byte which = qrWanted; qrWanted = 0;
-    if (which == 1) { loadKind(currentKind); drawQR(312, 82); if (dogFree) { dogStep = 1; dogX = 2; dogLeft = false; dogAt = millis(); } }   // the QR is up: the dog comes in (v5.19: for any item, however it was opened)
+    if (which == 1) { loadKind(currentKind); drawQR(312, 82); if (dogFree) { dogStep = 1; dogX = 2; dogLeft = false; dogTrips = 0; dogAt = millis(); } }   // the QR is up: the dog comes in (v5.19: for any item, however it was opened)
     else if (rowCount && row[cursor] == ROW_PHONE) drawStaffQR();
   }
   dogTick(); sleepTick(); showTick();
