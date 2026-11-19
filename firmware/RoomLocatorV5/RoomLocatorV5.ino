@@ -151,6 +151,8 @@
  the shelf lights in the item's category colour (the Home picture's colour), and the box and its line say that colour.
  (v5.23): Diana asked for CMU's colours. Claude looked them up on brand.cmu.edu and swapped the screen colours: a Carnegie
  Red title band, black background, and the tartan and campus colours for the eight categories.
+ (v5.24): the console is rarely switched off, so the start-up wave would hardly be seen. Diana pointed that out; Claude
+ added the same wave to the end of the wake-up stretch in wakeUp().
   _____
 
  Diana Caballero and Gauri Sharma
@@ -223,7 +225,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.23";
+const char VERSION[] PROGMEM = "5.24";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -518,6 +520,8 @@ void wakeUp(bool stretch) {
   if (stretch) {
     tft.fillRect(SLEEP_X - 4, SLEEP_Y - 72, SLEEP_W * 2 + 80, SLEEP_H * 2 + 76, BG);
     for (byte i = 0; i < WAKE_N && !somethingWaiting(); i++) { drawDog(240 - WAKE_W, 246 - WAKE_H * 2, (const uint8_t*)pgm_read_ptr(&WAKE[i]), WAKE_W, WAKE_H, 2); delay(i == WAKE_N - 1 ? 420 : 200); }
+    if (!somethingWaiting()) tft.fillRect(240 - WAKE_W, 246 - WAKE_H * 2, WAKE_W * 2, WAKE_H * 2, BG);   // awake: a wave hello before Home comes back (v5.24)
+    for (byte i = 0; i < WAVE_N * 2 && !somethingWaiting(); i++) { drawDog(240 - WAVE_W, 246 - WAVE_H * 2, (const uint8_t*)pgm_read_ptr(&WAVE[i % WAVE_N]), WAVE_W, WAVE_H, 2); delay(150); }
   }
   draw();
 }

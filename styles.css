@@ -201,3 +201,15 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .item-summary .location,.item-summary .location small,.item-summary .location p,.item-summary .location strong{color:var(--cat-ink)}
 .room-unit:hover,.room-unit.selected{background:#c41230}
 .my-loans .late span{color:#c41230}
+
+/* the return reminder, slimmer */
+.side-block .reminder-buttons{grid-template-columns:1fr 1fr;margin-top:12px}.side-block .reminder-buttons button{text-align:center;padding:12px 8px}
+.side-block .link-button,.link-button{display:inline;width:auto;background:none!important;color:var(--ink)!important;border:0!important;padding:0;font:600 14px var(--body);text-decoration:underline;text-decoration-color:#c41230;text-decoration-thickness:2px;text-underline-offset:3px;cursor:pointer}
+.side-block input#return-date{margin-bottom:6px}
+/* the staff page, calmer */
+.staff-main .intro{font-size:17px}
+.home-status{background:none!important;padding:0!important;margin:22px 0 8px}.home-status p{margin:0 0 8px}
+.status-row{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;margin:0 0 10px;font-size:15px}
+.staff-fold{border-top:2px solid var(--soft);padding:14px 0}.staff-fold>summary{font:700 19px var(--display);cursor:pointer}.staff-fold[open]>summary{margin-bottom:12px}.staff-fold:last-of-type{border-bottom:2px solid var(--soft)}
+.staff-folds{margin-top:48px}
+#share{background:var(--soft);padding:20px;margin-top:12px}#share h2{font-size:19px;margin:0 0 6px}#share h2+p{margin-top:0}
