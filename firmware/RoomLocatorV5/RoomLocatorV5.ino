@@ -160,6 +160,8 @@
  "3 of 31" counter no longer flashes black; the dots on a put-away or kit list blink with their lights; the same count
  code scanned twice no longer adds to Recent changes; after a phone change Select opens the To the website code, and
  Home says "Website needs an update" until that code has been shown; the sleeping screen shows the website's QR.
+ (v5.27): Diana said Loki looked bored and small. Claude rewrote dogTick(): on a screen with no notes he is drawn
+ double size, and each time he sits he does a different small thing (pants, bounces, waves, tilts his head, sniffs).
   _____
 
  Diana Caballero and Gauri Sharma
@@ -232,7 +234,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.26";
+const char VERSION[] PROGMEM = "5.27";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -306,8 +308,8 @@ char shelfUnit[5]; byte shelfNumber = 0;        // the shelf a scanned label poi
 char query[32]; byte queryLen = 0;              // what is being typed
 volatile byte missedPress = 0;                   // buttons pressed while the console was busy, one bit each (see readButtons)
 byte keyQueue[16]; byte keyHead = 0, keyCount = 0;   // keys typed while the console was busy, oldest first
-bool dogFree = false, dogLeft = false, dogHopOK = false; byte dogStep = 0, dogBlink = 0, dogTrips = 0, dogHopStep = 0; int dogX = 0; unsigned long dogAt = 0;   // the dog on the item screen: dogStep 0 = not moving
-const int DOG_Y = 234, DOG_STOP = 212;           // where it walks (under the shelf box) and where it sits down. The dog code is further down.
+bool dogFree = false, dogLeft = false; byte dogStep = 0, dogBlink = 0, dogTrips = 0, dogScale = 1; int dogX = 0; unsigned long dogAt = 0;   // the dog on the item screen: dogStep 0 = not moving
+// (the dog on the item screen stands on the line y = 290, just above the footer. Its code is further down.)
 byte qrWanted = 0; unsigned long qrAt = 0;        // a QR is still to be drawn: 1 = the item page's (see drawItem), 2 = the staff page's on the map
 bool live = false, livePending = false;         // live = the list on screen is a search that updates as you type
 unsigned long liveAt = 0;
@@ -470,39 +472,58 @@ void drawDog(int x, int y, const uint8_t* pic, byte w, byte h, byte scale, bool 
 static_assert(WAVE_W * 2 <= 200 && TILT_W <= 200 && SNIFF_W <= 200 && SLEEP_W * 2 <= 200 && WAKE_W * 2 <= 200 && WALK_W <= 200 && SIT_W <= 200 && BARK_W <= 200 && HOP_W <= 200, "a dog picture is wider than the row buffer in drawDog");
 bool somethingWaiting() { return keyCount || missedPress || Serial1.available() || Serial.available(); }   // the dog never makes a person wait
 
-// On an item's screen: once the QR is up the dog walks in from the left, 8 pixels every 70 ms, and sits by the QR.
-// After a rest it walks back to the left edge (the same pictures, mirrored), sits, and comes back again, for as long
-// as the screen stays up. It needs room under the shelf box, and it stops if the screen changes.
+// On an item's screen: once the QR is up the dog walks in from the left and sits by the QR. There it does one small
+// thing (pants, bounces, waves, tilts its head or sniffs: a different one each time), blinks, then walks back to the
+// left edge (the same pictures, mirrored), does the next thing, and comes back again, for as long as the screen stays up.
+// With no notes on the screen there is room to draw it double size (v5.27). It stops if the screen changes.
 // dogStep: 0 = not there, 1..200 = walking, DOG_REST = sitting until it is time to turn round.
-const byte DOG_REST = 255; const unsigned int DOG_REST_MS = 3500, DOG_STEP_MS = 105;   // (v5.26: a step every 105 ms; 70 looked rushed)
+#define MAX2(a, b) ((a) > (b) ? (a) : (b))
+const byte REST_W = MAX2(MAX2(SIT_W, BARK_W), MAX2(MAX2(WAVE_W, TILT_W), SNIFF_W)), REST_LIFT = 8;   // the widest sitting picture; how high a bounce goes
+static_assert(REST_W * 2 <= 200 && WALK_W * 2 <= 200, "a dog picture drawn double is wider than the row buffer in drawDog");
+const byte DOG_REST = 255; const unsigned int DOG_REST_MS = 4200;
+int dogStopX() { return 300 - WALK_W * dogScale - 2 * dogScale; }           // the walk ends here, short of the QR
+int dogRestX() { return dogLeft ? 2 : 300 - REST_W * dogScale; }
+void dogRestDraw(const uint8_t* const* pics, byte i, byte w, byte h, byte lift) {   // one sitting picture, standing on the ground line
+  int x = dogRestX(), boxH = (SIT_H + REST_LIFT) * dogScale;
+  tft.fillRect(x, 290 - boxH, REST_W * dogScale, boxH, BG);
+  drawDog(x, 290 - (h + lift) * dogScale, (const uint8_t*)pgm_read_ptr(&pics[i]), w, h, dogScale);
+}
 void dogTick() {
   if (!dogStep) return;
   if (mode != ITEM) { dogStep = 0; return; }
   if (somethingWaiting()) return;
-  if (dogStep == DOG_REST) {                                       // sitting: after the rest, stand up and go the other way
+  const unsigned int stepMs = dogScale == 2 ? 140 : 105; const byte stepPx = 8 * dogScale;
+  if (dogStep == DOG_REST) {                                       // sitting
     unsigned long sat = millis() - dogAt;
-    if (dogHopOK && !dogLeft && (dogTrips & 1) && dogHopStep < 4) {   // every other time it reaches the QR: a little hop first
-      if (sat < 500 + dogHopStep * 170UL) return;
-      if (dogHopStep == 0) tft.fillRect(DOG_STOP + 10, DOG_Y - 4, SIT_W, SIT_H, BG);
-      if (dogHopStep < 3) drawDog(DOG_STOP + 4, 290 - HOP_H, (const uint8_t*)pgm_read_ptr(&HOP[dogHopStep]), HOP_W, HOP_H, 1);
-      else { tft.fillRect(DOG_STOP + 4, 290 - HOP_H, HOP_W, HOP_H, BG); drawDog(DOG_STOP + 10, DOG_Y - 4, (const uint8_t*)pgm_read_ptr(&SIT[0]), SIT_W, SIT_H, 1); }
-      dogHopStep++; return;
+    byte want = 0;                                                 // which picture should be up right now: 0 = sitting still
+    if (sat >= 500 && sat < 2300) want = 1 + (sat - 500) / 150;    // 12 short frames of this rest's small thing
+    else if (sat >= 3100 && sat < 3350) want = 100;                // then one blink
+    if (want != dogBlink) {
+      dogBlink = want;
+      if (want == 0) dogRestDraw(SIT, 0, SIT_W, SIT_H, 0);
+      else if (want == 100) dogRestDraw(SIT, 1, SIT_W, SIT_H, 0);
+      else { byte fr = want - 1;
+        switch (dogTrips % 5) {
+          case 0: dogRestDraw(BARK, 1 + (fr & 1), BARK_W, BARK_H, 0); break;                          // panting: mouth open, tongue out
+          case 1: dogRestDraw(SIT, 0, SIT_W, SIT_H, (fr % 4 == 1 || fr % 4 == 2) ? REST_LIFT : 0); break;   // a bounce, three times
+          case 2: dogRestDraw(WAVE, fr % WAVE_N, WAVE_W, WAVE_H, 0); break;
+          case 3: dogRestDraw(TILT, (fr / 2) % TILT_N, TILT_W, TILT_H, 0); break;
+          default: dogRestDraw(SNIFF, (fr / 2) % SNIFF_N, SNIFF_W, SNIFF_H, 0); break;
+        }
+      }
     }
-    byte want = sat >= 1500 && sat < 1750;                         // one blink in the middle of the rest
-    if (want != dogBlink) { dogBlink = want; drawDog(dogLeft ? 2 : DOG_STOP + 10, DOG_Y - 4, (const uint8_t*)pgm_read_ptr(&SIT[want]), SIT_W, SIT_H, 1); }
     if (sat < DOG_REST_MS) return;
-    tft.fillRect(dogLeft ? 2 : DOG_STOP + 10, DOG_Y - 4, SIT_W, SIT_H, BG);
-    dogLeft = !dogLeft; dogX = dogLeft ? DOG_STOP : 2; dogStep = 1; dogAt = millis() - DOG_STEP_MS;
+    { int x = dogRestX(), boxH = (SIT_H + REST_LIFT) * dogScale; tft.fillRect(x, 290 - boxH, REST_W * dogScale, boxH, BG); }
+    dogLeft = !dogLeft; dogX = dogLeft ? dogStopX() : 2; dogStep = 1; dogAt = millis() - stepMs;
   }
-  if (millis() - dogAt < DOG_STEP_MS) return;
+  if (millis() - dogAt < stepMs) return;
   dogAt = millis();
-  if (dogLeft ? dogX < 2 : dogX >= DOG_STOP) {                     // arrived: wipe the last step and sit
-    tft.fillRect(dogLeft ? dogX + 8 : dogX - 8, DOG_Y, WALK_W, WALK_H, BG);
-    drawDog(dogLeft ? 2 : DOG_STOP + 10, DOG_Y - 4, (const uint8_t*)pgm_read_ptr(&SIT[0]), SIT_W, SIT_H, 1);
-    dogStep = DOG_REST; dogBlink = 0; dogHopStep = 0; if (!dogLeft) dogTrips++; return;
+  if (dogLeft ? dogX < 2 : dogX >= dogStopX()) {                   // arrived: wipe the last step and sit
+    tft.fillRect(dogLeft ? dogX + stepPx : dogX - stepPx, 290 - WALK_H * dogScale, WALK_W * dogScale, WALK_H * dogScale, BG);
+    dogStep = DOG_REST; dogBlink = 0; dogTrips++; dogRestDraw(SIT, 0, SIT_W, SIT_H, 0); return;
   }
-  drawDog(dogX, DOG_Y, (const uint8_t*)pgm_read_ptr(&WALK[(dogStep >> 1) % WALK_N]), WALK_W, WALK_H, 1, dogLeft);   // each picture stays for two steps
-  dogX += dogLeft ? -8 : 8; dogStep++;
+  drawDog(dogX, 290 - WALK_H * dogScale, (const uint8_t*)pgm_read_ptr(&WALK[(dogStep >> 1) % WALK_N]), WALK_W, WALK_H, dogScale, dogLeft);   // each picture stays for two steps
+  dogX += dogLeft ? -stepPx : stepPx; dogStep++;
 }
 
 // Asleep: when the Home screen has not been touched for 5 minutes the dog curls up on it, breathing, with z's
@@ -1270,7 +1291,7 @@ void drawItem() {
   int y = 180;                                                    // the two notes stack under the shelf, each as long as it needs
   if (field[K_WHAT][0]) { textF(14, y, F("What it is"), DIM, SMALL); y += 22; y += 20 * paragraph(14, y, field[K_WHAT], WHITE, LEFT_W, 3) + 16; }
   if (field[K_GOOD][0]) { textF(14, y, F("Good for"), DIM, SMALL); y += 22; y += 20 * paragraph(14, y, field[K_GOOD], WHITE, LEFT_W, (284 - y) / 20 + 1); }
-  dogFree = y <= 226; dogHopOK = y <= 204; dogStep = 0;                               // room for the dog only when the notes end above its strip
+  dogFree = y <= 226; dogScale = y <= 180 ? 2 : 1; dogStep = 0;      // no notes at all: room to draw it double size                               // room for the dog only when the notes end above its strip
   // Working out a QR takes the Mega over a second, and nothing else can happen meanwhile. So the page is drawn
   // without it, and loop() adds the QR once nobody has pressed anything for a moment: flicking through items stays quick.
   tft.fillRect(312, 82, 156, 156, PANEL); qrWanted = 1; qrAt = millis();
@@ -2501,7 +2522,7 @@ void loop() {
   if ((qrWanted == 1 && mode != ITEM) || (qrWanted == 2 && mode != MAP)) qrWanted = 0;
   if (qrWanted && millis() - qrAt > 350 && !keyCount && !missedPress && !Serial1.available() && !Serial.available()) {
     byte which = qrWanted; qrWanted = 0;
-    if (which == 1) { loadKind(currentKind); drawQR(312, 82); if (dogFree) { dogStep = 1; dogX = 2; dogLeft = false; dogTrips = 0; dogAt = millis(); } }   // the QR is up: the dog comes in (v5.19: for any item, however it was opened)
+    if (which == 1) { loadKind(currentKind); drawQR(312, 82); if (dogFree) { dogStep = 1; dogX = 2; dogLeft = false; dogTrips = 255; dogAt = millis(); } }   // the QR is up: the dog comes in (v5.19: for any item, however it was opened)
     else if (rowCount && row[cursor] == ROW_PHONE) drawStaffQR();
   }
   dogTick(); sleepTick(); showTick();
