@@ -70,7 +70,7 @@ function askForKey(why) {
   readLocked().then(all => {
     const hasPass = !!slotOf(all, 'pass'), hasConsole = !!slotOf(all, 'console');
     $('connect-passrow').hidden = !hasPass; $('connect-unlock').hidden = !hasPass;
-    $('connect-how').textContent = hasConsole ? 'Easiest: on the console, open the map, go to the Staff page spot (after the staff PIN) and scan that code with this phone. It signs this phone in by itself and it stays signed in.' + (hasPass ? ' Or type the staff passcode below (it is not the console\'s PIN).' : '')
+    $('connect-how').textContent = hasConsole ? 'Easiest: on the console, go down to the grey bar, press Select and type the staff PIN. Scan the code that comes up with this phone. It signs this phone in by itself and it stays signed in.' + (hasPass ? ' Or type the staff passcode below (it is not the console\'s PIN).' : '')
       : hasPass ? 'Type the staff passcode. It is not the console\'s PIN.'
       : 'Saving has not been set up on this site yet, so there is no passcode to type (the console\'s PIN does not work here). The person with the GitHub account does this once: open the line below and paste the site key. The page then shows a code for the console, and after that phones sign in just by scanning the console.';
     if (!hasPass && !hasConsole) box.querySelector('details').open = true;
@@ -608,8 +608,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   const drawHomeStatus = () => {
     const sy = room.synced, when = sy && sy.at ? new Date(sy.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
     $('home-sync').textContent = sy && sy.at ? 'Website last matched the console ' + when + ', with ' + sy.lines + (sy.lines === 1 ? ' change' : ' changes') + ' since the Nov 16 setup.' : 'The website is at the Nov 16 setup. No console changes have been brought over yet.';
-    $('home-key').textContent = keep.get('rl-key') ? 'This device can save to the website.' : 'This device cannot save to the website yet.';
-    $('home-key-set').textContent = keep.get('rl-key') ? 'Sign this device out' : 'Type the staff passcode';
+    $('home-key').textContent = keep.get('rl-key') ? 'This device can save to the website.' : 'To save changes from this phone: on the console, go down to the grey bar, press Select and type the staff PIN. Scan the code that comes up. That is all.';
+    $('home-key-set').textContent = keep.get('rl-key') ? 'Sign this device out' : 'No console nearby? Use the passcode';
     $('home-share').hidden = !keep.get('rl-key'); if (!keep.get('rl-key')) $('share').hidden = true;
   };
   drawHomeStatus();
