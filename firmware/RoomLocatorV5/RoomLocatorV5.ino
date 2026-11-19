@@ -244,7 +244,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.30";
+const char VERSION[] PROGMEM = "5.31";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -551,6 +551,10 @@ void draw(); void lightsOff(); bool drawQRText(int x, int y, const char* url); b
 const int SLEEP_MID = 318, SLEEP_X = SLEEP_MID - SLEEP_W, SLEEP_Y = 150 - SLEEP_H;   // drawn double size, right of the website's code
 void drawSleepFrame() {
   drawDog(SLEEP_X, SLEEP_Y, (const uint8_t*)pgm_read_ptr(&SLEEP[sleepStep % SLEEP_N]), SLEEP_W, SLEEP_H, 2);
+  // The existing breathing frames sit above a low, padded bed rim.
+  const int rimY = SLEEP_Y + SLEEP_H * 2 - 1;
+  tft.fillRoundRect(SLEEP_X - 7, rimY, SLEEP_W * 2 + 14, 22, 9, RGB(104, 36, 49));
+  tft.fillRoundRect(SLEEP_X + 1, rimY, SLEEP_W * 2 - 2, 8, 4, RGB(164, 72, 82));
   int zx = SLEEP_X + SLEEP_W * 2 - 6, zy = SLEEP_Y - 8;           // up to three z's, one more each step, then none
   tft.fillRect(zx, zy - 62, 70, 70, BG);
   byte zs = sleepStep % 4;
@@ -574,7 +578,7 @@ void wakeUp(bool stretch) {
   if (!asleep) return;
   asleep = false;
   if (stretch) {
-    tft.fillRect(SLEEP_X - 4, SLEEP_Y - 72, 480 - (SLEEP_X - 4), SLEEP_H * 2 + 76, BG);
+    tft.fillRect(SLEEP_X - 8, SLEEP_Y - 72, 480 - (SLEEP_X - 8), SLEEP_H * 2 + 94, BG);
     for (byte i = 0; i < WAKE_N && !somethingWaiting(); i++) { drawDog(SLEEP_MID - WAKE_W, 246 - WAKE_H * 2, (const uint8_t*)pgm_read_ptr(&WAKE[i]), WAKE_W, WAKE_H, 2); delay(i == WAKE_N - 1 ? 700 : 450); }   // (v5.26: slow enough to see)
     if (!somethingWaiting()) tft.fillRect(SLEEP_MID - WAKE_W, 246 - WAKE_H * 2, WAKE_W * 2, WAKE_H * 2, BG);   // awake: a wave hello before Home comes back (v5.24)
     for (byte i = 0; i < WAVE_N * 2 && !somethingWaiting(); i++) { drawDog(SLEEP_MID - WAVE_W, 246 - WAVE_H * 2, (const uint8_t*)pgm_read_ptr(&WAVE[i % WAVE_N]), WAVE_W, WAVE_H, 2); delay(260); }
@@ -1821,14 +1825,14 @@ void codeProblem(const __FlashStringHelper* what) {      // a phone code that ca
 // The staff page shows the parts one after another, round and round, while the phone is held at the scanner. Each part
 // is saved the moment it arrives, with no Select press (the list was checked on the staff page), and a part seen twice
 // is not saved twice. <id> tells one batch from the next. Every change lands on Recent changes, where it can be undone.
-byte batchId = 0, batchParts = 0, batchSeen[8], batchIn = 0, batchSaved = 0, batchSkipped = 0;   // batchParts 0 = no batch yet
+byte batchId = 0, batchParts = 0, batchSeen[8], batchIn = 0, batchSaved = 0, batchSkipped = 0, batchUnchanged = 0;
 const __FlashStringHelper* batchWhy = NULL;      // why the last skipped part was not used
 bool quietSave(char type, const byte* a, unsigned long key, const __FlashStringHelper** why) {
   if (!moveListHasRoom(type, key)) { *why = F("The console's list of changes is full."); return false; }
   if (!saveChange(type, a)) { *why = F("The SD card would not write."); return false; }
   rememberChange(type, a); return true;
 }
-bool batchApply(char* c, const __FlashStringHelper** why) {       // true = saved (or already true)
+bool batchApply(char* c, const __FlashStringHelper** why) {
   if (strncasecmp_P(c, PSTR("MOVE:"), 5) == 0) {
     char* place = strchr(c + 5, ':'); if (!place) { *why = F("A part was not complete."); return false; }
     *place++ = '\0';
@@ -1836,7 +1840,7 @@ bool batchApply(char* c, const __FlashStringHelper** why) {       // true = save
     if (kind < 0) { *why = F("An item is not in this console's list."); return false; }
     if (!parsePlace(place, &u, &sh)) { *why = F("A unit or shelf does not exist here."); return false; }
     currentKind = kind; moveWhat = W_ITEM; toNewBoard = false; moveToUnit = u; moveToShelf = unitCount[u] ? spaceLo(u, sh) : 0;
-    if (atMoveTarget()) return true;                               // it is there already
+    if (atMoveTarget()) { batchUnchanged++; return true; }
     unsigned long key = nameCode(field[K_NAME]);                   // atMoveTarget() loaded the kind
     byte a[6] = {(byte)((key >> 16) & 255), (byte)((key >> 8) & 255), (byte)(key & 255), moveToUnit, moveToShelf, 0};
     return quietSave('I', a, key, why);
@@ -1847,7 +1851,7 @@ bool batchApply(char* c, const __FlashStringHelper** why) {       // true = save
     byte u1, s1, u2, s2;
     if (!parsePlace(from, &u1, &s1) || !parsePlace(to, &u2, &s2) || !unitCount[u1] || !unitCount[u2]) { *why = F("A unit or shelf does not exist here."); return false; }
     byte lo = spaceLo(u1, s1), dest = spaceLo(u2, s2);
-    if (u1 == u2 && lo == dest) return true;
+    if (u1 == u2 && lo == dest) { batchUnchanged++; return true; }
     countThings(u1); if (!thingCount[lo]) { *why = F("A shelf to move was empty."); return false; }
     bool swapping = swap && strcasecmp_P(swap, PSTR("SWAP")) == 0;
     byte a[6] = {u1, lo, spaceHi(u1, lo), u2, dest, (byte)(swapping ? spaceHi(u2, dest) : 0)};
@@ -1857,8 +1861,10 @@ bool batchApply(char* c, const __FlashStringHelper** why) {       // true = save
     char* num = strchr(c + 6, ':'); if (!num) { *why = F("A part was not complete."); return false; }
     *num++ = '\0';
     unsigned long key = strtoul(c + 6, NULL, 16); int n = atoi(num);
-    if (findNameCode(key) < 0) { *why = F("An item is not in this console's list."); return false; }
+    long kind = findNameCode(key);
+    if (kind < 0) { *why = F("An item is not in this console's list."); return false; }
     if (n < 1 || n > 250) { *why = F("A count was not between 1 and 250."); return false; }
+    if (loadKind(kind) && atoi(field[K_COPIES]) == n) { batchUnchanged++; return true; }
     byte a[6] = {(byte)((key >> 16) & 255), (byte)((key >> 8) & 255), (byte)(key & 255), (byte)n, 0, 0};
     return quietSave('C', a, key, why);
   }
@@ -1869,7 +1875,7 @@ void drawBatch() {
   backDepth = 0; mode = HOME; homeMessage = true; offerSync = false; lightsOff();
   header("From the staff page", NULL);
   snprintf_P(lineOut, sizeof(lineOut), PSTR("%d of %d changes received"), batchIn, batchParts); text(18, 84, lineOut, WHITE, TITLE);
-  snprintf_P(lineOut, sizeof(lineOut), PSTR("%d saved, %d not used"), batchSaved, batchSkipped); text(18, 122, lineOut, batchSkipped ? ACCENT : GREEN, SMALL);
+  snprintf_P(lineOut, sizeof(lineOut), PSTR("%d saved, %d unchanged, %d skipped"), batchSaved - batchUnchanged, batchUnchanged, batchSkipped); text(18, 122, lineOut, batchSkipped ? ACCENT : GREEN, SMALL);
   if (batchWhy) textF(18, 146, batchWhy, DIM, SMALL);
   if (batchIn < batchParts) {
     strcpy_P(lineOut, PSTR("Still waiting for: ")); byte shown = 0;
@@ -1878,8 +1884,14 @@ void drawBatch() {
     text(18, 190, lineOut, WHITE, SMALL);
     footer(F("Keep the phone at the scanner"));
   } else {
-    textF(18, 190, F("All of them are in. Each one is on Recent"), WHITE, SMALL); textF(18, 214, F("changes, where it can be undone."), WHITE, SMALL);
-    doneBar(F("All saved.   Select = update the website")); offerSync = true;
+    if (batchSaved > batchUnchanged) {
+      textF(18, 190, F("Review saved entries under Recent changes."), WHITE, SMALL);
+      doneBar(batchSkipped ? F("Some saved.   Select = update website") : F("All received.   Select = update website"));
+      offerSync = true;
+    } else {
+      textF(18, 190, F("No changes from this batch were saved."), WHITE, SMALL);
+      footer(F("Back = Home"));
+    }
     startShow(WAVE, WAVE_N, WAVE_W, WAVE_H, 3, 0);              // every part is in: a wave (the hop pictures made way for same-size ones, v5.29)
   }
 }
@@ -1888,7 +1900,7 @@ void batchCode(char* c) {
   byte id = (byte)strtoul(c, NULL, 16); int i = part ? atoi(part + 1) : 0, n = total ? atoi(total + 1) : 0;
   if (!body || i < 1 || n < 1 || n > 64 || i > n) { codeProblem(F("The code is not complete.")); return; }
   body++;
-  if (!batchParts || id != batchId || n != batchParts) { batchId = id; batchParts = n; memset(batchSeen, 0, sizeof(batchSeen)); batchIn = batchSaved = batchSkipped = 0; batchWhy = NULL; }
+  if (!batchParts || id != batchId || n != batchParts) { batchId = id; batchParts = n; memset(batchSeen, 0, sizeof(batchSeen)); batchIn = batchSaved = batchSkipped = batchUnchanged = 0; batchWhy = NULL; }
   byte bit = i - 1;
   if (!(batchSeen[bit >> 3] & (1 << (bit & 7)))) {                 // a part seen before is only counted once
     batchSeen[bit >> 3] |= 1 << (bit & 7); batchIn++;
