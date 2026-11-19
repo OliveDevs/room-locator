@@ -225,3 +225,6 @@ a.item-card.kit-card{padding:18px 20px!important;justify-content:center;min-heig
 .kit-reminder{max-width:420px;margin:8px 0 36px}.kit-reminder .side-block{background:var(--soft)!important;border-radius:12px;padding:20px!important;border-bottom:0;margin:0!important}
 .home-done{background:#009647;color:#000;font-weight:650;padding:14px 16px;border-radius:10px;margin:0 0 14px!important}
 .staff-main h1{font-size:clamp(30px,4vw,44px)}
+
+@media(max-width:580px){.header-nav a[target]{display:none}.header-nav{gap:14px}.header-nav a{font-size:14px}}
+.my-loans h2+p{margin:0 0 6px}

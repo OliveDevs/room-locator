@@ -162,6 +162,16 @@
  Home says "Website needs an update" until that code has been shown; the sleeping screen shows the website's QR.
  (v5.27): Diana said Loki looked bored and small. Claude rewrote dogTick(): on a screen with no notes he is drawn
  double size, and each time he sits he does a different small thing (pants, bounces, waves, tilts his head, sniffs).
+ (v5.28): more from Diana's testing. A saved change now shows a green bar, not a grey line. On the put-away list the
+ colour dot stays solid and a white dot on the right blinks the way the light does, with its name beside it. After
+ the PIN on Home the map opens on the Staff page code, so staff only need the PIN and their own phone. Claude wrote these.
+ (v5.29): Diana said some animations did not look right. Claude measured the drawings: the wave, head tilt and sniff
+ were being shrunk more than the others, so Loki changed size between them. tools/mkdog.py now draws him the same size
+ in all of them. The hop pictures were dropped to make room; a finished batch gets a wave.
+ (v5.30): Diana asked whether the PIN could be changed from a laptop. It could, with one command, and Claude showed
+ her. Claude then closed it: the card now holds a scramble of the PIN mixed with the name Loki (her idea), never the
+ PIN; commands from the laptop that change the card are refused until the PIN is typed on the console; and the PIN
+ and website-link files cannot be sent from the laptop at all.
   _____
 
  Diana Caballero and Gauri Sharma
@@ -187,7 +197,7 @@
 //
 // Files on the SD card (made on the laptop, sent with push_card.py):
 //   UNITS.TSV   code, name, first light, how many lights, then (optional) its box on the map: x0 y0 x1 y1 in room mm / 2
-//   STAFF.TSV   the staff PIN, 4 digits (no file = 1234). Changed on the console: grey bar on Home, the last spot on the map
+//   STAFF.TSV   the staff PIN, scrambled since v5.30 (no file = 1234). Changed on the console: grey bar on Home, the last spot on the map
 //   BOARDS.TSV  made by the laptop, changed by the console: unit code, the grooves that have a board (like 1,2,3,5)
 //               no line for a unit = a board in every groove
 //   KINDS.TSV   category, type, name, unit, shelf, copies, good for, what it is
@@ -234,7 +244,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.27";
+const char VERSION[] PROGMEM = "5.30";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -337,7 +347,19 @@ const unsigned long STAFF_MS = 300000UL;        // once the PIN is right, change
 // ...and they lock again the moment the Home screen shows, or after 2 minutes with nobody touching the console
 const byte PIN_TRIES = 5;                       // this many wrong PINs in a row and the PIN screen rests for a while
 const unsigned long PIN_REST_MS = 60000UL;      // how long it rests: guessing all 10,000 PINs by hand would take days
-char staffPin[5] = "1234";
+uint32_t staffHash = 0;                          // the staff PIN, scrambled (v5.30). The PIN itself is never kept, on the card or in memory.
+// The scramble: the letters of "Loki" stirred together with the four digits, 1500 times over. The card holds only the
+// result, so nobody can read the PIN off the card or over the USB cable. (It is still only a 4-digit PIN: a program
+// could try all 10,000. What this stops is someone simply reading it or typing a new one in from a laptop.)
+uint32_t pinHash(const char* pin) {
+  uint32_t h = 2166136261UL;
+  for (int r = 0; r < 1500; r++) {
+    for (const char* p = "Loki"; *p; p++) { h ^= (byte)*p; h *= 16777619UL; }
+    for (byte i = 0; i < 4 && pin[i]; i++) { h ^= (byte)pin[i]; h *= 16777619UL; }
+    h ^= (uint32_t)r;
+  }
+  return h;
+}
 unsigned long staffUntil = 0;
 enum { P_ENTER, P_NEW1, P_NEW2 };               // typing the PIN / a new PIN / the new PIN again
 enum { AFTER_ORGANIZE, AFTER_MOVE, AFTER_CODE, AFTER_DOMOVE, AFTER_NEWPIN, AFTER_RESET, AFTER_UNDO, AFTER_NOTHING };   // what happens once the PIN is right
@@ -432,6 +454,10 @@ void footer(const __FlashStringHelper* hint) {            // the grey bar at the
   tft.fillRect(0, 294, 480, 26, PANEL);
   textF(14, 312, hint, DIM, SMALL);
 }
+void doneBar(const __FlashStringHelper* words) {          // the same bar in green with black words: something was just saved, and it should be seen (v5.28)
+  tft.fillRect(0, 288, 480, 32, GREEN);
+  textF(14, 310, words, BLACK, BOLD);
+}
 // the little picture for each category, drawn from simple shapes
 void icon(byte cat, int cx, int cy, uint16_t c) {
   switch (cat) {
@@ -469,7 +495,7 @@ void drawDog(int x, int y, const uint8_t* pic, byte w, byte h, byte scale, bool 
   }
   tft.setAddrWindow(0, 0, tft.width() - 1, tft.height() - 1);
 }
-static_assert(WAVE_W * 2 <= 200 && TILT_W <= 200 && SNIFF_W <= 200 && SLEEP_W * 2 <= 200 && WAKE_W * 2 <= 200 && WALK_W <= 200 && SIT_W <= 200 && BARK_W <= 200 && HOP_W <= 200, "a dog picture is wider than the row buffer in drawDog");
+static_assert(WAVE_W * 2 <= 200 && TILT_W <= 200 && SNIFF_W <= 200 && SLEEP_W * 2 <= 200 && WAKE_W * 2 <= 200 && WALK_W <= 200 && SIT_W <= 200 && BARK_W <= 200, "a dog picture is wider than the row buffer in drawDog");
 bool somethingWaiting() { return keyCount || missedPress || Serial1.available() || Serial.available(); }   // the dog never makes a person wait
 
 // On an item's screen: once the QR is up the dog walks in from the left and sits by the QR. There it does one small
@@ -478,7 +504,7 @@ bool somethingWaiting() { return keyCount || missedPress || Serial1.available() 
 // With no notes on the screen there is room to draw it double size (v5.27). It stops if the screen changes.
 // dogStep: 0 = not there, 1..200 = walking, DOG_REST = sitting until it is time to turn round.
 #define MAX2(a, b) ((a) > (b) ? (a) : (b))
-const byte REST_W = MAX2(MAX2(SIT_W, BARK_W), MAX2(MAX2(WAVE_W, TILT_W), SNIFF_W)), REST_LIFT = 8;   // the widest sitting picture; how high a bounce goes
+const byte REST_W = MAX2(MAX2(SIT_W, BARK_W), MAX2(MAX2(WAVE_W, TILT_W), SNIFF_W)), REST_LIFT = 6;   // the widest sitting picture; how high a bounce goes
 static_assert(REST_W * 2 <= 200 && WALK_W * 2 <= 200, "a dog picture drawn double is wider than the row buffer in drawDog");
 const byte DOG_REST = 255; const unsigned int DOG_REST_MS = 4200;
 int dogStopX() { return 300 - WALK_W * dogScale - 2 * dogScale; }           // the walk ends here, short of the QR
@@ -531,7 +557,7 @@ void dogTick() {
 // and is used as normal, so nobody types or scans twice.
 const unsigned long SLEEP_MS = 300000UL;
 bool asleep = false; byte sleepStep = 0; unsigned long sleepAt = 0;
-void draw(); void lightsOff(); bool drawQRText(int x, int y, const char* url); byte firstVisibleRow();   // (written further down)
+void draw(); void lightsOff(); bool drawQRText(int x, int y, const char* url); byte firstVisibleRow(); void blinkDot(byte slot, bool lit);   // (written further down)
 const int SLEEP_MID = 318, SLEEP_X = SLEEP_MID - SLEEP_W, SLEEP_Y = 150 - SLEEP_H;   // drawn double size, right of the website's code
 void drawSleepFrame() {
   drawDog(SLEEP_X, SLEEP_Y, (const uint8_t*)pgm_read_ptr(&SLEEP[sleepStep % SLEEP_N]), SLEEP_W, SLEEP_H, 2);
@@ -613,8 +639,7 @@ void blinkTick() {
   byte first = firstVisibleRow();                                 // the dot beside each row goes on and off with its light (v5.26)
   for (byte sl = 0; sl < ROWS_ON_SCREEN; sl++) {
     byte i = first + sl; if (i >= listCount || listLed[i] < 0) continue;
-    uint32_t c = LIST_RGB[listColor[i]];
-    tft.fillCircle(30, 44 + sl * 50 + 24, 10, (mask & (1 << i)) ? RGB((c >> 16) & 255, (c >> 8) & 255, c & 255) : RGB(56, 56, 58));
+    blinkDot(sl, mask & (1 << i));                               // (the colour dot on the left stays solid: it says which colour to look for)
   }
 }
 
@@ -725,17 +750,23 @@ void loadUnits() {
   if (f) f.close();
 }
 // the staff PIN: STAFF.TSV, one line with 4 digits
-void loadStaff() {
-  strcpy_P(staffPin, PSTR("1234"));
-  File f = cardOpen("STAFF.TSV");
-  if (!f) return;
-  long pos = readLine(f, 0); f.close();
-  if (pos >= 0 && strlen(field[0]) == 4) { bool digits = true; for (byte i = 0; i < 4; i++) if (!isdigit(field[0][i])) digits = false; if (digits) strcpy(staffPin, field[0]); }
-}
 bool saveStaff() {
   File f = cardOpen("STAFF.TSV", O_WRITE | O_CREAT | O_TRUNC);
   if (!f) return false;
-  f.println(staffPin); f.close(); return true;
+  char line[12]; snprintf_P(line, sizeof(line), PSTR("L%08lx"), (unsigned long)staffHash);
+  f.println(line); f.close(); return true;
+}
+void loadStaff() {
+  staffHash = pinHash("1234");
+  File f = cardOpen("STAFF.TSV");
+  if (!f) return;
+  long pos = readLine(f, 0); f.close();
+  if (pos < 0) return;
+  if (field[0][0] == 'L' && strlen(field[0]) == 9) { staffHash = strtoul(field[0] + 1, NULL, 16); return; }
+  if (strlen(field[0]) == 4) {                                     // a card from before v5.30 holds the 4 digits: scramble them and write that back
+    for (byte i = 0; i < 4; i++) if (!isdigit(field[0][i])) return;
+    staffHash = pinHash(field[0]); saveStaff();
+  }
 }
 bool staffOK() { return staffUntil != 0 && (long)(staffUntil - millis()) > 0; }
 // which grooves have a board: BOARDS.TSV, one line per unit like  AUD<tab>1,2,3,5
@@ -1080,10 +1111,9 @@ void drawTyping() {                             // the bottom bar while someone 
 
 void doneFooter() {                              // after a change: say it is saved, and what to do by hand
   webDirty = true;                                     // (an undo counts too)
-  if (doneNote == 1) footer(F("Done. Saved on the card."));
-  else if (doneNote == 2) footer(F("Done. Now swap the two unit bodies."));
-  else if (doneNote == 3) footer(F("Undone. Saved on the card."));
-  else footer(F("Done. Saved on the card."));
+  if (doneNote == 2) doneBar(F("Done. Now swap the two unit bodies."));
+  else if (doneNote == 3) doneBar(F("Undone. Saved on the card."));
+  else doneBar(F("Done. Saved on the card."));
   doneNote = 0;
 }
 void drawHomeBar() {                            // the grey bar; Down past the last picture lands on it and it opens the move screens
@@ -1108,15 +1138,17 @@ void drawHome() {
 }
 
 // one row of a list: a bold line and a grey line under it
-void drawRow(byte slot, bool on, const char* top, const char* under, int dotColor) {
+void drawRow(byte slot, bool on, const char* top, const char* under, int dotColor, int maxRight = 470) {
   int y = 44 + slot * 50;
   tft.fillRect(0, y, 480, 48, on ? PICKED : BG);
   if (on) tft.fillRect(0, y, 5, 48, ACCENT);
   int x = 18;
   if (dotColor >= 0) { uint32_t c = LIST_RGB[dotColor]; tft.fillCircle(30, y + 24, 10, RGB((c >> 16) & 255, (c >> 8) & 255, c & 255)); x = 52; }
-  text(x, y + 20, top, WHITE, BOLD, 470 - x);
-  text(x, y + 40, under, DIM, SMALL, 470 - x);
+  text(x, y + 20, top, WHITE, BOLD, maxRight - x);
+  text(x, y + 40, under, DIM, SMALL, maxRight - x);
 }
+const int BLINK_DOT_X = 356;                       // put-away list: the white dot that shows how the light blinks, right of the words
+void blinkDot(byte slot, bool lit) { tft.fillCircle(BLINK_DOT_X, 44 + slot * 50 + 24, 7, lit ? WHITE : RGB(48, 48, 50)); }
 // the rows of whichever list is showing, 5 at a time, keeping the cursor on screen
 void drawRows(int onlyA = -1, int onlyB = -1) {   // with two row numbers: just those two (the cursor moved from one to the other)
   byte first = firstVisibleRow();
@@ -1160,9 +1192,11 @@ void drawRows(int onlyA = -1, int onlyB = -1) {   // with two row numbers: just 
     } else if (mode == PUTAWAY) {
       loadKind(listKind[i]);
       copyText(top, field[K_NAME], sizeof(top));
-      char where[40], blink[8]; whereText(where, sizeof(where)); strcpy_P(blink, BLINK_NAME[listColor[i]]);
-      if (listLed[i] >= 0 && LIST_BLINKS) snprintf_P(under, sizeof(under), PSTR("%s  -  %s light"), where, blink); else strcpy(under, where);
-      drawRow(s, i == cursor, top, under, listLed[i] >= 0 ? listColor[i] : -1);
+      char where[40], blink[16]; whereText(where, sizeof(where)); strcpy_P(blink, BLINK_NAME[listColor[i]]);
+      strcpy(under, where);
+      bool blinks = listLed[i] >= 0 && LIST_BLINKS;
+      drawRow(s, i == cursor, top, under, listLed[i] >= 0 ? listColor[i] : -1, blinks ? BLINK_DOT_X - 16 : 470);
+      if (blinks) { blinkDot(s, true); strcat_P(blink, PSTR(" light")); text(BLINK_DOT_X + 14, 44 + s * 50 + 29, blink, DIM, SMALL, 466 - BLINK_DOT_X - 14); }
     } else {
       loadKind(row[i]);
       copyText(top, field[K_NAME], sizeof(top));
@@ -1295,8 +1329,8 @@ void drawItem() {
   // Working out a QR takes the Mega over a second, and nothing else can happen meanwhile. So the page is drawn
   // without it, and loop() adds the QR once nobody has pressed anything for a moment: flicking through items stays quick.
   tft.fillRect(312, 82, 156, 156, PANEL); qrWanted = 1; qrAt = millis();
-  if (justCounted) { footer(justCounted == 2 ? F("It already says that. Nothing was changed.") : F("Count changed.   Select = update the website")); offerSync = justCounted == 1; justCounted = 0; }
-  else if (justMoved) { justMoved = false; footer(F("Moved and saved.   Select = update the website")); offerSync = true; }
+  if (justCounted) { if (justCounted == 2) footer(F("It already says that. Nothing was changed.")); else doneBar(F("Count changed.   Select = update the website")); offerSync = justCounted == 1; justCounted = 0; }
+  else if (justMoved) { justMoved = false; doneBar(F("Moved and saved.   Select = update the website")); offerSync = true; }
   else if (justAdded) { justAdded = false; footer(F("Added. It is saved on the card.")); }
   else footer(itemWasScanned ? F("Down: move it     Scan more: a list") : F("Down: move it     Back"));
 }
@@ -1603,6 +1637,7 @@ void startMove() {                              // from a thing's page: pick a u
 void startOrganize() {                         // from the grey bar on Home: start on the first unit on the map
   byte first = 0; while (first < unitTotal && (unitMap[first][0] == 255 || !unitCount[first])) first++;
   moveWhat = W_ITEM; stage = ST_FROM; backDepth = 0; mode = HOME; openMap(first < unitTotal ? first : 0);
+  for (byte i = 0; i < rowCount; i++) if (row[i] == ROW_PHONE) { cursor = i; draw(); preview(); break; }   // (v5.28) start on the Staff page code: a phone that scans it can do everything, so new staff need nothing set up
 }
 void pickedUnit(byte u) {                       // Select on the map
   if (u == ROW_PHONE) return;                                                  // only a QR to look at
@@ -1708,7 +1743,7 @@ void askPinAgain() { pinStep = P_ENTER; pinLen = 0; pinDigit = 0; pinWrong = fal
 void pinDone() {                                 // 4 digits are in
   pinIn[4] = '\0';
   if (pinStep == P_ENTER) {
-    if (strcmp(pinIn, staffPin) != 0) {
+    if (pinHash(pinIn) != staffHash) {
       pinWrong = true; pinLen = 0; pinDigit = 0;
       if (++pinMisses >= PIN_TRIES) { pinMisses = 0; pinRestUntil = millis() + PIN_REST_MS; if (!pinRestUntil) pinRestUntil = 1; }
       draw(); return;
@@ -1729,8 +1764,8 @@ void pinDone() {                                 // 4 digits are in
   if (!staffOK()) { askPinAgain(); return; }                                   // the 5 minutes ran out half way: start over with the PIN in use
   if (pinStep == P_NEW1) { strcpy(pinNew, pinIn); pinStep = P_NEW2; pinLen = 0; pinDigit = 0; pinMismatch = false; draw(); return; }
   if (strcmp(pinIn, pinNew) != 0) { pinStep = P_NEW1; pinLen = 0; pinDigit = 0; pinMismatch = true; draw(); return; }
-  char was[5]; strcpy(was, staffPin); strcpy(staffPin, pinNew);
-  if (!saveStaff()) { strcpy(staffPin, was); header("Could not save", NULL); textF(18, 90, F("The SD card would not write. Is it locked?"), WHITE, SMALL); footer(F("Back")); return; }
+  uint32_t was = staffHash; staffHash = pinHash(pinNew);
+  if (!saveStaff()) { staffHash = was; header("Could not save", NULL); textF(18, 90, F("The SD card would not write. Is it locked?"), WHITE, SMALL); footer(F("Back")); return; }
   popScreen(); justChanged = true; reload(); draw(); preview();
 }
 bool pinResting() {                              // too many wrong PINs: no digits are taken for a minute
@@ -1842,8 +1877,8 @@ void drawBatch() {
     footer(F("Keep the phone at the scanner"));
   } else {
     textF(18, 190, F("All of them are in. Each one is on Recent"), WHITE, SMALL); textF(18, 214, F("changes, where it can be undone."), WHITE, SMALL);
-    footer(F("Select = update the website    Other = Home")); offerSync = true;
-    startShow(HOP, HOP_N, HOP_W, HOP_H, 2, HOP_N - 1);
+    doneBar(F("All saved.   Select = update the website")); offerSync = true;
+    startShow(WAVE, WAVE_N, WAVE_W, WAVE_H, 3, 0);              // every part is in: a wave (the hop pictures made way for same-size ones, v5.29)
   }
 }
 void batchCode(char* c) {
@@ -2411,6 +2446,7 @@ void receiveFile(char* args) {
   if (!sp) { Serial.println(F("@ERR usage")); return; }
   *sp = '\0'; long size = atol(sp + 1);
   if (!strstr_P(args, PSTR(".TSV")) || strlen(args) > 12) { Serial.println(F("@ERR only .TSV files")); return; }
+  if (strcasecmp_P(args, PSTR("STAFF.TSV")) == 0 || strcasecmp_P(args, PSTR("WEB.TSV")) == 0) { Serial.println(F("@ERR the PIN and the website link are only changed on the console")); return; }
   bool wasKinds = strcasecmp_P(args, PSTR("KINDS.TSV")) == 0;
   if (wasKinds) kindsFile.close();
   header("Receiving from laptop", NULL); text(18, 90, args, WHITE, BOLD);
@@ -2435,6 +2471,10 @@ void readLaptop() {                              // a line of text from the Seri
     if (c != '\n' && c != '\r') { if (len < sizeof(buf) - 1) buf[len++] = c; continue; }
     buf[len] = '\0'; len = 0;
     if (!buf[0]) continue;
+    // (v5.30) Anything from the laptop that changes the card needs the staff PIN typed on the console first, so a cable
+    // alone is not enough. A card with no data files yet is the one exception: there is nothing to protect and no way in.
+    bool mayWrite = staffOK() || !kindsFile || unitTotal == 0;
+    if ((strncasecmp_P(buf, PSTR("@PUT "), 5) == 0 || strcasecmp_P(buf, PSTR("@CLEARMOVES")) == 0 || strcasecmp_P(buf, PSTR("@RESET")) == 0) && !mayWrite) { Serial.println(F("@LOCKED type the staff PIN on the console first")); continue; }
     if (strncasecmp_P(buf, PSTR("@PUT "), 5) == 0) { receiveFile(buf + 5); return; }
     if (strcasecmp_P(buf, PSTR("@MOVES")) == 0) {                    // print every move done at the desk, for the spreadsheet
       File f = cardOpen("MOVES.TSV"); while (f && f.available()) Serial.write(f.read()); if (f) f.close();
@@ -2465,7 +2505,7 @@ void readLaptop() {                              // a line of text from the Seri
     if (strcasecmp_P(buf, PSTR("@RESET")) == 0) { startOver(); Serial.println(F("@OK")); continue; }
     if (strcasecmp_P(buf, PSTR("@STATUS")) == 0) {
       Serial.print(F("@STATUS changes=")); Serial.print(moveTotal);
-      Serial.print(F(" pin=")); Serial.print(strcmp_P(staffPin, PSTR("1234")) == 0 ? F("starting") : F("changed"));
+      Serial.print(F(" pin=")); Serial.print(staffHash == pinHash("1234") ? F("starting") : F("changed"));
       Serial.print(F(" web=")); Serial.print(webPass[0] ? F("linked") : F("no"));
       Serial.print(F(" staff=")); Serial.print(staffOK() ? F("open") : F("locked"));
       Serial.print(F(" screen=")); Serial.println(mode); continue;

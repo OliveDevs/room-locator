@@ -38,15 +38,14 @@ def animation(names, H, padL=3, padR=3, same_canvas=False):
         base = Image.new('RGB', (W, H), BG); base.paste(Image.new('RGB', (W, H), EDGE), mask=ring); base.paste(rgb, mask=a.point(lambda v: 255 if v > 110 else 0)); cells.append(base)
     return cells
 ANIMS = [  # name, frames, height on screen, left pad
- ('WALK',  frames('console-walk', 6, None), 56, 8, True),
+ ('WALK',  frames('console-walk', 6, None), 60, 8, True),
  ('SIT',   frames('console-sit', 2, None), 60, 3, True),
  ('SLEEP', frames('console-sleep', 4, None), 48, 3, True),
  ('WAKE',  frames('console-wake', 4, None), 60, 3, True),
  ('BARK',  frames('console-bark', 3, None), 60, 3, True),
- ('HOP',   frames('console-hop', 3, None), 72, 3, True),
- ('WAVE',  frames('console-wave', 4, None), 50, 3, True),
- ('TILT',  frames('console-head-tilt', 4, None), 48, 3, True),
- ('SNIFF', frames('console-sniff', 4, None), 44, 3, True),
+ ('WAVE',  frames('console-wave', 4, None), 60, 3, True),      # these three were drawn a little larger than the rest:
+ ('TILT',  frames('console-head-tilt', 4, None), 60, 3, True), # the heights here make Loki the same size in every animation
+ ('SNIFF', frames('console-sniff', 4, None), 54, 3, True),
 ]
 missing = [a[0] for a in ANIMS if not a[1]]
 if missing: sys.exit('frames missing for: ' + ', '.join(missing))
