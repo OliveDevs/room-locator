@@ -1,5 +1,5 @@
 {
-  "source": "Room Locator console, changes brought over on 2026-11-19",
+  "source": "Room Locator SD snapshot (run sync_room.py after changing the card)",
   "units": [
     {
       "code": "TRN",
@@ -686,9 +686,8 @@
     ]
   ],
   "synced": {
-    "lines": 4,
-    "first": "587245|SHOP|6",
-    "at": "2026-11-19T01:04:10.119Z"
+    "lines": 0,
+    "first": ""
   },
-  "published": "2026-11-19T01:04:29.668Z"
+  "published": "2026-11-19T03:31:05.000Z"
 }
