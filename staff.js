@@ -531,6 +531,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     // Scanned straight from the console on a device that has the key: save by itself after a 5-second count, so keeping
     // the website in step is one scan and nothing else. Cancel stops it; nothing to change means nothing is saved.
     clearInterval(autoTimer); $('sync-auto').hidden = true;
+    if (cameFromConsole && !moved) { $('home-done').textContent = 'The website already matches the console. Nothing to do.'; $('home-done').hidden = false; }
     if (cameFromConsole && moved && keep.get('rl-key')) {
       let left = 5; $('sync-auto').hidden = false;
       const tick = () => { $('sync-auto-text').textContent = 'Saving to the website in ' + left + '...'; if (left-- <= 0) { clearInterval(autoTimer); $('sync-auto').hidden = true; $('sync-publish').click(); } };
@@ -539,7 +540,9 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   }
   const boardBelowIn = (u, n) => { while (n > 1 && u.boards && u.boards.length && !u.boards.includes(n)) n--; return n; };
   const download = (obj, name) => { const blob = new Blob([JSON.stringify(obj, null, 2) + '\n'], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
-  $('sync-publish').addEventListener('click', async e => { if (!outData) return; if (await publish({ 'data.json': outData, 'room.json': outRoom }, 'Website matched to the console (staff page)', e.target)) { $('sync-saved').hidden = false; setTimeout(() => location.reload(), 2500); } });
+  $('sync-publish').addEventListener('click', async e => { if (!outData) return; if (await publish({ 'data.json': outData, 'room.json': outRoom }, 'Website matched to the console (staff page)', e.target)) { $('sync-saved').hidden = false; try { sessionStorage.setItem('rl-done', 'Done: the website now matches the console. Students see the new shelves in about a minute. Nothing else to do.'); } catch (err) { } setTimeout(() => location.reload(), 2500); } });
+  // after that reload, say plainly that it worked (the page used to come back looking as if nothing had happened)
+  try { const done = sessionStorage.getItem('rl-done'); if (done) { sessionStorage.removeItem('rl-done'); $('home-done').textContent = done; $('home-done').hidden = false; } } catch (err) { }
   $('web-reset').addEventListener('click', async e => {
     if (!confirm('Put the website back to the Nov 16 setup? Every change brought over from the console since then, and every edit made here, is taken off the website.')) return;
     const [d, r] = await Promise.all([fetch('backup/2026-11-16/data.json?x=' + Date.now()).then(x => x.json()), fetch('backup/2026-11-16/room.json?x=' + Date.now()).then(x => x.json())]);

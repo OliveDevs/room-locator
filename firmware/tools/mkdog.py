@@ -42,7 +42,7 @@ ANIMS = [  # name, frames, height on screen, left pad
  ('SIT',   frames('console-sit', 2, None), 60, 3, True),
  ('SLEEP', frames('console-sleep', 4, None), 48, 3, True),
  ('WAKE',  frames('console-wake', 4, None), 60, 3, True),
- ('BARK',  frames('console-bark-word', 3, frames('console-bark', 3, None)), 60, 3, True),   # the set with the word "Bark!" when it is there
+ ('BARK',  frames('console-bark', 3, None), 60, 3, True),
  ('HOP',   frames('console-hop', 3, None), 72, 3, True),
  ('WAVE',  frames('console-wave', 4, None), 50, 3, True),
  ('TILT',  frames('console-head-tilt', 4, None), 48, 3, True),
