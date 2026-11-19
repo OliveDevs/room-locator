@@ -1,22 +1,21 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400..700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=20261118l"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
+  <link rel="stylesheet" href="styles.css?v=compact-loki-1"><link rel="stylesheet" href="staff-layout.css"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
 <main class="staff-main">
 <h1>Staff tools</h1>
 
 <div class="tool-tabs" role="tablist" aria-label="Staff tools">
-<button type="button" role="tab" id="tab-move" aria-controls="tool-move" aria-selected="true">Move a thing</button>
+<button type="button" role="tab" id="tab-move" aria-controls="tool-move" aria-selected="true">Move an item</button>
 <button type="button" role="tab" id="tab-shelf" aria-controls="tool-shelf" aria-selected="false">Move a shelf</button>
-<button type="button" role="tab" id="tab-many" aria-controls="tool-many" aria-selected="false">Move several things</button>
-<button type="button" role="tab" id="tab-add" aria-controls="tool-add" aria-selected="false">Add a new item</button>
+<button type="button" role="tab" id="tab-many" aria-controls="tool-many" aria-selected="false">Move several</button>
+<button type="button" role="tab" id="tab-add" aria-controls="tool-add" aria-selected="false">Add an item</button>
 <button type="button" role="tab" id="tab-edit" aria-controls="tool-edit" aria-selected="false">Edit an item</button>
-<button type="button" role="tab" id="tab-sync" aria-controls="tool-sync" aria-selected="false">From the console</button>
+<button type="button" role="tab" id="tab-sync" aria-controls="tool-sync" aria-selected="false">Sync website</button>
 </div>
 
 <section class="home-status">
 <p id="home-done" class="home-done" role="status" hidden></p>
 <p id="home-sync"></p>
-<p><button type="button" id="home-sync-go" class="button-secondary">Bring in the console's changes</button></p>
 <div class="status-row"><span id="home-key"></span><button type="button" id="home-key-set" class="link-button"></button><button type="button" id="home-share" class="link-button" hidden>Change the passcode or console link</button></div>
 <p id="home-expiry" class="health-warn" hidden></p>
 <div id="share" class="connect" hidden>
@@ -33,17 +32,21 @@
 </div>
 </section>
 
-<section id="room3d-card" class="room3d-card" hidden>
-<h2>The room: click a shelf</h2>
+<details id="room3d-card" class="room3d-card" hidden>
+<summary>Choose a shelf on the room map</summary>
 <p class="tool-note" id="room3d-help"></p>
 <div id="room3d" class="room3d"></div>
 <p class="room3d-key"><span class="key key-now"></span>where it is now<span class="key key-pick"></span>where it goes</p>
 <div id="shelf-contents" class="shelf-contents" hidden></div>
-</section>
+</details>
 
 <section id="tool-move" class="tool" role="tabpanel" aria-labelledby="tab-move">
 <form id="move-form" class="staff-form">
-<label class="wide">Item<input name="thing" list="item-list" required placeholder="Start typing the item name" autocomplete="off"></label>
+<label class="wide">Find an item<input name="thing" type="search" required placeholder="Type part of the item name" autocomplete="off" aria-describedby="move-search-status"></label>
+<div class="wide" id="move-search-results" hidden>
+<p class="tool-note" id="move-search-status" role="status"></p>
+<ul class="edit-matches" id="move-matches" aria-label="Matching items"></ul>
+</div>
 <p class="wide tool-note" id="move-now"></p>
 <label>Move to unit<select name="unit" required></select></label>
 <label>Shelf<select name="shelf" required></select></label>
@@ -68,7 +71,7 @@
 
 <section id="tool-many" class="tool" role="tabpanel" aria-labelledby="tab-many" hidden>
 <form id="many-form" class="staff-form">
-<p class="wide tool-note">Pick a shelf, untick anything that is staying, and choose where the rest go. Each thing is added to the list of changes below. Do this for as many shelves as you like, then send the whole list to the console in one go.</p>
+<p class="wide tool-note">Pick a shelf, choose the items that are moving, and add them to the list. Repeat for other shelves, then send the queued moves to the console.</p>
 <label>From unit<select name="fromUnit" required></select></label>
 <label>Shelf<select name="fromShelf" required></select></label>
 <div class="wide many-list" id="many-list"></div>
@@ -125,10 +128,14 @@
 <section id="tool-edit" class="tool" role="tabpanel" aria-labelledby="tab-edit" hidden>
 <form id="edit-form" class="staff-form">
 <p class="wide tool-note">Change the photo, the manual link or the description on an item's guide page. This only changes the website, not the console.</p>
-<label class="wide">Item<input name="thing" list="item-list" placeholder="Start typing the item name" autocomplete="off"></label>
+<label class="wide">Find an item<input name="thing" type="search" placeholder="Type part of the item name" autocomplete="off" aria-describedby="edit-search-status"></label>
+<div class="wide" id="edit-search-results" hidden>
+<p class="tool-note" id="edit-search-status" role="status"></p>
+<ul class="edit-matches" id="edit-matches" aria-label="Matching items"></ul>
+</div>
 <div class="wide" id="edit-fields" hidden>
 <div class="edit-grid">
-<div class="wide edit-preview" id="edit-preview"></div>
+<div class="wide edit-preview" id="edit-preview" tabindex="-1"></div>
 <label class="wide">New photo URL<input name="photo" placeholder="https://... or photos/name.jpg"><small class="field-help">Use a photo Lending took, or one you are allowed to use. Leave it blank to keep the photo it has now.</small></label>
 <label>Photo credit<input name="credit" placeholder="IDeATe Lending staff"></label>
 <label>Photo source or licence URL<input name="crediturl" type="url" placeholder="https://..."></label>
@@ -136,7 +143,7 @@
 <label>Manual link name<input name="manualname" placeholder="Owner's manual (PDF)"></label>
 <label>Manual link<input name="manual" type="url" placeholder="https://..."></label>
 <label class="wide">Short description<textarea name="description" rows="2" placeholder="What this item is useful for"></textarea></label>
-<label>How many Lending has<input name="copies" type="number" min="1" step="1" inputmode="numeric"></label>
+<label>How many Lending has<input name="copies" type="number" min="1" max="250" step="1" inputmode="numeric"></label>
 <button type="button" id="edit-publish" class="wide">Save to the website</button>
 <button type="button" id="edit-count-code" class="wide button-secondary">Only tell the console the new count</button>
 <button type="button" id="edit-download" class="wide button-secondary">Or download the file instead (data.json)</button>
@@ -155,7 +162,7 @@
 
 <section id="tool-sync" class="tool" role="tabpanel" aria-labelledby="tab-sync" hidden>
 <div class="sync-box">
-<p class="tool-note">Bring the console's changes into this website. On the console: Home, Down past the last picture, Select, then "Send to website" near the end of the map. Point your phone's normal camera at each page it shows: this page opens by itself with those changes. The button below does the same from inside this page.</p>
+<p class="tool-note">Open <strong>Send to website</strong> on the console. Scan each QR page with your phone camera or use the scanner below.</p>
 <div class="sync-camera"><video id="sync-video" playsinline muted hidden></video><canvas id="sync-canvas" hidden></canvas></div>
 <div class="sync-actions"><button type="button" id="sync-start">Scan the console's codes</button><button type="button" id="sync-stop" class="button-secondary" hidden>Stop the camera</button></div>
 <p id="sync-pages" class="sync-pages"></p>
@@ -209,7 +216,7 @@
 <p id="code-all-what"></p>
 <ul id="code-all-list" class="code-all-list"></ul>
 <button type="button" id="code-all-go">Send them all to the console</button>
-<p class="note">Needs console version 5.15 or newer. On an older console, use Next code and press Select for each one.</p>
+<button type="button" id="code-add-more" class="link-button">Queue another change</button>
 </div>
 <div id="code-play" class="code-play" hidden>
 <p id="code-play-count" class="code-play-count"></p>
@@ -268,10 +275,9 @@
 </details>
 </div>
 </main>
-<datalist id="item-list"></datalist>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="room3d.js?v=20261116g"></script>
-<script src="staff.js?v=20261118f" defer></script></body></html>
+<script src="staff.js?v=staff-search-5" defer></script></body></html>

@@ -220,7 +220,14 @@ body.in-cat .header-nav a:hover{text-decoration-color:var(--cat-ink)}
 /* kit cards: room around the words, both lines together */
 a.item-card.kit-card{padding:18px 20px!important;justify-content:center;min-height:104px!important}a.kit-card>div{gap:6px}
 .kit-card .card-where{font-weight:500;color:var(--muted);margin:0}
-.pup-peek{width:150px;margin:0}@media(max-width:580px){.pup-peek{width:104px;margin:0}}
+.pup-peek{width:112px;margin:0}
+.pup-room,.pup-wave{width:80px}
+.empty-state .pup{width:84px}
+.pup-item{width:72px}
+@media(max-width:580px){
+  .pup-peek,.pup-room,.pup-wave{width:64px}
+  .pup-item{width:56px}
+}
 
 .kit-reminder{max-width:420px;margin:8px 0 36px}.kit-reminder .side-block{background:var(--soft)!important;border-radius:12px;padding:20px!important;border-bottom:0;margin:0!important}
 .home-done{background:#009647;color:#000;font-weight:650;padding:14px 16px;border-radius:10px;margin:0 0 14px!important}

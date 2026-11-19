@@ -83,14 +83,39 @@ async function checkKey() {
   const info = await r.json();
   return info.permissions && info.permissions.push ? '' : 'This key can read the site but not change it. It needs Contents: Read and write.';
 }
-// files = { 'data.json': object, ... }. Returns true when every file is on the website.
+async function publishTogether(files, message) {
+  async function gitJson(path, method = 'GET', body) {
+    const response = await gh('/git/' + path, { method, ...(body ? { body: JSON.stringify(body) } : {}) });
+    if (!response.ok) {
+      if (response.status === 401) throw Error(DEAD_KEY);
+      if (response.status === 403) throw Error('GitHub denied this write. Check the site key or repository permissions');
+      if (method === 'PATCH' && (response.status === 409 || response.status === 422)) {
+        throw Error('The branch could not be updated. Reload and review the latest data before trying again');
+      }
+      throw Error('GitHub returned ' + response.status + ' while preparing the website update');
+    }
+    return response.json();
+  }
+  const ref = 'heads/' + BRANCH;
+  const head = (await gitJson('ref/' + ref)).object.sha;
+  const base = await gitJson('commits/' + head);
+  const entries = Object.entries(files).map(([path, value]) => ({
+    path, mode: '100644', type: 'blob', content: JSON.stringify(value, null, 2) + '\n'
+  }));
+  const tree = await gitJson('trees', 'POST', { base_tree: base.tree.sha, tree: entries });
+  const commit = await gitJson('commits', 'POST', { tree: tree.sha, parents: [head], message });
+  await gitJson('refs/' + ref, 'PATCH', { sha: commit.sha, force: false });
+}
+// Returns true when the branch contains the update.
 async function publish(files, message, button) {
   if (!keep.get('rl-key')) { afterKey = () => button ? button.click() : publish(files, message, button); askForKey('Saving to the website needs the staff passcode on this device, once.'); return false; }
   const label = button ? button.textContent : ''; if (button) { button.disabled = true; button.textContent = 'Saving...'; }
   try {
     const stamp = new Date().toISOString();
-    for (const [path, value] of Object.entries(files)) {
-      if (path === 'data.json' || path === 'room.json') value.published = stamp;
+    const entries = Object.entries(files);
+    for (const [path, value] of entries) if (path === 'data.json' || path === 'room.json') value.published = stamp;
+    if (entries.length > 1) await publishTogether(files, message);
+    else for (const [path, value] of entries) {
       const now = await gh('/contents/' + path + '?ref=' + BRANCH);
       if (now.status === 401 || now.status === 403) { keep.set('rl-key', null); afterKey = () => button ? button.click() : publish(files, message, button); askForKey('The saved key no longer works. Paste a new one.'); return false; }
       const sha = now.ok ? (await now.json()).sha : undefined;
@@ -103,7 +128,7 @@ async function publish(files, message, button) {
     if (files['key.json']) { justLocked = JSON.stringify(files['key.json']); justLockedAt = Date.now(); }
     status.textContent = 'Saved to the website. Everyone sees it in about a minute.';
     return true;
-  } catch (err) { status.textContent = 'Not saved: ' + err.message + '. Nothing on the website changed for that file. Try again, or use the download.'; return false; }
+  } catch (err) { status.textContent = 'Could not confirm the website save: ' + err.message + '. Check the website before retrying, or use the download.'; return false; }
   finally { if (button) { button.disabled = false; button.textContent = label; } }
 }
 $('connect-save').addEventListener('click', async () => {
@@ -175,10 +200,31 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   const boardBelow = (u, n) => { while (n > 1 && !hasBoard(u, n)) n--; return n; };
   const onShelf = (code, n) => { const u = unitBy[code]; return kinds.filter(k => k.u === code && u && u.shelves && boardBelow(u, k.s) === n); };
   const placeName = (code, n) => { const u = unitBy[code]; if (!u) return code; return u.shelves ? u.name + ', shelf ' + n : u.name + ' (ask at the desk)'; };
+  const searchName = value => value.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().trim();
+  function itemMatches(query) {
+    const words = query.split(/\s+/);
+    return kinds.filter(item => words.every(word => searchName(item.n).includes(word)));
+  }
+  function showItemMatches(tool, matches, onSelect) {
+    const list = $(tool + '-matches');
+    list.replaceChildren();
+    const shown = matches.slice(0, 12);
+    $(tool + '-search-status').textContent = !shown.length ? 'No matches. Try a shorter name.' :
+      matches.length > shown.length ? 'Showing the first 12 matches. Type more to narrow the list.' : 'Select an item.';
+    for (const item of shown) {
+      const row = document.createElement('li'), button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = item.n;
+      button.addEventListener('click', () => onSelect(item));
+      row.append(button); list.append(row);
+    }
+  }
 
   // ---- tabs
   const tabs = ['move', 'shelf', 'many', 'add', 'edit', 'sync'];
   tabs.forEach(t => $('tab-' + t).addEventListener('click', () => {
+    if ($('tab-' + t).getAttribute('aria-selected') === 'false' && playTimer) stopPlay(false);
+    if (t !== 'sync' && stream) stopCamera();
     tabs.forEach(o => { $('tab-' + o).setAttribute('aria-selected', o === t); $('tool-' + o).hidden = o !== t; });
     $('code-out').hidden = !made.length || t === 'sync'; status.textContent = '';
   }));
@@ -235,14 +281,32 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   }
   function drawAll() {
     const ok = made.filter(canBatch), box = $('code-all');
-    box.hidden = ok.length < 2 || !!playTimer;
+    box.hidden = !made.length || !!playTimer;
     if (box.hidden) return;
     const first = nextRound().length;
-    $('code-all-title').textContent = ok.length + ' changes are lined up';
+    $('code-all-title').textContent = made.length + (made.length === 1 ? ' change queued' : ' changes queued');
+    $('code-all-go').hidden = ok.length < 2;
     $('code-all-go').textContent = first < ok.length ? 'Send the first ' + first + ' to the console' : 'Send them all to the console';
-    $('code-all-what').textContent = (first < ok.length ? (first === 64 ? 'The console takes 64 at a time. ' : 'Some of these build on earlier ones, so they go in turns. ') + 'After the first ' + first + (first === 1 ? ' is' : ' are') + ' in, send the rest the same way. ' : '') + (made.length > ok.length ? (made.length - ok.length) + ' other code' + (made.length - ok.length === 1 ? '' : 's') + ' (new items, linking) cannot go in a batch: show ' + (made.length - ok.length === 1 ? 'it' : 'them') + ' on ' + (made.length - ok.length === 1 ? 'its' : 'their') + ' own.' : '');
-    $('code-all-list').innerHTML = ok.map(c => '<li><strong>' + esc(c.title) + '</strong> ' + esc(c.what) + '</li>').join('');
+    $('code-all-what').textContent = (first < ok.length ? (first === 64 ? 'The console takes 64 at a time. ' : 'Some changes must go in order. ') + 'Send the rest after the first round. ' : '') + (made.length > ok.length ? 'New item codes are scanned individually.' : '');
+    $('code-all-list').innerHTML = made.map((c, i) => '<li><strong>' + esc(c.title) + '</strong> ' + esc(c.what) + ' <button type="button" class="link-button" data-remove-code="' + i + '" aria-label="' + esc('Remove ' + c.title) + '">Remove</button></li>').join('');
   }
+  $('code-all-list').addEventListener('click', e => {
+    const button = e.target.closest('[data-remove-code]');
+    if (!button) return;
+    const index = Number(button.dataset.removeCode);
+    made.splice(index, 1);
+    if (index < madeAt) madeAt--;
+    madeAt = Math.min(madeAt, made.length - 1);
+    drawCode();
+    const next = $('code-all-list').querySelectorAll('button');
+    (next[Math.min(index, next.length - 1)] || $('tab-move')).focus();
+    status.textContent = made.length ? 'Change removed from the queue.' : 'The queue is empty.';
+  });
+  $('code-add-more').addEventListener('click', () => {
+    const tab = document.querySelector('.tool-tabs [aria-selected="true"]');
+    tab.focus();
+    tab.scrollIntoView({ block: 'center' });
+  });
   function stopPlay(finished) {
     if (playTimer) clearInterval(playTimer); playTimer = null;
     $('code-play').hidden = true; document.querySelector('#code-out .code-steps > ol').hidden = false;
@@ -276,12 +340,15 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   });
   $('code-play-done').addEventListener('click', () => stopPlay(true));
   $('code-play-stop').addEventListener('click', () => stopPlay(false));
-  function showCode(code, title, what, extra) {
+  function showCode(code, title, what, extra, reveal = true) {
     if (code.length >= MAX_CODE) { status.textContent = 'That code is too long for the scanner (' + code.length + ' characters). Use a shorter name.'; $('code-out').hidden = true; return; }
     const had = made.findIndex(c => c.code === code);
     if (had >= 0) madeAt = had; else { made.push({ code, title, what, extra }); madeAt = made.length - 1; }
     status.textContent = made.length > 1 ? 'Added. ' + made.length + ' codes are ready: set up more, or show them to the console one after another.' : '';
-    drawCode(); $('code-out').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (reveal) {
+      drawCode();
+      $('code-out').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }
   $('code-prev').addEventListener('click', () => { if (madeAt > 0) { madeAt--; drawCode(); } });
   $('code-next').addEventListener('click', () => { if (madeAt < made.length - 1) { madeAt++; drawCode(); } });
@@ -289,11 +356,18 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
 
   // ---- move a thing
   const mf = $('move-form');
-  $('item-list').innerHTML = kinds.map(k => '<option value="' + esc(k.n) + '"></option>').join('');
   unitOptions(mf.elements.unit, units, 'Choose a unit');
-  const pickedItem = () => kinds.find(k => k.n.toLowerCase() === mf.elements.thing.value.trim().toLowerCase());
+  const pickedItem = () => kinds.find(k => searchName(k.n) === searchName(mf.elements.thing.value));
   mf.elements.thing.addEventListener('input', () => {
     const k = pickedItem();
+    const query = searchName(mf.elements.thing.value);
+    $('move-search-results').hidden = !query || !!k;
+    if (query && !k) showItemMatches('move', itemMatches(query), item => {
+      mf.elements.thing.value = item.n;
+      mf.elements.thing.dispatchEvent(new Event('input', { bubbles: true }));
+      mf.elements.unit.focus({ preventScroll: true });
+    });
+    else $('move-search-status').textContent = '';
     $('move-now').textContent = k ? 'Now: ' + placeName(k.u, k.s) + (k.x > 1 ? '. All ' + k.x + ' copies move together.' : '.') : '';
     if (k) { mf.elements.unit.value = k.u; shelfOptions(mf.elements.shelf, k.u, k.s); }
   });
@@ -313,8 +387,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   const manyList = () => {
     const c = yf.elements.fromUnit.value, n = Number(yf.elements.fromShelf.value), things = c && n ? onShelf(c, boardBelow(unitBy[c], n)) : [];
     $('many-list').innerHTML = !c || !n ? '' : !things.length ? '<p class="tool-note">This shelf is empty on this copy of the room.</p>' :
-      '<p class="tool-note">' + things.length + ' things on this shelf. <button type="button" class="link-button" id="many-all">Tick all</button> <button type="button" class="link-button" id="many-none">Untick all</button></p>' +
-      things.map(k => '<label class="many-item"><input type="checkbox" name="pick" value="' + esc(k.h) + '" checked> ' + esc(k.n) + (k.x > 1 ? ' <small>(' + k.x + ' copies)</small>' : '') + '</label>').join('');
+      '<p class="tool-note">' + things.length + ' items on this shelf. <button type="button" class="link-button" id="many-all">Select all</button> <button type="button" class="link-button" id="many-none">Clear selection</button></p>' +
+      things.map(k => '<label class="many-item"><input type="checkbox" name="pick" value="' + esc(k.h) + '"> ' + esc(k.n) + (k.x > 1 ? ' <small>(' + k.x + ' copies)</small>' : '') + '</label>').join('');
     const set = on => $('many-list').querySelectorAll('input').forEach(i => { i.checked = on; });
     if ($('many-all')) { $('many-all').addEventListener('click', () => set(true)); $('many-none').addEventListener('click', () => set(false)); }
   };
@@ -329,7 +403,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     if (!unitBy[u]) { status.textContent = 'Choose where they go.'; return; }
     const dest = unitBy[u].shelves ? boardBelow(unitBy[u], s) : 0, from = yf.elements.fromUnit.value;
     if (u === from && dest === boardBelow(unitBy[from], Number(yf.elements.fromShelf.value))) { status.textContent = 'That is the shelf they are already on.'; return; }
-    picked.forEach(k => showCode('RL:MOVE:' + k.h + ':' + u + '-' + s, 'Move ' + k.n, 'From ' + placeName(k.u, k.s) + ' to ' + placeName(u, dest) + '.'));
+    picked.forEach((k, index) => showCode('RL:MOVE:' + k.h + ':' + u + '-' + s, 'Move ' + k.n, 'From ' + placeName(k.u, k.s) + ' to ' + placeName(u, dest) + '.', '', index === picked.length - 1));
     status.textContent = picked.length + (picked.length === 1 ? ' move' : ' moves') + ' added. ' + made.length + ' changes are on the list below.';
   });
 
@@ -444,11 +518,24 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const head = lines[0].split('|');
     if (head[0] !== 'RLSYNC') return false;
     const p = Number(head[1]), n = Number(head[2]), total = Number(head[3]);
+    if (![p, n, total].every(Number.isInteger) || p < 1 || p > n || n > 255 || total < 0 || n > Math.max(1, total)) return false;
     if (pageCount && (n !== pageCount || Object.values(pages).some(x => x.total !== total))) { Object.keys(pages).forEach(k => delete pages[k]); }   // a different list: start over
     pageCount = n; pages[p] = { total, lines: lines.slice(1).filter(Boolean) };
     remember();
     showPages();
-    if (Object.keys(pages).length === pageCount) { stopCamera(); const all = []; for (let i = 1; i <= pageCount; i++) all.push(...pages[i].lines); apply(all.map(l => l.split('|'))).then(() => { try { localStorage.removeItem(KEEP); } catch (e) {} }).catch(() => { status.textContent = 'Could not load the Nov 16 backup. Check the internet connection and scan again.'; }); }
+    if (Object.keys(pages).length === pageCount) {
+      stopCamera();
+      const all = [];
+      for (let i = 1; i <= pageCount; i++) all.push(...pages[i].lines);
+      Object.keys(pages).forEach(k => delete pages[k]);
+      pageCount = 0;
+      try { localStorage.removeItem(KEEP); } catch (e) {}
+      if (all.length !== total) {
+        status.textContent = 'The scanned pages do not match. Scan all pages again, starting at page 1.';
+        return false;
+      }
+      apply(all.map(l => l.split('|'))).catch(() => { status.textContent = 'Could not load the Nov 16 backup. Check the internet connection and scan again.'; });
+    }
     return true;
   }
   function tick() {
@@ -464,7 +551,12 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   }
   $('sync-start').addEventListener('click', async () => {
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const camera = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      if ($('tab-sync').getAttribute('aria-selected') !== 'true') {
+        camera.getTracks().forEach(track => track.stop());
+        return;
+      }
+      stream = camera;
       video.srcObject = stream; video.hidden = false; await video.play();
       scanning = true; $('sync-start').hidden = true; $('sync-stop').hidden = false; status.textContent = ''; tick();
     } catch (e) { status.textContent = 'The camera did not start. Allow camera access, or use "Paste instead".'; }
@@ -488,7 +580,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const [baseData, baseRoom] = await loadBaseline();
     const d = JSON.parse(JSON.stringify(baseData)), r = JSON.parse(JSON.stringify(baseRoom));
     const nowBy = Object.fromEntries(kinds.map(k => [k.h, k]));
-    for (const k of d.kinds) { const now = nowBy[k.h]; if (!now) continue; for (const key of ['p', 'r', 'd', 'g', 'tips']) { if (now[key] !== undefined) k[key] = JSON.parse(JSON.stringify(now[key])); else delete k[key]; } }
+    const guideFields = ['p', 'r', 'd', 'g', 'need', 'start', 'tips'];
+    for (const k of d.kinds) { const now = nowBy[k.h]; if (!now) continue; for (const key of guideFields) { if (now[key] !== undefined) k[key] = JSON.parse(JSON.stringify(now[key])); else delete k[key]; } }
     const ub = Object.fromEntries(r.units.map(u => [u.code, u]));
     const firstText = lines.length ? lines[0].join('|') : '';
     const start = 0;
@@ -505,7 +598,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
       else if (t === 'C') { const k = byH[(f[1] || '').toLowerCase()]; if (k) { k.x = Number(f[2]) || k.x; count.C++; } }
       else if (t === 'A') {
         const name = f[3], h = nameCode(name);
-        if (!byH[h]) { const now = nowBy[h] || {}; const k = { n: name, c: CAT_ORDER[Number(f[1])] || 'Cables & More', t: f[2], x: Number(f[6]) || 1, in: true, d: now.d || '', h, u: f[4], s: Number(f[5]) }; for (const key of ['p', 'r', 'g']) if (now[key] !== undefined) k[key] = now[key]; d.kinds.push(k); byH[h] = k; count.A++; }
+        if (!byH[h]) { const now = nowBy[h] || {}; const k = { n: name, c: CAT_ORDER[Number(f[1])] || 'Cables & More', t: f[2], x: Number(f[6]) || 1, in: true, d: '', h, u: f[4], s: Number(f[5]) }; for (const key of guideFields) if (now[key] !== undefined) k[key] = now[key]; d.kinds.push(k); byH[h] = k; count.A++; }
       }
     }
     const names = Object.fromEntries(r.units.map(u => [u.code, u.name]));
@@ -515,9 +608,16 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     r.source = 'Room Locator console, changes brought over on ' + new Date().toISOString().slice(0, 10);
     outData = d; outRoom = r;
     const list = [];
-    const moved = d.kinds.filter(k => { const b = nowBy[k.h]; return !b || b.u !== k.u || b.s !== k.s || b.x !== k.x; }).length + kinds.filter(k => !byH[k.h]).length;
+    const moved = d.kinds.filter(k => { const b = nowBy[k.h]; return !b || b.u !== k.u || b.s !== k.s || b.x !== k.x || b.w !== k.w; }).length + kinds.filter(k => !byH[k.h]).length;
+    const layoutChanged = r.units.some(u => {
+      const current = unitBy[u.code];
+      return !current || ['first', 'shelves', 'rect', 'boards'].some(key => JSON.stringify(u[key]) !== JSON.stringify(current[key]));
+    });
+    const needsSave = moved > 0 || layoutChanged;
     list.push(lines.length ? 'The console has ' + lines.length + (lines.length === 1 ? ' change' : ' changes') + ' since the Nov 16 setup. Saving makes the website match it exactly.' : 'The console has no changes. Saving puts the website back to the Nov 16 setup.');
-    list.push(moved ? moved + (moved === 1 ? ' item page will change.' : ' item pages will change.') : 'The website already matches: nothing will change.');
+    if (moved) list.push(moved + (moved === 1 ? ' item page will change.' : ' item pages will change.'));
+    if (layoutChanged) list.push('The room map will change.');
+    if (!needsSave) list.push('The website already matches the console.');
     if (count.C) list.push(count.C + (count.C === 1 ? ' count changed' : ' counts changed'));
     if (count.I) list.push(count.I + (count.I === 1 ? ' thing moved' : ' things moved'));
     if (count.S) list.push(count.S + (count.S === 1 ? ' whole shelf moved' : ' whole shelves moved'));
@@ -531,8 +631,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     // Scanned straight from the console on a device that has the key: save by itself after a 5-second count, so keeping
     // the website in step is one scan and nothing else. Cancel stops it; nothing to change means nothing is saved.
     clearInterval(autoTimer); $('sync-auto').hidden = true;
-    if (cameFromConsole && !moved) { $('home-done').textContent = 'The website already matches the console. Nothing to do.'; $('home-done').hidden = false; }
-    if (cameFromConsole && moved && keep.get('rl-key')) {
+    if (cameFromConsole && !needsSave) { $('home-done').textContent = 'The website already matches the console. Nothing to do.'; $('home-done').hidden = false; }
+    if (cameFromConsole && needsSave && keep.get('rl-key')) {
       let left = 5; $('sync-auto').hidden = false;
       const tick = () => { $('sync-auto-text').textContent = 'Saving to the website in ' + left + '...'; if (left-- <= 0) { clearInterval(autoTimer); $('sync-auto').hidden = true; $('sync-publish').click(); } };
       tick(); autoTimer = setInterval(tick, 1000);
@@ -598,8 +698,9 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     view3d.mark(marks);
   }
   if (view3d) {
-    card.hidden = false; view3d.resize();
-    tabs.forEach(t => $('tab-' + t).addEventListener('click', () => { activeTab = t; shelfStep = 'from'; card.hidden = t === 'sync' || t === 'edit'; if (!card.hidden) { view3d.resize(); refresh3d(); } }));
+    card.hidden = false;
+    card.addEventListener('toggle', () => { if (card.open && !card.hidden) { view3d.resize(); refresh3d(); } });
+    tabs.forEach(t => $('tab-' + t).addEventListener('click', () => { activeTab = t; shelfStep = 'from'; card.hidden = !['move', 'shelf', 'add'].includes(t); if (!card.hidden && card.open) { view3d.resize(); refresh3d(); } }));
     [mf, sf, af].forEach(f => { f.addEventListener('change', refresh3d); f.addEventListener('input', refresh3d); });
     refresh3d();
   }
@@ -607,13 +708,12 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   // ---- the status line at the top: is the website in step with the console, and can this device save
   const drawHomeStatus = () => {
     const sy = room.synced, when = sy && sy.at ? new Date(sy.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
-    $('home-sync').textContent = sy && sy.at ? 'Website last matched the console ' + when + ', with ' + sy.lines + (sy.lines === 1 ? ' change' : ' changes') + ' since the Nov 16 setup.' : 'The website is at the Nov 16 setup. No console changes have been brought over yet.';
-    $('home-key').textContent = keep.get('rl-key') ? 'This device can save to the website.' : 'To save changes from this phone: on the console, go down to the grey bar, press Select and type the staff PIN. Scan the code that comes up. That is all.';
+    $('home-sync').textContent = when ? 'Last website sync: ' + when + '.' : 'Website shows the Nov 16 setup.';
+    $('home-key').textContent = keep.get('rl-key') ? 'This device can save to the website.' : 'To publish, enter the PIN at the console’s grey bar and scan its Staff page QR.';
     $('home-key-set').textContent = keep.get('rl-key') ? 'Sign this device out' : 'No console nearby? Use the passcode';
     $('home-share').hidden = !keep.get('rl-key'); if (!keep.get('rl-key')) $('share').hidden = true;
   };
   drawHomeStatus();
-  $('home-sync-go').addEventListener('click', () => { $('tab-sync').click(); $('tool-sync').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
   $('home-key-set').addEventListener('click', () => { if (keep.get('rl-key')) { keep.set('rl-key', null); drawHomeStatus(); } else askForKey('Type the staff passcode and this device can save.'); });
   $('home-share').addEventListener('click', () => { $('share').hidden = !$('share').hidden; });
   addEventListener('rl-key-changed', drawHomeStatus);
@@ -628,7 +728,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     // 1. the files every page reads
     const [d, r, p, h, k] = await Promise.all(['data.json', 'room.json', 'photos.json', 'howto.json', 'kits.json'].map(get));
     const missing = [['data.json', d], ['room.json', r], ['photos.json', p], ['howto.json', h], ['kits.json', k]].filter(x => !x[1]).map(x => x[0]);
-    if (missing.length) line('bad', 'The website could not load ' + missing.join(', ') + '. Check the internet connection; if it stays, put the Nov 16 setup back from the "From the console" tab.');
+    if (missing.length) line('bad', 'Could not load ' + missing.join(', ') + '. Check the connection and retry. If the files are still missing, ask the site maintainer to check the deployment.');
     else line('ok', 'The website\'s files load: ' + d.kinds.length + ' items, ' + r.units.length + ' units, ' + k.kits.length + ' kits.');
     // 2. the inventory agrees with itself, and with the codes the console makes
     if (d && r) {
@@ -719,21 +819,60 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   // ---- edit an item that is already on the website: its photo, manual link and description
   const ef = $('edit-form'), preview = $('edit-preview');
   let photos = null; fetch('photos.json?v=20261116h').then(r => r.json()).then(p => { photos = p; }).catch(() => {});
-  const editItem = () => kinds.find(k => k.n.toLowerCase() === ef.elements.thing.value.trim().toLowerCase());
+  const editSearch = ef.elements.thing;
+  const editResults = $('edit-search-results'), editMatches = $('edit-matches');
+  let selectedEditItem = null, matchingEditItems = [];
+  const editItem = () => selectedEditItem;
   const showPreview = url => { preview.innerHTML = url ? '<img src="' + esc(url) + '" alt="" referrerpolicy="no-referrer"><span>This is the photo the page shows now.</span>' : '<span>This item has no photo yet.</span>'; };
-  ef.elements.thing.addEventListener('input', () => {
-    const k = editItem(); $('edit-fields').hidden = !k; $('edit-handoff').hidden = true; if (!k) return;
-    const shared = photos && photos.images[photos.items[k.n]];
+  function selectEditItem(k) {
+    selectedEditItem = k;
+    editSearch.value = k.n;
+    editResults.hidden = true;
+    $('edit-search-status').textContent = '';
+    $('edit-fields').hidden = false;
+    const shared = photos?.images?.[photos?.items?.[k.n]];
     ef.elements.photo.value = k.p ? k.p.url : ''; ef.elements.credit.value = k.p ? k.p.artist || '' : ''; ef.elements.crediturl.value = k.p && k.p.page !== '#' ? k.p.page || '' : '';
     ef.elements.nophoto.checked = false;
     ef.elements.manualname.value = k.r && k.r[0] ? k.r[0][0] : ''; ef.elements.manual.value = k.r && k.r[0] ? k.r[0][1] : '';
     ef.elements.description.value = k.d || ''; ef.elements.copies.value = k.x || 1;
     showPreview(k.p ? k.p.url : shared ? shared.url : '');
+  }
+  const updateEditSearch = () => {
+    selectedEditItem = null;
+    $('edit-fields').hidden = true;
+    $('edit-handoff').hidden = true;
+    status.textContent = '';
+    const query = searchName(editSearch.value);
+    editResults.hidden = !query;
+    matchingEditItems = [];
+    editMatches.replaceChildren();
+    $('edit-search-status').textContent = '';
+    if (!query) return;
+    matchingEditItems = itemMatches(query);
+    const exact = matchingEditItems.filter(k => searchName(k.n) === query);
+    if (exact.length === 1) { selectEditItem(exact[0]); return; }
+    showItemMatches('edit', matchingEditItems, item => { selectEditItem(item); preview.focus({ preventScroll: true }); });
+  };
+  editSearch.addEventListener('input', updateEditSearch);
+  editSearch.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || e.isComposing) return;
+    e.preventDefault();
+    if (matchingEditItems.length === 1 && !selectedEditItem) {
+      selectEditItem(matchingEditItems[0]);
+      preview.focus({ preventScroll: true });
+    }
   });
+  ef.addEventListener('submit', e => e.preventDefault());
   ef.elements.photo.addEventListener('change', () => { if (ef.elements.photo.value.trim()) showPreview(ef.elements.photo.value.trim()); });
   const editedData = () => {
     const k = editItem(); if (!k) { status.textContent = 'Pick the item from the list first.'; return null; }
     const f = ef.elements, url = f.photo.value.trim(), link = f.manual.value.trim();
+    const copies = f.copies.valueAsNumber;
+    if (!Number.isInteger(copies) || copies < 1 || copies > 250) {
+      status.textContent = 'Enter a whole count from 1 to 250.';
+      f.copies.focus();
+      return null;
+    }
     if (link && !/^https?:\/\//.test(link)) { status.textContent = 'The manual link has to start with https://'; return; }
     const d = JSON.parse(JSON.stringify(data)), item = d.kinds.find(x => x.h === k.h);
     if (f.nophoto.checked) item.p = { none: true };
@@ -741,7 +880,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     else delete item.p;
     if (link) item.r = [[f.manualname.value.trim() || 'Manual', link]].concat((item.r || []).slice(1)); else if (item.r && !f.manualname.value.trim()) delete item.r;
     if (f.description.value.trim()) item.d = f.description.value.trim(); else item.d = '';
-    const copies = Number(f.copies.value); if (copies >= 1) item.x = Math.floor(copies);
+    item.x = copies;
     return d;
   };
   $('edit-download').addEventListener('click', () => { const d = editedData(); if (!d) return; download(d, 'data.json'); status.textContent = ''; $('edit-handoff').hidden = false; $('edit-handoff').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); });
@@ -751,7 +890,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     if (copies !== k.x) { k.x = copies; showCode('RL:COUNT:' + k.h + ':' + copies, 'Show this to the console too', k.n + ': Lending now has ' + copies + '. The website is saved; this tells the console.', 'Without this the console keeps showing the old count.'); }
     else setTimeout(() => location.reload(), 1500);
   });
-  $('edit-count-code').addEventListener('click', () => { const k = editItem(); if (!k) { status.textContent = 'Pick the item from the list first.'; return; } const n = Math.floor(Number(ef.elements.copies.value)); if (!(n >= 1 && n <= 250)) { status.textContent = 'The count has to be between 1 and 250.'; return; } showCode('RL:COUNT:' + k.h + ':' + n, 'Show this to the console', k.n + ': Lending now has ' + n + '.', 'This changes the count on the console only. Save to the website changes it there.'); });
+  $('edit-count-code').addEventListener('click', () => { const k = editItem(); if (!k) { status.textContent = 'Pick the item from the list first.'; return; } const n = ef.elements.copies.valueAsNumber; if (!Number.isInteger(n) || n < 1 || n > 250) { status.textContent = 'Enter a whole count from 1 to 250.'; return; } showCode('RL:COUNT:' + k.h + ':' + n, 'Show this to the console', k.n + ': Lending now has ' + n + '.', 'This changes the count on the console only. Save to the website changes it there.'); });
   window.__rlSync = { readPage, apply: async lines => { await apply(lines); return { data: outData, room: outRoom }; } };   // (for testing)
 }).catch(err => { console.error(err); status.textContent = 'Could not load the inventory. Open this page from the published site or a local web server.'; });
 
