@@ -4819,7 +4819,7 @@
       "n": "Hammer / Irwin.",
       "c": "Shop & Tools",
       "t": "Hammers",
-      "x": 2,
+      "x": 1,
       "w": "Shop, shelf 2",
       "in": true,
       "g": "",
@@ -6076,5 +6076,6 @@
     "Soft Tech/Cricut Machines": [
       "Soft Tech/Cricut Accessories"
     ]
-  }
+  },
+  "published": "2026-11-19T00:39:59.111Z"
 }
