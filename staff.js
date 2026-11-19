@@ -142,13 +142,13 @@ $('connect-save').addEventListener('click', async () => {
   const all = (await readLocked()) || {}, pass = $('connect-newpass').value, cpass = keep.get('rl-cpass'), expires = $('connect-expires').value, did = [], left = [];
   let out = null, firstLink = false;
   try {
-    if (pass.length >= 4) { out = await lockKey(pass, 'pass'); did.push('the staff passcode'); } else if (slotOf(all, 'pass')) left.push('The staff passcode still opens the OLD key: set the passcode again under "Link the console, or set a passcode".');
+    if (pass.length >= 4) { out = await lockKey(pass, 'pass'); did.push('the staff passcode'); } else if (slotOf(all, 'pass')) left.push('The staff passcode still opens the OLD key: set the passcode again under "Passcode and sign-out".');
     if (cpass && (!slotOf(all, 'console') || await openLocked(all, cpass, 'console') !== null)) {
       const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
       const box = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await lockBytes(cpass, salt), new TextEncoder().encode(value));
       out = out || await lockKey(cpass, 'console'); out.console = { salt: b64(salt), iv: b64(iv), box: b64(box) }; did.push('the console\'s link (nothing to do at the console)');
     } else if (!slotOf(all, 'console')) firstLink = true;
-    else if (slotOf(all, 'console')) left.push('The console\'s link still holds the OLD key: press "Link the console" and show the new code to the console, or open this page from the console\'s Staff page code and paste the key there.');
+    else if (slotOf(all, 'console')) left.push('The console\'s link still holds the OLD key: press "Link the console again" (under Passcode and sign-out) and show the new code to the console, or open this page from the console\'s Staff page code and paste the key there.');
     if (/^\d{4}-\d\d-\d\d$/.test(expires)) { out = out || { note: 'The site key, locked. Made by the staff page.', ...Object.fromEntries(['pass', 'console'].filter(n => slotOf(all, n)).map(n => [n, slotOf(all, n)])) }; out.expires = expires; }
     else if (out) delete out.expires;                              // a new key with no date given: the old date no longer applies
   } catch (e) { out = null; left.push('The locked copies could not be renewed on this browser.'); }
@@ -158,7 +158,7 @@ $('connect-save').addEventListener('click', async () => {
   dispatchEvent(new Event('rl-key-changed'));
   if (afterKey) { const go = afterKey; afterKey = null; go(); }
   else if (firstLink) {                                            // first time on this site: go straight on to linking the console, the step that makes every phone automatic
-    $('share').hidden = false; $('link-console').click(); $('share').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('device').hidden = false; $('device').open = true; $('link-console').click(); $('share').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 });
 const keyReady = () => { $('connect').hidden = true; status.textContent = 'This device can now save to the website.'; dispatchEvent(new Event('rl-key-changed')); if (afterKey) { const go = afterKey; afterKey = null; go(); } };
@@ -220,6 +220,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     }
   }
 
+  document.querySelectorAll('.staff-form select').forEach(s => { if (/shelf/i.test(s.name) && !s.options.length) s.disabled = true; });   // nothing to pick until a unit is chosen
   // ---- tabs
   const tabs = ['move', 'shelf', 'many', 'add', 'edit', 'sync'];
   tabs.forEach(t => $('tab-' + t).addEventListener('click', () => {
@@ -235,6 +236,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   }
   function shelfOptions(select, code, keep) {
     const u = unitBy[code];
+    select.disabled = !u;
     if (!u) { select.innerHTML = ''; return; }
     if (!u.shelves) { select.innerHTML = '<option value="0">No shelves: ask at the desk</option>'; return; }
     let html = '';
@@ -458,7 +460,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     if (kinds.some(k => k.h === nameCode(name))) return 'That name clashes with another item’s code. Add a word to the name.';
     if (f.type.value === '') return 'Choose a category and type.';
     if (!unitBy[f.unit.value]) return 'Choose where it goes.';
-    const n = Number(f.copies.value); if (!Number.isInteger(n) || n < 1 || n > 99) return 'Copies must be 1 to 99.';
+    const n = Number(f.copies.value); if (!Number.isInteger(n) || n < 1 || n > 250) return 'Copies must be a whole number from 1 to 250.';
     if (addCode().length >= MAX_CODE) return 'The name is too long for the code. Shorten it.';
     return '';
   }
@@ -469,31 +471,20 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     showCode(addCode(), 'Add ' + name, CAT_ORDER[t[0]] + ' / ' + t[1] + ', ' + f.copies.value + (f.copies.value === '1' ? ' copy' : ' copies') + ', goes to ' + placeName(f.unit.value, s && unitBy[f.unit.value].shelves ? boardBelow(unitBy[f.unit.value], s) : 0) + '.',
       'On the console: scan this, type the PIN, check the details, scan the new item’s barcode sticker (or skip), check the spot, then Select. Its page code will be ' + nameCode(name) + '.');
   });
-  $('download-data').addEventListener('click', () => {
+  $('add-publish').addEventListener('click', async e => {
     const problem = checkAdd(); if (problem) { status.textContent = problem; return; }
     const f = af.elements, name = f.name.value.trim(), t = types[Number(f.type.value)], u = unitBy[f.unit.value], s = Number(f.shelf.value || 0);
+    if (f.manual.value.trim() && !/^https:\/\//.test(f.manual.value.trim())) { status.textContent = 'The manual link has to start with https://'; return; }
     const item = { n: name, c: CAT_ORDER[t[0]], t: t[1], x: Number(f.copies.value), w: placeName(u.code, s && u.shelves ? boardBelow(u, s) : 0), in: true, d: f.description.value.trim(), h: nameCode(name), u: u.code, s };
     const need = lines(f.need.value), start = lines(f.start.value), tips = lines(f.tips.value);
     if (need.length) item.need = need; if (start.length) item.start = start; if (tips.length) item.tips = tips;
     if (f.manual.value.trim()) item.r = [['Official maker instructions', f.manual.value.trim()]];
     if (f.photo.value.trim()) item.p = { url: f.photo.value.trim(), page: f.crediturl.value.trim() || '#', artist: f.credit.value.trim() || 'IDeATe Lending', license: 'Photo source' };
     const out = { ...data, kinds: [...kinds, item].sort((a, b) => a.n.localeCompare(b.n)) };
-    const blob = new Blob([JSON.stringify(out, null, 2) + '\n'], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a');
-    a.href = url; a.download = 'data.json'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-    status.textContent = 'Downloaded data.json with ' + name + '. Now hand the file over using the steps below.';
-    $('add-handoff').hidden = false;
-    $('add-handoff').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    lastNote = 'Please add this to the Room Locator website.\n\nItem: ' + name + '\nCategory: ' + CAT_ORDER[t[0]] + ' / ' + t[1] +
-      '\nGoes to: ' + item.w + '\nCopies: ' + item.x + '\nIts page code: ' + item.h +
-      '\n\nThe data.json file is attached. Put it in github.com/OliveDevs/room-locator (replace the one that is there) and commit.';
-  });
-  let lastNote = '';
-  $('copy-handoff').addEventListener('click', () => {
-    const note = $('handoff-note');
-    if (!lastNote) { note.textContent = 'Download the file first.'; return; }
-    navigator.clipboard.writeText(lastNote)
-      .then(() => { note.textContent = 'Copied. Paste it into an email or a message, and attach the data.json you downloaded.'; })
-      .catch(() => { note.textContent = lastNote; });
+    if (!(await publish({ 'data.json': out }, 'Add ' + name + ' (staff page)', e.target))) return;
+    kinds.push(item);                                              // so pressing twice cannot add it twice
+    showCode(addCode(), 'Add ' + name, 'Its guide page is saved. Now show this to the console so it knows the item too.', 'On the console: scan this, type the PIN, check the details, scan the new item’s barcode sticker (or skip), check the spot, then Select.');
+    status.textContent = 'Saved: ' + name + ' has a guide page in about a minute. Show the code below to the console.';
   });
 
   // ---- from the console: its change list (MOVES.TSV) as QR pages "RLSYNC|page|pages|total" + lines with | for tabs
@@ -563,6 +554,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   });
   $('sync-stop').addEventListener('click', stopCamera);
   $('sync-use-paste').addEventListener('click', () => {
+    $('tab-sync').click(); $('tool-sync').scrollIntoView({ block: 'start' });
     const text = $('sync-paste').value.replace(/\r/g, '');
     if (text.startsWith('RLSYNC')) { text.split(/\n(?=RLSYNC)/).forEach(readPage); return; }
     apply(text.split('\n').filter(l => l.trim() && !l.startsWith('@')).map(l => l.split(/\t|\|/)));
@@ -648,8 +640,6 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const [d, r] = await Promise.all([fetch('backup/2026-11-16/data.json?x=' + Date.now()).then(x => x.json()), fetch('backup/2026-11-16/room.json?x=' + Date.now()).then(x => x.json())]);
     if (await publish({ 'data.json': d, 'room.json': r }, 'Website back to the Nov 16 setup (staff page)', e.target)) setTimeout(() => location.reload(), 1500);
   });
-  $('sync-data').addEventListener('click', () => outData && download(outData, 'data.json'));
-  $('sync-room').addEventListener('click', () => outRoom && download(outRoom, 'room.json'));
   // ---- the 3D room: click a shelf instead of using the two menus
   const card = $('room3d-card'), help = $('room3d-help');
   let activeTab = 'move', shelfStep = 'from';
@@ -709,13 +699,13 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   const drawHomeStatus = () => {
     const sy = room.synced, when = sy && sy.at ? new Date(sy.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
     $('home-sync').textContent = when ? 'Last website sync: ' + when + '.' : 'Website shows the Nov 16 setup.';
-    $('home-key').textContent = keep.get('rl-key') ? 'This device can save to the website.' : 'To publish, enter the PIN at the console’s grey bar and scan its Staff page QR.';
-    $('home-key-set').textContent = keep.get('rl-key') ? 'Sign this device out' : 'No console nearby? Use the passcode';
-    $('home-share').hidden = !keep.get('rl-key'); if (!keep.get('rl-key')) $('share').hidden = true;
+    $('home-key').textContent = keep.get('rl-key') ? 'This device can save.' : 'To publish, enter the PIN at the console’s grey bar and scan its Staff page QR.';
+    $('home-key-set').textContent = 'No console nearby? Use the passcode'; $('home-key-set').hidden = !!keep.get('rl-key');
+    $('device').hidden = !keep.get('rl-key');
   };
   drawHomeStatus();
   $('home-key-set').addEventListener('click', () => { if (keep.get('rl-key')) { keep.set('rl-key', null); drawHomeStatus(); } else askForKey('Type the staff passcode and this device can save.'); });
-  $('home-share').addEventListener('click', () => { $('share').hidden = !$('share').hidden; });
+  $('device-signout').addEventListener('click', () => { keep.set('rl-key', null); drawHomeStatus(); status.textContent = 'This device is signed out.'; });
   addEventListener('rl-key-changed', drawHomeStatus);
   // ---- "Check everything": one button that looks at each link in the chain and says in plain words what is fine and
   // what is not. It only reads; the one thing it can change (renewing the locked copies of the key) has its own button.
@@ -764,10 +754,10 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const me = keep.get('rl-key'), cpass = keep.get('rl-cpass'); let stale = false;
     if (!slotOf(locked, 'pass')) line('note', 'No staff passcode is set up. That is fine if staff always come in through the console\'s code.');
     else line('ok', 'A staff passcode is set up for devices away from the console.' + (keyWorks ? ' (This page cannot tell whether it still opens the current key without the passcode: if a device says the key has run out, set the passcode again.)' : ''));
-    if (!slotOf(locked, 'console')) line('warn', 'The console is not linked to the website. Phones that scan its codes cannot save until someone presses "Link the console" and shows the code to the console.');
+    if (!slotOf(locked, 'console')) line('warn', 'The console is not linked to the website. Phones that scan its codes cannot save until someone presses "Link the console again" (under Passcode and sign-out) and shows the code to the console.');
     else if (!cpass) line('note', 'The console has been linked. To test that link, scan the console\'s Staff page code (the last spots on its map) with this phone and press Check everything again.');
     else { const inside = await openLocked(locked, cpass, 'console');
-      if (inside === null) line('bad', 'The console\'s website pass does not open the website\'s copy any more. Press "Link the console" and show the new code to the console.');
+      if (inside === null) line('bad', 'The console\'s website pass does not open the website\'s copy any more. Press "Link the console again" (under Passcode and sign-out) and show the new code to the console.');
       else if (keyWorks && inside !== me) { stale = true; line('bad', 'The console\'s link holds an older site key than this device. Press "Renew the console\'s link" below (nothing to do at the console).'); }
       else if (!keyWorks) line('note', 'The console\'s pass opens the website\'s copy. Whether the key inside still works is checked once this device is signed in.');
       else line('ok', 'The console\'s link works: a phone that scans the console\'s Staff page code or To the website code can save.'); }
@@ -840,7 +830,6 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   const updateEditSearch = () => {
     selectedEditItem = null;
     $('edit-fields').hidden = true;
-    $('edit-handoff').hidden = true;
     status.textContent = '';
     const query = searchName(editSearch.value);
     editResults.hidden = !query;
@@ -883,7 +872,6 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     item.x = copies;
     return d;
   };
-  $('edit-download').addEventListener('click', () => { const d = editedData(); if (!d) return; download(d, 'data.json'); status.textContent = ''; $('edit-handoff').hidden = false; $('edit-handoff').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); });
   $('edit-publish').addEventListener('click', async e => {
     const d = editedData(); if (!d) return; const k = editItem(), copies = d.kinds.find(x => x.h === k.h).x;
     if (!(await publish({ 'data.json': d }, 'Edit ' + k.n + ' (staff page)', e.target))) return;
