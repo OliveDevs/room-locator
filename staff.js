@@ -61,7 +61,7 @@ async function unlockKey(pass, slot = 'pass') {
 }
 // After a passcode or the console's pass opened the locked copy: does GitHub still take the key inside? A key that has
 // run out (or was deleted on GitHub) is the one thing a passcode cannot fix, so the message says what to do.
-const DEAD_KEY = 'The passcode is right, but the site key behind it has run out or was replaced on GitHub. Someone with the GitHub account needs to paste a new key: open "Check everything" on this page for the steps.';
+const DEAD_KEY = 'The passcode is right, but the site key behind it has run out or was replaced on GitHub. Someone with the GitHub account needs to paste a new key: open "Check everything" at the bottom of this page for the steps.';
 const checkUnlocked = async () => { const r = await gh('').catch(() => null); if (!r) return 'Could not reach GitHub. Check the internet connection.'; if (r.status === 401) return DEAD_KEY; return checkKey(); };
 let afterKey = null, cameWithPass = false;
 function askForKey(why) {
@@ -149,7 +149,7 @@ $('share-save').addEventListener('click', async e => {
   if (!keep.get('rl-key')) { $('share-why').textContent = 'This device needs the key first.'; return; }
   if (pass.length < 4) { $('share-why').textContent = 'Use at least 4 characters.'; return; }
   if (pass !== again) { $('share-why').textContent = 'The two do not match.'; return; }
-  if (await publish({ 'key.json': await lockKey(pass, 'pass') }, 'Site key locked with the staff passcode (staff page)', e.target)) { $('share-pass').value = $('share-pass2').value = ''; $('share-why').textContent = 'Done. In about a minute any device can save by typing that passcode.'; }
+  if (await publish({ 'key.json': await lockKey(pass, 'pass') }, 'Site key locked with the staff passcode (staff page)', e.target)) { $('share-pass').value = $('share-pass2').value = ''; $('share-why').textContent = 'Saved. In about a minute the new passcode works on any device, and the old one stops working. Devices already signed in stay signed in.'; }
 });
 $('link-console').addEventListener('click', async e => {
   if (!keep.get('rl-key')) { $('share-why').textContent = 'This device needs the key first.'; return; }
@@ -620,7 +620,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   const dayText = d => new Date(d + 'T12:00:00').toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
   const daysTo = d => Math.ceil((new Date(d + 'T23:59:59') - Date.now()) / 86400000);
   async function checkEverything() {
-    health.innerHTML = ''; $('health-renew').hidden = true; $('health-steps').hidden = true; const go = $('health-go'); go.disabled = true; go.textContent = 'Checking...';
+    $('checks').open = true; health.innerHTML = ''; $('health-renew').hidden = true; $('health-steps').hidden = true; const go = $('health-go'); go.disabled = true; go.textContent = 'Checking...';
     const get = (path) => fetch(path + '?x=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null);
     // 1. the files every page reads
     const [d, r, p, h, k] = await Promise.all(['data.json', 'room.json', 'photos.json', 'howto.json', 'kits.json'].map(get));
@@ -689,7 +689,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   });
   $('health-paste').addEventListener('click', () => { askForKey('Paste the new key below, with its run-out date and the staff passcode.'); document.querySelector('#connect details').open = true; });
   // a quiet warning at the top when the key is close to running out, without anyone pressing anything
-  readLocked().then(all => { if (all && all.expires && daysTo(all.expires) <= 21) { $('home-expiry').hidden = false; $('home-expiry').textContent = daysTo(all.expires) < 0 ? 'The site key was due to run out on ' + dayText(all.expires) + '. Press Check everything.' : 'The site key runs out on ' + dayText(all.expires) + '. Press Check everything for how to renew it.'; } });
+  readLocked().then(all => { if (all && all.expires && daysTo(all.expires) <= 21) { $('home-expiry').hidden = false; $('home-expiry').onclick = () => { $('checks').open = true; $('checks').scrollIntoView({ behavior: 'smooth' }); }; $('home-expiry').textContent = daysTo(all.expires) < 0 ? 'The site key was due to run out on ' + dayText(all.expires) + '. Press Check everything.' : 'The site key runs out on ' + dayText(all.expires) + '. Press Check everything for how to renew it.'; } });
   const unlockFromAddress = async () => {
     const m = /(?:^#|&)k=([A-Za-z0-9]{8,20})(?:&|$)/.exec(location.hash); if (!m) return;
     const rest = location.hash.slice(1).split('&').filter(part => !part.startsWith('k=')).join('&');
