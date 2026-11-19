@@ -893,6 +893,20 @@
       "page": "https://commons.wikimedia.org/wiki/File:ACME_Lighting_ArtNet_To_DMX_model_CA-AN28_(DMX_Ethernet_Node)_(2016-01-16_18.58.18_by_chcleung_).jpg",
       "artist": "chcleung",
       "license": "CC BY-SA 2.0"
+    },
+    "pa speaker tripod stand": {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/9/9b/EONA_ADRaudio_at_barndance.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "thumb": "https://upload.wikimedia.org/wikipedia/commons/9/9b/EONA_ADRaudio_at_barndance.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "page": "https://commons.wikimedia.org/wiki/File:EONA_ADRaudio_at_barndance.jpg",
+      "artist": "Binksternet",
+      "license": "CC BY-SA 3.0"
+    },
+    "dmx opto splitter": {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/5/5a/Dmx_repeater.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "thumb": "https://upload.wikimedia.org/wikipedia/commons/5/5a/Dmx_repeater.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "page": "https://commons.wikimedia.org/wiki/File:Dmx_repeater.jpg",
+      "artist": "KeepOnTruckin",
+      "license": "CC BY 2.5"
     }
   },
   "items": {
@@ -1185,7 +1199,9 @@
     "USB A to 1/8\" Audio": "USB audio adapter",
     "USB Foot Pedal Kit": "foot switch",
     "Open DMX USB Interface": "USB to DMX cable",
-    "ODE Interface": "Art-Net DMX node"
+    "ODE Interface": "Art-Net DMX node",
+    "PA Speaker Stand": "pa speaker tripod stand",
+    "DMX Distributor": "dmx opto splitter"
   },
   "exact": [
     "Sony a7 III Camera",
@@ -2891,6 +2907,111 @@
       "page": "https://cmu.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma991020226942304436&vid=01CMU_INST:01CMU",
       "w": 457,
       "h": 250
+    },
+    "Camera Bracket": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/ManfrottoCameraBracket.png",
+      "w": 501,
+      "h": 276,
+      "page": "https://resources.ideate.cmu.edu/lending-images/ManfrottoCameraBracket.png",
+      "source": "image-library"
+    },
+    "DEEPMIND 12 MIDI Controller": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/deepmind12.png",
+      "w": 250,
+      "h": 81,
+      "page": "https://resources.ideate.cmu.edu/lending-images/deepmind12.png",
+      "source": "image-library"
+    },
+    "DMX Distributor": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/dmxsplitter.png",
+      "w": 225,
+      "h": 225,
+      "page": "https://resources.ideate.cmu.edu/lending-images/dmxsplitter.png",
+      "source": "image-library"
+    },
+    "DPA Instrument Clip - Reserve": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/DPAInstrumentClip.png",
+      "w": 250,
+      "h": 141,
+      "page": "https://resources.ideate.cmu.edu/lending-images/DPAInstrumentClip.png",
+      "source": "image-library"
+    },
+    "DPA Mic Adapter for Sennheiser - Reserve": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/DPA_Sennheiser_Adapter.PNG",
+      "w": 497,
+      "h": 247,
+      "page": "https://resources.ideate.cmu.edu/lending-images/DPA_Sennheiser_Adapter.PNG",
+      "source": "image-library"
+    },
+    "HDMI Splitter": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/HDMI-Splitter.jpg",
+      "w": 180,
+      "h": 180,
+      "page": "https://resources.ideate.cmu.edu/lending-images/HDMI-Splitter.jpg",
+      "source": "image-library"
+    },
+    "Stage Pin (Male) to NEMA 5-15 (Female) Electrical Adaptor": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/StagePin.png",
+      "w": 250,
+      "h": 250,
+      "page": "https://resources.ideate.cmu.edu/lending-images/StagePin.png",
+      "source": "image-library"
+    },
+    "Wireless DMX Transmitter/Reciever": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/dmxtransmitter.png",
+      "w": 208,
+      "h": 243,
+      "page": "https://resources.ideate.cmu.edu/lending-images/dmxtransmitter.png",
+      "source": "image-library"
+    },
+    "X-Touch Mini USB MIDI Controller": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/xtouch.png",
+      "w": 250,
+      "h": 80,
+      "page": "https://resources.ideate.cmu.edu/lending-images/xtouch.png",
+      "source": "image-library"
+    }
+  },
+  "references": {
+    "DEEPMIND 12 MIDI Controller": {
+      "label": "View the Behringer DeepMind 12 photos",
+      "url": "https://www.behringer.com/en/products/0722-AAA",
+      "kind": "model"
+    },
+    "X-Touch Mini USB MIDI Controller": {
+      "label": "View the Behringer X-Touch Mini photos",
+      "url": "https://behringer.com/en/products/0808-AAF",
+      "kind": "model"
+    },
+    "HDMI Splitter": {
+      "label": "View an example HDMI splitter from StarTech",
+      "url": "https://www.startech.com/en-gb/audio-video-products/st122hd4k",
+      "kind": "example"
+    },
+    "Stage Pin (Male) to NEMA 5-15 (Female) Electrical Adaptor": {
+      "label": "View a connector reference from Lex",
+      "url": "https://lexproducts.com/powerflex_detail?part=A5016",
+      "kind": "example"
+    },
+    "Wireless DMX Transmitter/Reciever": {
+      "label": "View an example wireless DMX kit from Chauvet",
+      "url": "https://www.chauvetdj.com/products/d-fi-xlr-pack/",
+      "kind": "example"
+    },
+    "Rotary Sanding Drum": {
+      "label": "View an example sanding drum from Dremel",
+      "url": "https://www.dremel.com/us/en/p/407-2615000407",
+      "kind": "example"
+    },
+    "DPA Instrument Clip - Reserve": {
+      "label": "Compare the DPA instrument clip styles",
+      "url": "https://www.dpamicrophones.com/mic-university/how-to-mic/how-to-use-the-dpa-instrument-clips/",
+      "kind": "example"
+    },
+    "DPA Mic Adapter for Sennheiser - Reserve": {
+      "label": "Compare the DPA wireless adapter models",
+      "url": "https://www.dpamicrophones.com/accessories/adapters/",
+      "kind": "example"
     }
   }
 }

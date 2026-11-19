@@ -1,0 +1,66 @@
+.staff-main .tool-tabs {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0;
+  margin-top: 20px;
+  overflow: visible;
+}
+
+.staff-main .tool-tabs button {
+  min-height: 44px;
+  padding: 9px 4px;
+  white-space: normal;
+}
+
+.staff-main .home-status {
+  margin: 16px 0;
+  padding: 0 0 12px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.staff-main .room3d-card {
+  background: transparent;
+  padding: 0;
+  margin: 14px 0;
+}
+
+.staff-main .room3d-card summary {
+  padding: 8px 0;
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.staff-main .room3d-card .tool-note {
+  margin: 0 0 8px;
+}
+
+.edit-matches {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+}
+
+.staff-form .edit-matches button {
+  width: 100%;
+  min-height: 44px;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  padding: 9px 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+
+.staff-form .edit-matches button:hover,
+.staff-form .edit-matches button:focus-visible {
+  background: var(--soft);
+}
+
+@media (max-width: 640px) {
+  .staff-main .tool-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    row-gap: 5px;
+  }
+}

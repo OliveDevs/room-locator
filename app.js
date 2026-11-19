@@ -158,7 +158,8 @@ function attachCalendar(k,fromConsole){
     const due=dueOrAsk(); if(!due)return;
     // a Google Calendar link cannot set its own alerts, so the event covers the 2 hours before the deadline:
     // the person's usual Google alert then goes off before that window, and the block sits in their day
-    const start=new Date(Math.max(Date.now()+60000,due.getTime()-2*60*60*1000));
+    const start=new Date(Math.min(Date.now(),due.getTime()-1000));
+    start.setTime(Math.max(start.getTime(),due.getTime()-2*60*60*1000));
     const zone=Intl.DateTimeFormat().resolvedOptions().timeZone||'America/New_York';
     const by=due.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
     const params=new URLSearchParams({action:'TEMPLATE',text:'Return '+k.n+' to IDeATe Lending by '+by,dates:calendarStamp(start)+'/'+calendarStamp(due),stz:zone,etz:zone,details:(k.list?'Everything to bring back: '+k.list+'.\n\n':'')+'Due back at '+by+' on '+due.toLocaleDateString([], {weekday:'long',month:'long',day:'numeric'})+'. This event covers the last 2 hours before the deadline. Hand the item to staff in Hunt Library A29.\n\nLoans cannot be renewed. For illness or an emergency, email help@ideate.cmu.edu before it is due. Late fees are charged by the day.\n\nFor a warning the day before, choose Add notification and set 1 day before you save.\n\nItem guide: '+location.origin+location.pathname+(k.url||'?i='+(k.h||'')),location:'IDeATe Lending, Hunt Library A29, Carnegie Mellon University'});
@@ -266,13 +267,27 @@ function external(label,url){return '<a class="source-link" href="'+esc(url)+'" 
 function photoFor(k){if(k.p&&k.p.none)return null;if(k.p)return k.p;const own=PHOTO.lending?.[k.n];return own?{...own,kind:'lending'}:PHOTO.images?.[PHOTO.items?.[k.n]]}
 // a small picture for the list. Only Wikimedia thumbnails, which come in a 120-pixel size; each loads when it scrolls into view
 function thumbHtml(k){
-  const photo=photoFor(k), small=!photo?'':photo.kind==='lending'?photo.url:/\/\d+px-/.test(photo.url)?photo.url.replace(/\/\d+px-/,'/330px-'):/Special:FilePath\/.*[?&]width=\d+/.test(photo.url)?photo.url.replace(/width=\d+/,'width=330'):'';
+  const photo=photoFor(k), small=!photo?'':photo.thumb||(photo.kind==='lending'?photo.url:/\/\d+px-/.test(photo.url)?photo.url.replace(/\/\d+px-/,'/330px-'):/Special:FilePath\/.*[?&]width=\d+/.test(photo.url)?photo.url.replace(/width=\d+/,'width=330'):'');
   return small?'<img class="card-thumb" src="'+esc(small)+'" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.parentElement.classList.add(\'card-photo-none\');this.remove()">':'<span class="card-thumb card-thumb-none" aria-hidden="true"></span>';
 }
 function photoHtml(k){
   const photo=photoFor(k);
-  if(!photo)return '<figure class="item-photo no-photo"><div class="no-photo-tile" aria-hidden="true"><span>'+esc(k.t)+'</span></div><figcaption><strong>No photo yet</strong><span>We would rather show nothing than a picture of the wrong thing. Ask at the desk to see it.</span></figcaption></figure>';
-  if(photo.kind==='lending')return '<figure class="item-photo item-photo-own"><img src="'+esc(photo.url)+'" alt="'+esc('Photo of '+k.n+' from the lending catalog')+'" style="width:'+Math.round(photo.w*Math.min(2,300/photo.h,480/photo.w))+'px" loading="eager" referrerpolicy="no-referrer" onerror="const f=this.closest(\'figure\');if(f)f.classList.add(\'photo-unavailable\');this.remove()"><figcaption><strong>From the lending catalog</strong><span>The library\u2019s own picture of this item.</span><small>Photo: IDeATe Lending, Carnegie Mellon University Libraries \u00b7 <a href="'+esc(photo.page)+'" target="_blank" rel="noopener noreferrer">Catalog record \u2197</a></small></figcaption></figure>';
+  if (!photo) {
+    const reference = PHOTO.references?.[k.n];
+    const hasReference = reference && /^https:\/\//.test(reference.url);
+    const caption = hasReference
+      ? '<strong>Photo reference</strong><span>' + (reference.kind === 'model' ? 'The manufacturer shows this model.' : 'Use this example to identify the type. Confirm the exact model at the desk.') + '</span>' + external(reference.label, reference.url)
+      : '<strong>No photo yet</strong><span>Ask at the desk to see the exact item.</span>';
+    return '<figure class="item-photo no-photo"><div class="no-photo-tile" aria-hidden="true"><span>' + esc(k.t) + '</span></div><figcaption>' + caption + '</figcaption></figure>';
+  }
+  if (photo.kind === 'lending') {
+    const archive = photo.source === 'image-library';
+    const title = archive ? 'From the Lending image library' : 'From the Lending catalog';
+    const detail = archive ? 'Compare the photo against the unit at the desk.' : 'The library’s own picture of this item.';
+    const linkLabel = archive ? 'Original image' : 'Catalog record';
+    const width = Math.round(photo.w*Math.min(2,300/photo.h,480/photo.w));
+    return '<figure class="item-photo item-photo-own"><img src="' + esc(photo.url) + '" alt="' + esc('Photo of ' + k.n + ' from IDeATe Lending') + '" style="width:' + width + 'px" loading="eager" referrerpolicy="no-referrer" onerror="const f=this.closest(\'figure\');if(f)f.classList.add(\'photo-unavailable\');this.remove()"><figcaption><strong>' + title + '</strong><span>' + detail + '</span><small>Source: IDeATe Lending, Carnegie Mellon University Libraries · <a href="' + esc(photo.page) + '" target="_blank" rel="noopener noreferrer">' + linkLabel + ' ↗</a></small></figcaption></figure>';
+  }
   const exact=!!k.p||PHOTO.exact?.includes(k.n),illustration=photo.kind==='illustration',alt=illustration?'Illustration of '+k.t:exact?'Photo showing '+k.n:'Representative photo for '+categoryName(k.c)+' / '+k.t;
   const license=photo.license||'',parts=license.match(/^CC (BY-SA|BY) (\d\.\d)$/),licenseUrl=parts?'https://creativecommons.org/licenses/'+parts[1].toLowerCase()+'/'+parts[2]+'/':license==='CC0'?'https://creativecommons.org/publicdomain/zero/1.0/':'';
   const credit=illustration?'Original site illustration':'Photo: '+esc(photo.artist||'Wikimedia Commons contributor')+(photo.page&&photo.page!=='#'?' · <a href="'+esc(photo.page)+'" target="_blank" rel="noopener noreferrer">Source ↗</a>':'')+(licenseUrl?' · <a href="'+licenseUrl+'" target="_blank" rel="noopener noreferrer">'+esc(license)+' ↗</a>':license?' · '+esc(license):'');
@@ -316,7 +331,7 @@ function consolePlace(){
   const m=/^([A-Za-z0-9]{1,4})-(\d{1,2})$/.exec(new URLSearchParams(location.search).get('w')||'');
   if(!m)return null;
   const unit=(ROOM.units||[]).find(u=>u.code.toUpperCase()===m[1].toUpperCase()), shelf=Number(m[2]);
-  if(!unit)return null;
+  if (!unit || (unit.shelves ? shelf < 1 || shelf > unit.shelves : shelf !== 0)) return null;
   return {text:shelf>0&&unit.shelves?unit.name+', shelf '+shelf:'Ask at the desk · '+unit.name};
 }
 // a hand-written how-to for the kind of thing this is: what it does, its parts, how to use it, what goes wrong
@@ -361,6 +376,7 @@ function itemView(k,fromConsole){
   app.innerHTML='<a class="back" href="./">← All items</a>'+(fromConsole?reminderHtml(true,k.n):'')+'<div class="item-lead"><div class="item-summary"><p class="eyebrow">'+esc(categoryName(k.c))+' / '+esc(k.t)+'</p><h1>'+esc(k.n)+'</h1><p class="intro">'+esc(introFor(k))+'</p>'+(goodFor(k)?'<p class="good-for"><strong>Good for</strong> '+esc(goodFor(k))+'</p>':'')+'<aside class="location"><small>Find it in Lending</small><strong>'+esc(live?live.text:k.in?k.w:'Ask at the desk · '+k.w)+'</strong><p>'+(live?'This is the shelf the console in Lending showed when you scanned it.':'Shelf locations and availability can change. The desk has the current information.')+'</p></aside></div>'+photoHtml(k)+'</div>'+
   '<div class="guide-layout"><div class="guide-stack">'+(howto?howtoHtml(howto):'<section class="guide-section"><h2>Before you start</h2>'+listItems(guide.need)+'<p class="note">This is a preparation list. Confirm what comes in the loan with staff; accessories and supplies may be separate.</p></section><section class="guide-section"><h2>First steps</h2><ol>'+guide.start.map(s=>'<li>'+esc(s)+'</li>').join('')+'</ol></section>')+
   ((k.tips?.length||TIPS[k.n]||TIPS[group])?'<section class="guide-section"><h2>Useful tips</h2>'+listItems(k.tips||TIPS[k.n]||TIPS[group])+'</section>':'')+((howto&&!manual.length&&!MODEL_CHOICES[k.n])?(makerSupport(k.n)?'<section class="guide-section"><h2>Maker support</h2>'+external('Open '+makerSupport(k.n)[0]+'\u2019s own support site',makerSupport(k.n)[1])+'<p class="note">Read the model on the item to find its exact manual there.</p></section>':''):manualHtml(k,manual))+'</div><aside class="side-stack"><details class="side-block side-fold"><summary>Borrowing rules and late fees</summary><p>At checkout, confirm the exact model, included parts, condition, and return date with staff. For powered devices, test startup before leaving when possible.</p><p>Visit IDeATe Lending in Hunt Library basement, room A29, across from the elevator. Bring your CMU ID. Check current lending hours and borrowing rules before visiting.</p><p>During the semester, the normal loan is three days with a 6 p.m. due time. Weekends count; university holidays may shift the due date.</p><p>Loans cannot be renewed. Hand the item to staff in A29; drop boxes and other libraries do not count. Late fees run from $1 to $25 a day depending on what the item costs, and borrowing is blocked once fines reach $25.</p>'+external('Official IDeATe Lending rules','https://ideate.cmu.edu/resources/lending/index.html')+external('Full circulation policy','https://ideate.cmu.edu/resources/lending/ideate-circulation-policy.html')+external('Browse CMU’s '+categoryName(k.c)+' collection',collectionUrl(k.c))+'</details>'+(related.length?'<div class="side-block"><h2>Often used with</h2>'+related.map(g=>'<a class="source-link" href="#t'+encodeURIComponent(g)+'">'+esc(g.split('/')[1])+'</a>').join('')+'<p>Compatibility and availability vary by model.</p></div>':'')+(fromConsole?'':reminderHtml(false))+kitsFor(k)+'<div class="side-block"><h2>Something wrong with it?</h2><p>Missing a part, broken, or this page is wrong? Tell the lending staff.</p><a class="source-link" href="'+esc(problemLink(k,live))+'">Report a problem by email</a></div></aside></div>';
+  if (!location.search) app.querySelector('.back').href = '#';
   attachCalendar(k,fromConsole);
   countOpen(k,fromConsole);
   {const pose=itemPose(k),first=document.querySelector('.guide-stack .guide-section');if(pose&&first)first.insertAdjacentHTML('afterbegin',pup(pose,'pup-item'))}
@@ -373,10 +389,13 @@ function itemView(k,fromConsole){
 }
 const pup=(pose,cls)=>'<img class="pup '+(cls||'')+'" src="dog/'+pose+'.png?v=2" alt="" aria-hidden="true" loading="lazy">';   // drawings of Loki, Diana's dog, as decoration
 function renderCards(rows){const target=document.getElementById('results');document.getElementById('count').textContent=rows.length+' of '+K.length+' items';target.innerHTML=rows.length?rows.map(k=>'<a class="item-card" style="'+catStyle(k.c)+'" href="#i'+k.h+'"><span class="card-photo">'+thumbHtml(k)+'</span><div><strong>'+esc(k.n)+'</strong><small>'+esc(k.t)+'</small><span class="card-where"><i class="led" aria-hidden="true"></i>'+esc(k.in?k.w:'Ask at the desk')+'</span></div></a>').join(''):'<div class="empty-state">'+pup('dig')+'<p>Dug around and found nothing. Try a shorter name or another category.</p></div>'}
+const homeSearch = { query: '', category: '', mode: 'name' };
 function listing(category='',type=''){
+  const isHome = !category && !type;
+  if (isHome) category = homeSearch.category;
   document.title='IDeATe Lending · Item guides';
   const categories=[...new Set(K.map(k=>k.c))].sort();
-  app.innerHTML='<div class="hero-row"><div><h1>Find it in Lending</h1><p class="intro">'+K.length+' things to borrow in Hunt Library A29, each with its shelf, how to use it and a return reminder.</p></div>'+(loans().some(x=>x.due<Date.now())?'':'<img class="pup pup-peek" src="dog/'+(matchMedia('(prefers-reduced-motion: reduce)').matches?'hero.png':'hero.webp')+'?v=2" alt="" aria-hidden="true">')+'</div>'+loansHtml()+'<div class="search-mode" role="group" aria-label="How to search"><button type="button" data-mode="name" aria-pressed="true">Find an item</button><button type="button" data-mode="use" aria-pressed="false">What it is good for</button><a href="#kits">Kits for a whole project</a></div><div class="search-tools"><input id="query" type="search" placeholder="Item name: tripod, HDMI, Zoom..." aria-label="Search" autocomplete="off"><select id="category" class="visually-hidden" aria-label="Filter by category" tabindex="-1"><option value="">All categories</option>'+categories.map(c=>'<option value="'+esc(c)+'"'+(c===category?' selected':'')+'>'+esc(categoryName(c))+'</option>').join('')+'</select></div><div class="cat-tiles" role="group" aria-label="Category">'+CAT_ORDER.filter(x=>categories.includes(x)).map(x=>'<button type="button" class="cat-tile" style="'+catStyle(x)+'" data-cat="'+esc(x)+'" aria-pressed="'+(x===category)+'"><strong>'+esc(CAT_SHORT[x]||x)+'</strong><span>'+K.filter(k=>k.c===x).length+'</span></button>').join('')+'</div><div id="kit-hits"></div><p class="result-count" id="count"></p><div class="item-grid" id="results"></div>';
+  app.innerHTML='<div class="hero-row"><div><h1>Find it in Lending</h1><p class="intro">'+K.length+' things to borrow in Hunt Library A29, each with its shelf, how to use it and a return reminder.</p></div>'+(loans().some(x=>x.due<Date.now())?'':'<img class="pup pup-peek" width="280" height="300" src="dog/'+(matchMedia('(prefers-reduced-motion: reduce)').matches?'hero.png':'hero.webp')+'?v=2" alt="" aria-hidden="true">')+'</div>'+loansHtml()+'<div class="search-mode" role="group" aria-label="How to search"><button type="button" data-mode="name" aria-pressed="true">Find an item</button><button type="button" data-mode="use" aria-pressed="false">What it is good for</button><a href="#kits">Kits for a whole project</a></div><div class="search-tools"><input id="query" type="search" placeholder="Item name: tripod, HDMI, Zoom..." aria-label="Search" autocomplete="off"><select id="category" class="visually-hidden" aria-label="Filter by category" tabindex="-1"><option value="">All categories</option>'+categories.map(c=>'<option value="'+esc(c)+'"'+(c===category?' selected':'')+'>'+esc(categoryName(c))+'</option>').join('')+'</select></div><div class="cat-tiles" role="group" aria-label="Category">'+CAT_ORDER.filter(x=>categories.includes(x)).map(x=>'<button type="button" class="cat-tile" style="'+catStyle(x)+'" data-cat="'+esc(x)+'" aria-pressed="'+(x===category)+'"><strong>'+esc(CAT_SHORT[x]||x)+'</strong><span>'+K.filter(k=>k.c===x).length+'</span></button>').join('')+'</div><div id="kit-hits"></div><p class="result-count" id="count"></p><div class="item-grid" id="results"></div>';
   attachLoans(app);
   const q=document.getElementById('query'),c=document.getElementById('category');
   // the colour tiles drive the (hidden) category list: tap one to filter, tap it again for everything
@@ -415,8 +434,16 @@ function listing(category='',type=''){
     const scored=KITS.map(x=>{const t=(x.name+' '+x.why+' '+x.parts.map(p=>p.role).join(' ')).toLowerCase().split(/[^a-z0-9]+/);const direct=keys.filter(w=>has(t,w)).length, soft=keys.filter(w=>!has(t,w)&&alsoOf(w).some(a=>has(t,a))).length;return [x,direct,direct+soft*0.5]}).filter(x=>x[1]>=Math.min(2,keys.length));
     const best=Math.max(0,...scored.map(x=>x[2]));
     return scored.filter(x=>x[2]===best).map(x=>x[0]).slice(0,2)};
-  let mode='name';
+  let mode = isHome ? homeSearch.mode : 'name';
+  if (isHome) q.value = homeSearch.query;
+  const modeButtons = [...app.querySelectorAll('.search-mode button')];
+  function showSearchMode() {
+    for (const button of modeButtons) button.setAttribute('aria-pressed', String(button.dataset.mode === mode));
+    q.placeholder = mode === 'use' ? 'What do you need to do? record an interview, hang a poster...' : 'Item name: tripod, HDMI, Zoom...';
+  }
+  showSearchMode();
   function draw(){
+    if (isHome) Object.assign(homeSearch, { query: q.value, category: c.value, mode });
     const words=q.value.trim().toLowerCase().split(/\s+/).filter(Boolean), pool=K.filter(k=>(!c.value||k.c===c.value)&&(!type||k.t===type));
     let rows=pool, said='';
     if(words.length&&mode==='use'){rows=byUse(pool,words);said=rows.length?rows.length+' things good for that':''}
@@ -432,7 +459,7 @@ function listing(category='',type=''){
     if(said)document.getElementById('count').textContent=said;
     else if(words.length&&mode==='use'&&!rows.length)document.getElementById('count').textContent=kits.length?'':'Nothing matched. Try other words for what you want to do.';
   }
-  document.querySelectorAll('.search-mode button').forEach(b=>b.addEventListener('click',()=>{mode=b.dataset.mode;document.querySelectorAll('.search-mode button').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'));q.placeholder=mode==='use'?'What do you need to do? record an interview, hang a poster...':'Item name: tripod, HDMI, Zoom...';q.focus();draw()}));
+  for (const button of modeButtons) button.addEventListener('click', () => { mode = button.dataset.mode; showSearchMode(); q.focus(); draw(); });
   q.addEventListener('input',draw);c.addEventListener('change',()=>{type='';draw()});draw();
 }
 function roomView(){
@@ -458,7 +485,7 @@ function loansHtml(always){
   const now=Date.now(),when=t=>new Date(t).toLocaleString([], {weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
   return '<section class="my-loans" aria-label="My loans">'+(v.some(x=>x.due<now)?pup('sad','pup-loans'):'')+'<h2>My loans</h2><ul>'+v.map(x=>'<li'+(x.due<now?' class="late"':'')+'><a href="'+(x.h.startsWith('kit-')?'#':'#i')+esc(x.h)+'">'+esc(x.n)+'</a><span>'+(x.due<now?'Was due ':'Due ')+esc(when(x.due))+'</span><button type="button" data-returned="'+esc(x.h)+'">Returned</button></li>').join('')+'</ul><p class="note">Remembered on this phone only. Loans cannot be renewed; hand each one to staff in A29.</p></section>';
 }
-function attachLoans(root){root.querySelectorAll('[data-returned]').forEach(b=>b.addEventListener('click',()=>{saveLoans(loans().filter(x=>x.h!==b.dataset.returned));const box=root.querySelector('.my-loans');if(box){box.outerHTML=loansHtml();attachLoans(root)}thanksNote()}))}
+function attachLoans(root){root.querySelectorAll('[data-returned]').forEach(b=>b.addEventListener('click',()=>{saveLoans(loans().filter(x=>x.h!==b.dataset.returned));const box=root.querySelector('.my-loans');if(box){box.outerHTML=loansHtml(location.hash==='#loans');attachLoans(root)}thanksNote()}))}
 // a small "thanks" in the corner for a few seconds after Returned is pressed, with the tail-wag animation
 function thanksNote(){
   document.querySelector('.thanks-note')?.remove();
@@ -471,9 +498,15 @@ function thanksNote(){
 function kitCodeText(kit){return 'RL:KIT:'+kit.parts.map(p=>K.find(k=>k.n===p.pick[0])).filter(Boolean).slice(0,8).map(k=>k.h).join(',')}
 function showKitCode(kit,box){
   const draw=()=>{const q=qrcode(0,'M');q.addData(kitCodeText(kit));q.make();box.innerHTML='<div class="kit-qr">'+q.createSvgTag({cellSize:5,margin:4,scalable:true})+'</div><p>Hold this up to the scanner on the console in Lending. The shelf of every piece lights up, each in its own colour.</p><p class="note">It lights the first choice in each row, up to 8 pieces, and changes nothing. The console needs version 5.14 or newer.</p>'};
-  if(window.qrcode){draw();return}
+  if(window.qrcode){draw();return Promise.resolve()}
   box.textContent='Making the code...';
-  const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';sc.onload=draw;sc.onerror=()=>{box.textContent='The code could not be made. Check the connection and try again.'};document.head.appendChild(sc);
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
+    script.onload = () => { try { draw(); resolve(); } catch (err) { reject(err); } };
+    script.onerror = () => { script.remove(); reject(Error('QR library unavailable')); };
+    document.head.appendChild(script);
+  });
 }
 function kitsView(id){
   const kit=KITS.find(x=>x.id===id), find=n=>K.find(k=>k.n===n);
@@ -482,14 +515,20 @@ function kitsView(id){
   document.title=kit.name+' \u00b7 IDeATe Lending';
   app.innerHTML='<a class="back" href="#kits">\u2190 All kits</a><div class="hero-row"><div><h1>'+esc(kit.name)+'</h1><p class="intro">'+esc(kit.why)+'</p></div></div><div class="kit-list">'+kit.parts.map(p=>{const items=p.pick.map(find).filter(Boolean);if(!items.length)return '';const first=items[0];
     return '<div class="kit-row"><p class="kit-role">'+esc(p.role)+'</p><a class="item-card" href="#i'+first.h+'">'+thumbHtml(first)+'<div><strong>'+esc(first.n)+'</strong><span class="card-where">'+esc(first.in?first.w:'Ask at the desk')+'</span></div><span class="arrow" aria-hidden="true">\u2197</span></a>'+(items.length>1?'<p class="kit-or">or '+items.slice(1).map(k=>'<a href="#i'+k.h+'">'+esc(k.n)+'</a> ('+esc(k.in?k.w:'ask at the desk')+')').join(', or ')+'</p>':'')+'</div>'}).join('')+'</div><div class="kit-reminder">'+reminderHtml(false).replace('<h2>Return reminder</h2>','<h2>One return reminder for the whole kit</h2>')+'</div><div class="guide-section kit-tip"><h2>Light the shelves in Lending</h2><p><button type="button" id="kit-code-go" class="kit-code-go">Show the code for the console</button></p><div id="kit-code" aria-live="polite"></div></div><div class="guide-section kit-tip"><h2>Before you go</h2><p>'+esc(kit.tip)+'</p><p class="note">Each piece is checked out separately and may already be on loan. The desk has what is in today.</p></div>';
-  document.getElementById('kit-code-go').addEventListener('click',e=>{e.target.hidden=true;showKitCode(kit,document.getElementById('kit-code'))});
+  document.getElementById('kit-code-go').addEventListener('click', async e => {
+    const button = e.currentTarget, box = document.getElementById('kit-code');
+    button.disabled = true;
+    try { await showKitCode(kit, box); button.hidden = true; }
+    catch { box.textContent = 'Could not make the code. Check your connection and try again.'; }
+    finally { button.disabled = false; }
+  });
   attachCalendar({n:kit.name+' kit',h:'kit-'+kit.id,url:'#kit-'+kit.id,list:kit.parts.map(p=>(p.pick.map(find).filter(Boolean)[0]||{}).n).filter(Boolean).join(', ')},false);
 }
-function route(){if(!DATA)return;app.style.removeProperty('--cat');app.style.removeProperty('--cat-ink');document.body.classList.remove('in-cat');document.body.style.removeProperty('--cat');document.body.style.removeProperty('--cat-ink');const hash=decodeURIComponent(location.hash.slice(1));const query=new URLSearchParams(location.search).get('i');let k;
+function route(){if(!DATA)return;app.style.removeProperty('--cat');app.style.removeProperty('--cat-ink');document.body.classList.remove('in-cat');document.body.style.removeProperty('--cat');document.body.style.removeProperty('--cat-ink');let hash=location.hash.slice(1);try{hash=decodeURIComponent(hash)}catch{}const query=new URLSearchParams(location.search).get('i');let k;
   if(/^i[0-9a-f]{6}$/.test(hash))k=K.find(x=>x.h===hash.slice(1));   // links carry the item's own code, so they keep working when the list changes
   else if(/^k\d+$/.test(hash))k=K[Number(hash.slice(1))];             // (old links by position still open)
   else if(query&&!hash)k=K.find(x=>x.h===query.toLowerCase());
   if(k)itemView(k,!!(query&&!hash));else if(hash==='loans'){document.title='My loans \u00b7 IDeATe Lending';app.innerHTML='<a class="back" href="./">\u2190 All items</a><h1>My loans</h1>'+loansHtml(true);attachLoans(app)}else if(hash==='room')roomView();else if(hash==='kits'||hash.startsWith('kit-'))kitsView(hash.slice(4));else if(hash.startsWith('t')){const [c,t]=hash.slice(1).split('/');listing(c,t)}else{listing();if(/^[ik][0-9a-f]+$/.test(hash)||(query&&!hash)){const lost=document.createElement('div');lost.className='lost-link';lost.innerHTML=pup('surprised')+'<p><strong>That link does not match anything in the list now.</strong> The item may have been renamed or removed. Search for it below.</p>';app.insertBefore(lost,app.firstChild);app.querySelector('.pup-peek')?.remove()}}
   window.scrollTo(0,0);
 }
-Promise.all([fetch('data.json?v=20261116t').then(r=>{if(!r.ok)throw Error('Inventory unavailable');return r.json()}),fetch('photos.json?v=20261116k').then(r=>r.ok?r.json():{}).catch(()=>({})),fetch('room.json?v=20261116a').then(r=>r.ok?r.json():{units:[]}).catch(()=>({units:[]})),fetch('howto.json?v=20261116b').then(r=>r.ok?r.json():null).catch(()=>null),fetch('kits.json?v=20261118a').then(r=>r.ok?r.json():null).catch(()=>null)]).then(([data,photos,room,howto,kits])=>{if(kits&&Array.isArray(kits.kits))KITS=kits.kits;DATA=data;K=data.kinds;PHOTO=photos;ROOM=room;if(howto&&howto.guides&&howto.items)HOWTO=howto;route();addEventListener('hashchange',route)}).catch(()=>{app.innerHTML='<h1>Item guide unavailable</h1><p>Please try reloading this page.</p>'});
+Promise.all([fetch('data.json?v=20261116t').then(r=>{if(!r.ok)throw Error('Inventory unavailable');return r.json()}),fetch('photos.json?v=lending-archive-2').then(r=>r.ok?r.json():{}).catch(()=>({})),fetch('room.json?v=20261116a').then(r=>r.ok?r.json():{units:[]}).catch(()=>({units:[]})),fetch('howto.json?v=20261116b').then(r=>r.ok?r.json():null).catch(()=>null),fetch('kits.json?v=20261118a').then(r=>r.ok?r.json():null).catch(()=>null)]).then(([data,photos,room,howto,kits])=>{if(kits&&Array.isArray(kits.kits))KITS=kits.kits;DATA=data;K=data.kinds;PHOTO=photos;ROOM=room;if(howto&&howto.guides&&howto.items)HOWTO=howto;route();addEventListener('hashchange',route)}).catch(()=>{app.innerHTML='<h1>Item guide unavailable</h1><p>Please try reloading this page.</p>'});
