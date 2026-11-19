@@ -249,18 +249,8 @@ const unsigned long STAFF_MS = 300000UL;        // once the PIN is right, change
 const byte PIN_TRIES = 5;                       // this many wrong PINs in a row and the PIN screen rests for a while
 const unsigned long PIN_REST_MS = 60000UL;      // how long it rests: guessing all 10,000 PINs by hand would take days
 uint32_t staffHash = 0;                          // the staff PIN, scrambled (v5.30). The PIN itself is never kept, on the card or in memory.
-// The scramble: the letters of "Loki" stirred together with the four digits, 1500 times over. The card holds only the
-// result, so nobody can read the PIN off the card or over the USB cable. (It is still only a 4-digit PIN: a program
-// could try all 10,000. What this stops is someone simply reading it or typing a new one in from a laptop.)
-uint32_t pinHash(const char* pin) {
-  uint32_t h = 2166136261UL;
-  for (int r = 0; r < 1500; r++) {
-    for (const char* p = "Loki"; *p; p++) { h ^= (byte)*p; h *= 16777619UL; }
-    for (byte i = 0; i < 4 && pin[i]; i++) { h ^= (byte)pin[i]; h *= 16777619UL; }
-    h ^= (uint32_t)r;
-  }
-  return h;
-}
+// (pinHash(), the scramble, sits just above loadStaff() further down: the Arduino builder needs the first function
+// in the file to come after the type definitions.)
 unsigned long staffUntil = 0;
 enum { P_ENTER, P_NEW1, P_NEW2 };               // typing the PIN / a new PIN / the new PIN again
 enum { AFTER_ORGANIZE, AFTER_MOVE, AFTER_CODE, AFTER_DOMOVE, AFTER_NEWPIN, AFTER_RESET, AFTER_UNDO, AFTER_NOTHING };   // what happens once the PIN is right
@@ -651,6 +641,18 @@ void loadUnits() {
   if (f) f.close();
 }
 // the staff PIN: STAFF.TSV, one line with 4 digits
+// The scramble: the letters of "Loki" stirred together with the four digits, 1500 times over. The card holds only the
+// result, so nobody can read the PIN off the card or over the USB cable. (It is still only a 4-digit PIN: a program
+// could try all 10,000. What this stops is someone simply reading it or typing a new one in from a laptop.)
+uint32_t pinHash(const char* pin) {
+  uint32_t h = 2166136261UL;
+  for (int r = 0; r < 1500; r++) {
+    for (const char* p = "Loki"; *p; p++) { h ^= (byte)*p; h *= 16777619UL; }
+    for (byte i = 0; i < 4 && pin[i]; i++) { h ^= (byte)pin[i]; h *= 16777619UL; }
+    h ^= (uint32_t)r;
+  }
+  return h;
+}
 bool saveStaff() {
   File f = cardOpen("STAFF.TSV", O_WRITE | O_CREAT | O_TRUNC);
   if (!f) return false;
