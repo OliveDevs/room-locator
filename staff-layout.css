@@ -64,3 +64,8 @@
     row-gap: 5px;
   }
 }
+
+.staff-main .status-line { margin: 0; font-size: 15px; }
+.staff-main .sync-paste summary { color: var(--ink); }
+.staff-form select:disabled { opacity: .45; }
+#device h2 { font-size: 17px; margin: 18px 0 6px; }

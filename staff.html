@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400..700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=compact-loki-1"><link rel="stylesheet" href="staff-layout.css"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
+  <link rel="stylesheet" href="styles.css?v=compact-loki-1"><link rel="stylesheet" href="staff-layout.css?v=trim-1"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
 <main class="staff-main">
 <h1>Staff tools</h1>
 
@@ -15,21 +15,8 @@
 
 <section class="home-status">
 <p id="home-done" class="home-done" role="status" hidden></p>
-<p id="home-sync"></p>
-<div class="status-row"><span id="home-key"></span><button type="button" id="home-key-set" class="link-button"></button><button type="button" id="home-share" class="link-button" hidden>Change the passcode or console link</button></div>
+<p class="status-line"><span id="home-sync"></span> <span id="home-key"></span> <button type="button" id="home-key-set" class="link-button"></button></p>
 <p id="home-expiry" class="health-warn" hidden></p>
-<div id="share" class="connect" hidden>
-<h2>Staff passcode</h2>
-<p class="tool-note">Type a new one to set or change it. Anyone who types it on this page can save to the website. It is not the console's PIN. Longer is safer: a 4-digit one can be guessed.</p>
-<label>New passcode<input id="share-pass" type="password" autocomplete="off"></label>
-<label>Again<input id="share-pass2" type="password" autocomplete="off"></label>
-<div class="sync-actions"><button type="button" id="share-save">Save the passcode</button></div>
-<p id="share-why" class="tool-note"></p>
-<h2>Console link</h2>
-<p class="tool-note">Lets any phone that scans the console's Staff page code save with nothing to type. Only needed again if the console is replaced or its card is wiped.</p>
-<div class="sync-actions"><button type="button" id="link-console" class="button-secondary">Link the console again</button></div>
-<div id="link-code" hidden><div id="link-qr" class="qr"></div><p class="note">Last step, once: show this to the console's scanner (unlock the console with its staff PIN first). It is not shown again.</p></div>
-</div>
 </section>
 
 <details id="room3d-card" class="room3d-card" hidden>
@@ -82,22 +69,18 @@
 </section>
 
 <section id="tool-add" class="tool" role="tabpanel" aria-labelledby="tab-add" hidden>
-<ol class="add-steps">
-<li><strong>Fill in the five boxes below.</strong> That is all the console needs.</li>
-<li><strong>Make the code</strong> and scan it at the console. It asks for the PIN, then the item is live on the console straight away.</li>
-<li><strong>Want it on this website too?</strong> Open "Also put it on this website" and use the button at the bottom.</li>
-</ol>
+<p class="tool-note">Fill in the five boxes and make the code. The console asks for the PIN, then the item is live there straight away.</p>
 <form id="add-form" class="staff-form">
 <label class="wide">Item name<input name="name" required placeholder="Exactly as it appears in the inventory"><small id="name-room" class="field-help"></small></label>
 <label>Category<select name="category" required></select></label>
 <label>Type<select name="type" required></select></label>
 <label>Room unit<select name="unit" required></select></label>
 <label>Shelf<select name="shelf" required></select></label>
-<label>How many copies<input name="copies" required type="number" min="1" max="99" value="1"></label>
+<label>How many copies<input name="copies" required type="number" min="1" max="250" step="1" inputmode="numeric" value="1"></label>
 <button type="submit" class="wide">Make the console code</button>
 
 <details class="wide add-extra">
-<summary>Also put it on this website <span class="add-extra-hint">(optional &mdash; everything below only changes the item's guide page)</span></summary>
+<summary>Also give it a guide page on this website <span class="add-extra-hint">(optional)</span></summary>
 <div class="add-extra-grid">
 <p class="wide tool-note">Leave anything blank that you do not know. The page still works without it.</p>
 <label class="wide">Short description<textarea name="description" rows="2" placeholder="What this item is useful for"></textarea></label>
@@ -108,18 +91,8 @@
 <label class="wide">Photo URL, only if Lending is allowed to use it<input name="photo" placeholder="https://... or photos/name.jpg"><small class="field-help">No photo is better than the wrong photo. Leave it blank if you are not sure.</small></label>
 <label>Photo credit or maker<input name="credit" placeholder="IDeATe Lending staff"></label>
 <label>Photo source or licence URL<input name="crediturl" type="url" placeholder="https://..."></label>
-<button type="button" id="download-data" class="wide button-secondary">Download the website file (data.json)</button>
-<div class="wide handoff" id="add-handoff" hidden>
-<h3>Last step: hand the file over</h3>
-<p>The website is held on GitHub, so one person with access has to put the file in. Whoever that is:</p>
-<ol>
-<li>Open <a href="https://github.com/OliveDevs/room-locator/upload/main" target="_blank" rel="noopener noreferrer">the upload page &#8599;</a></li>
-<li>Drag the <code>data.json</code> you just downloaded onto it</li>
-<li>Press <em>Commit changes</em>. The guide page is live in about a minute.</li>
-</ol>
-<button type="button" id="copy-handoff" class="button-secondary">Copy a note to send with the file</button>
-<p class="tool-note" id="handoff-note"></p>
-</div>
+<button type="button" id="add-publish" class="wide">Save its guide page to the website</button>
+<p class="wide tool-note">Scan the console code above as well, so the console knows the item too.</p>
 </div>
 </details>
 </form>
@@ -146,15 +119,6 @@
 <label>How many Lending has<input name="copies" type="number" min="1" max="250" step="1" inputmode="numeric"></label>
 <button type="button" id="edit-publish" class="wide">Save to the website</button>
 <button type="button" id="edit-count-code" class="wide button-secondary">Only tell the console the new count</button>
-<button type="button" id="edit-download" class="wide button-secondary">Or download the file instead (data.json)</button>
-<div class="wide handoff" id="edit-handoff" hidden>
-<h3>Last step: hand the file over</h3>
-<ol>
-<li>Open <a href="https://github.com/OliveDevs/room-locator/upload/main" target="_blank" rel="noopener noreferrer">the upload page &#8599;</a></li>
-<li>Drag the <code>data.json</code> you just downloaded onto it</li>
-<li>Press <em>Commit changes</em>. The guide page updates in about a minute.</li>
-</ol>
-</div>
 </div>
 </div>
 </form>
@@ -166,13 +130,12 @@
 <div class="sync-camera"><video id="sync-video" playsinline muted hidden></video><canvas id="sync-canvas" hidden></canvas></div>
 <div class="sync-actions"><button type="button" id="sync-start">Scan the console's codes</button><button type="button" id="sync-stop" class="button-secondary" hidden>Stop the camera</button></div>
 <p id="sync-pages" class="sync-pages"></p>
-<details class="sync-paste"><summary>No camera? Paste instead</summary><label>The console's change list (type @MOVES in the Serial Monitor and copy what it prints)<textarea id="sync-paste" rows="5"></textarea></label><button type="button" id="sync-use-paste" class="button-secondary">Use the pasted list</button></details>
+
 <div id="sync-result" hidden><h2>What changes on the website</h2><ul id="sync-summary"></ul>
 <p id="sync-auto" class="tool-note" hidden><strong id="sync-auto-text"></strong> <button type="button" id="sync-auto-cancel" class="link-button">Cancel</button></p>
 <div class="sync-actions"><button type="button" id="sync-publish">Save these changes to the website</button></div>
-<p class="tool-note" id="sync-saved" hidden>Saved. Item pages and this staff page show the new shelves in about a minute.</p>
-<details class="sync-paste"><summary>Or download the two files instead</summary><div class="sync-actions"><button type="button" id="sync-data" class="button-secondary">Download data.json</button><button type="button" id="sync-room" class="button-secondary">Download room.json</button></div></details></div>
-<details class="sync-paste"><summary>Start over: put the website back to the Nov 16 setup</summary><p class="tool-note">Use this together with "Start over" on the console (the last spot on its map), so the two match again. It takes off every change brought over from the console and every edit made on this page since Nov 16.</p><button type="button" id="web-reset" class="button-secondary">Put the website back to the Nov 16 setup</button></details>
+<p class="tool-note" id="sync-saved" hidden>Saved. Item pages and this staff page show the new shelves in about a minute.</p></div>
+
 </div>
 </section>
 
@@ -259,18 +222,38 @@
 <p><button type="button" id="health-paste" class="button-secondary">Paste the new key</button></p>
 </details>
 </details>
-<details class="staff-fold"><summary>Help</summary>
+<details class="staff-fold" id="device" hidden><summary>Passcode and sign-out</summary>
+<div id="share">
+<h2>Staff passcode</h2>
+<p class="tool-note">Type a new one to set or change it. Anyone who types it on this page can save to the website. It is not the console's PIN. Longer is safer: a 4-digit one can be guessed.</p>
+<label>New passcode<input id="share-pass" type="password" autocomplete="off"></label>
+<label>Again<input id="share-pass2" type="password" autocomplete="off"></label>
+<div class="sync-actions"><button type="button" id="share-save">Save the passcode</button></div>
+<p id="share-why" class="tool-note"></p>
+<h2>Console link</h2>
+<p class="tool-note">Lets any phone that scans the console's Staff page code save with nothing to type. Only needed again if the console is replaced or its card is wiped.</p>
+<div class="sync-actions"><button type="button" id="link-console" class="button-secondary">Link the console again</button></div>
+<div id="link-code" hidden><div id="link-qr" class="qr"></div><p class="note">Last step, once: show this to the console's scanner (unlock the console with its staff PIN first). It is not shown again.</p></div>
+<h2>This device</h2>
+<p class="tool-note">Signing out means this phone or computer has to scan the console's Staff page code, or type the passcode, before it can save again.</p>
+<div class="sync-actions"><button type="button" id="device-signout" class="button-secondary">Sign this device out</button></div>
+</div>
+</details>
+<details class="staff-fold" id="help"><summary>Help</summary>
 <ul>
 <li>The PIN is checked on the console, never on this page. It starts as 1234. Change it on the console: press Down past the last picture on Home, Select, then go to the last spot on the map, "Change staff PIN".</li>
 <li>Shelf numbers count grooves from the bottom. If a board was taken out for something tall, the console puts things on the board below.</li>
 <li>This page reads the website's copy of the room. Moves made at the console since the last update are not shown here, so the console's own screen is the one to trust.</li>
-<li>A new item added with a code exists on the console right away. Its guide page appears on this site after "From the console" brings it over and you press Save.</li>
+<li>A new item added with a code exists on the console right away. Its guide page appears on this site after "Sync website" brings it over and you press Save. Or save it straight away from "Add an item".</li>
 <li>How many Lending has: "Edit an item" saves the number to the website, then shows a code for the console so it knows too.</li>
 <li>Several changes at once: every code you make is kept in a list under the QR. Set them all up, then show them to the console with Next code. The PIN is typed once.</li>
-<li>"From the console" always makes the website match the console exactly, including changes that were taken back there. With no changes on the console it puts the website back to the Nov 16 setup.</li>
+<li>"Sync website" always makes the website match the console exactly, including changes that were taken back there. With no changes on the console it puts the website back to the Nov 16 setup.</li>
 <li>A mistake on the console can be taken back there: Recent changes, then pick any change and press Select twice. Adding a new item cannot be undone one at a time, only with Start over.</li>
-<li>Start over (the last spot on the console's map, behind the PIN) takes back every change and every item added at the console. "From the console" on this page has the matching button for the website.</li>
+<li>Start over (the last spot on the console's map, behind the PIN) takes back every change and every item added at the console. The matching button for the website is at the bottom of this Help list.</li>
 </ul>
+<details class="sync-paste"><summary>Start over: put the website back to the Nov 16 setup</summary><p class="tool-note">Use this together with "Start over" on the console (the last spot on its map), so the two match again. It takes off every change brought over from the console and every edit made on this page since Nov 16.</p><button type="button" id="web-reset" class="button-secondary">Put the website back to the Nov 16 setup</button></details>
+<details class="sync-paste"><summary>Sync without a camera (needs a laptop plugged into the console)</summary><label>The console's change list (type @MOVES in the Serial Monitor and copy what it prints)<textarea id="sync-paste" rows="5"></textarea></label><button type="button" id="sync-use-paste" class="button-secondary">Use the pasted list</button></details>
+<p><a href="data.json" download>Download a copy of the item list</a> · <a href="room.json" download>Download a copy of the room map</a></p>
 <p><a href="STAFF-GUIDE.md">Full maintenance instructions ↗</a></p>
 </details>
 </div>
@@ -280,4 +263,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="room3d.js?v=20261116g"></script>
-<script src="staff.js?v=staff-search-5" defer></script></body></html>
+<script src="staff.js?v=staff-trim-1" defer></script></body></html>
