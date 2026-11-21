@@ -146,7 +146,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.48";
+const char VERSION[] PROGMEM = "5.49";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -664,6 +664,13 @@ void applyMove() {                               // play every change back over 
 char block[256]; File* blockOf = NULL; long blockAt = 0; int blockLen = 0; unsigned long blockSize = 0;
 File cardOpen(const char* name, uint8_t how = FILE_READ) { blockOf = NULL; return SD.open(name, how); }
 bool cardRemove(const char* name) { blockOf = NULL; return SD.remove(name); }
+// Files earlier versions left on the card. Nothing reads them now; the start-up removes them (v5.49). Copies of the old
+// data are in "SD CARD - full room 81 LEDs" on Diana's Desktop.
+const char OLD_0[] PROGMEM = "ITEMS.CSV";    const char OLD_1[] PROGMEM = "UPLOAD.TMP";   const char OLD_2[] PROGMEM = "SHELFMAP.CSV";
+const char OLD_3[] PROGMEM = "README.TXT";   const char OLD_4[] PROGMEM = "SHELVES.CSV";  const char OLD_5[] PROGMEM = "SECTIONS.CSV";
+const char OLD_6[] PROGMEM = "BAYS.CSV";     const char OLD_7[] PROGMEM = "BAYS_MAP.CSV"; const char OLD_8[] PROGMEM = "WRITE.BAK";
+const char OLD_9[] PROGMEM = "WRITE.NEW";    const char OLD_10[] PROGMEM = "CART.CSV";    const char OLD_11[] PROGMEM = "SENT.TSV";
+const char* const OLD_FILES[] PROGMEM = { OLD_0, OLD_1, OLD_2, OLD_3, OLD_4, OLD_5, OLD_6, OLD_7, OLD_8, OLD_9, OLD_10, OLD_11 };
 // reads one line starting at `pos` into `line`. Returns where the next line starts, or -1 at the end of the file
 bool searching = false;                          // true while the search reads every line: no need to replay changes
 long readLine(File& f, long pos) {
@@ -2544,7 +2551,6 @@ void receiveFile(char* args) {
   f.close();
   if (wasKinds) kindsFile = cardOpen("KINDS.TSV");
   if (got == size) { Serial.print(F("@OK ")); Serial.println(got); } else Serial.println(F("@ERR timeout"));
-  { char old[10]; strcpy_P(old, PSTR("SENT.TSV")); cardRemove(old); }   // v5.45 kept its notes here; ACKED.TSV replaced it
   loadUnits(); loadBoards(); loadMoves(); loadSent(); loadStaff(); loadWeb(); findAddedFrom(); goHome();
 }
 void readLaptop() {                              // a line of text from the Serial Monitor or the laptop tools
@@ -2632,6 +2638,7 @@ void setup() {
   if (!SD.begin(SD_CS_PIN)) { stopWith(F("No SD card"), F("Push the card in and press the reset button")); while (true) {} }
   kindsFile = cardOpen("KINDS.TSV");
   staffUntil = 0;                                                  // a restart locks changes again
+  for (byte i = 0; i < sizeof(OLD_FILES) / sizeof(OLD_FILES[0]); i++) { char old[14]; strcpy_P(old, (const char*)pgm_read_ptr(&OLD_FILES[i])); cardRemove(old); }
   loadUnits(); loadBoards(); loadMoves(); loadSent(); loadStaff(); loadWeb(); findAddedFrom();
   if (!kindsFile || unitTotal == 0) {                              // card without the v5 files: wait for the laptop to send them
     stopWith(F("Waiting for the laptop"), F("The SD card needs the data files (push_card.py)"));
