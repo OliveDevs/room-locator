@@ -564,9 +564,11 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const head = lines[0].split('|');
     if (head[0] !== 'RLSYNC') return false;
     const p = Number(head[1]), n = Number(head[2]), total = Number(head[3]);
+    const from = head.length >= 6 ? Number(head[4]) : 0, tag = head.length >= 6 ? Number(head[5]) : null;   // console v5.46: only the changes after `from`; `tag` is where they end
+    if (head.length >= 6 && !(Number.isInteger(from) && Number.isInteger(tag) && from >= 0 && tag >= from)) return false;
     if (![p, n, total].every(Number.isInteger) || p < 1 || p > n || n > 255 || total < 0 || n > Math.max(1, total)) return false;
-    if (pageCount && (n !== pageCount || Object.values(pages).some(x => x.total !== total))) { Object.keys(pages).forEach(k => delete pages[k]); }   // a different list: start over
-    pageCount = n; pages[p] = { total, lines: lines.slice(1).filter(Boolean) };
+    if (pageCount && (n !== pageCount || Object.values(pages).some(x => x.total !== total || x.tag !== tag))) { Object.keys(pages).forEach(k => delete pages[k]); }   // a different list: start over
+    pageCount = n; pages[p] = { total, tag, lines: lines.slice(1).filter(Boolean) };
     remember();
     showPages();
     if (Object.keys(pages).length === pageCount) {
@@ -580,7 +582,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
         status.textContent = 'The scanned pages do not match. Scan all pages again, starting at page 1.';
         return false;
       }
-      apply(all.map(l => l.split('|'))).catch(() => { status.textContent = 'Could not load the Nov 16 backup. Check the internet connection and scan again.'; });
+      apply(all.map(l => l.split('|')), from, tag).catch(() => { status.textContent = 'Could not load the website\'s files. Check the internet connection and scan again.'; });
     }
     return true;
   }
@@ -623,10 +625,43 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   let baseline = null, autoTimer = 0, cameFromConsole = false;
   $('sync-auto-cancel').addEventListener('click', () => { clearInterval(autoTimer); $('sync-auto').hidden = true; status.textContent = 'Not saved. Press Save these changes to the website when you are ready.'; });
   const loadBaseline = async () => baseline || (baseline = await Promise.all([fetch('backup/2026-11-16/data.json?x=' + Date.now()).then(x => x.json()), fetch('backup/2026-11-16/room.json?x=' + Date.now()).then(x => x.json())]));
-  async function apply(lines) {
-    const [baseData, baseRoom] = await loadBaseline();
+  // ---- the answer back to the console (v5.46). The console only counts changes as "on the website" when it scans this.
+  function showAck(code, title, what) {
+    const qr = qrcode(0, 'M'); qr.addData(code); qr.make();
+    $('ack-qr').innerHTML = qr.createSvgTag({ cellSize: 8, margin: 4, scalable: true }); $('ack-qr').dataset.code = code;
+    $('ack-title').textContent = title; $('ack-what').textContent = what; $('ack').hidden = false;
+    $('ack').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  const ackGot = tag => showAck('RL:GOT:' + tag, 'Last step: show this to the console', 'Hold it about 10 cm from the console\'s scanner. The console then knows the website has these changes and stops asking for an update.');
+  $('ack-done').addEventListener('click', () => { $('ack').hidden = true; });
+  let syncTag = null;
+  async function apply(lines, from = 0, tag = null) {
+    syncTag = tag; $('ack').hidden = true;
+    const allLines = lines.length;
+    const [liveData, liveRoom] = await Promise.all([fetch('data.json?x=' + Date.now()).then(x => x.json()), fetch('room.json?x=' + Date.now()).then(x => x.json())]);
+    const have = liveRoom.synced && Number.isInteger(liveRoom.synced.bytes) ? liveRoom.synced.bytes : -1;   // how far into the console's list the website already is
+    const adding = from > 0;                    // the console sent only what is new: add it to the website as it is now
+    if (adding) {
+      // The website may already hold the first few of these (saved, but the console never got the answer). Each line
+      // is its letters plus the two that end a line on the console's card, so they can be counted off exactly.
+      let skip = have - from, at = 0; const enc = new TextEncoder();
+      while (have >= from && have <= tag && skip > 0 && at < lines.length) { skip -= enc.encode(lines[at].join('\t')).length + 2; at++; }
+      if (have < from || have > tag || skip !== 0) {
+        clearInterval(autoTimer); $('sync-auto').hidden = true; $('sync-result').hidden = true;
+        status.textContent = 'The website and the console have lost track of each other. Nothing was changed.';
+        showAck('RL:RESEND', 'Show this to the console', 'Hold it at the console\'s scanner and type the PIN. The console then shows a code with its whole list. Scan that one with this phone\'s camera.');
+        return;
+      }
+      lines = lines.slice(at);
+      if (!lines.length) {
+        clearInterval(autoTimer); $('sync-auto').hidden = true; $('sync-result').hidden = true;
+        status.textContent = 'The website already has ' + (allLines === 1 ? 'that change' : 'those ' + allLines + ' changes') + '. Nothing to save.';
+        ackGot(tag); return;
+      }
+    }
+    const [baseData, baseRoom] = adding ? [liveData, liveRoom] : await loadBaseline();
     const d = JSON.parse(JSON.stringify(baseData)), r = JSON.parse(JSON.stringify(baseRoom));
-    const nowBy = Object.fromEntries(kinds.map(k => [k.h, k]));
+    const nowBy = Object.fromEntries((adding ? liveData.kinds : kinds).map(k => [k.h, k]));
     const guideFields = ['p', 'r', 'd', 'g', 'need', 'start', 'tips'];
     for (const k of d.kinds) { const now = nowBy[k.h]; if (!now) continue; for (const key of guideFields) { if (now[key] !== undefined) k[key] = JSON.parse(JSON.stringify(now[key])); else delete k[key]; } }
     const ub = Object.fromEntries(r.units.map(u => [u.code, u]));
@@ -652,6 +687,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     for (const k of d.kinds) { const u = ub[k.u]; k.w = u && u.shelves && k.s ? names[k.u] + ', shelf ' + boardBelowIn(u, k.s) : (names[k.u] || k.u); k.in = !!(u && u.shelves && k.s); }
     d.kinds.sort((a, b) => a.n.localeCompare(b.n));
     r.synced = { lines: lines.length, first: firstText, at: new Date().toISOString() };
+    if (tag !== null) r.synced.bytes = tag;       // how far into the console's list the website now is
     r.source = 'Room Locator console, changes brought over on ' + new Date().toISOString().slice(0, 10);
     outData = d; outRoom = r;
     const list = [];
@@ -660,8 +696,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
       const current = unitBy[u.code];
       return !current || ['first', 'shelves', 'rect', 'boards'].some(key => JSON.stringify(u[key]) !== JSON.stringify(current[key]));
     });
-    const needsSave = moved > 0 || layoutChanged;
-    list.push(lines.length ? 'The console has ' + lines.length + (lines.length === 1 ? ' change' : ' changes') + ' since the Nov 16 setup. Saving makes the website match it exactly.' : 'The console has no changes. Saving puts the website back to the Nov 16 setup.');
+    const needsSave = moved > 0 || layoutChanged || (tag !== null && have !== tag);
+    list.push(adding ? 'The console has ' + lines.length + (lines.length === 1 ? ' new change' : ' new changes') + '. Saving adds ' + (lines.length === 1 ? 'it' : 'them') + ' to the website.' : lines.length ? 'The console has ' + lines.length + (lines.length === 1 ? ' change' : ' changes') + ' since the Nov 16 setup. Saving makes the website match it exactly.' : 'The console has no changes. Saving puts the website back to the Nov 16 setup.');
     if (moved) list.push(moved + (moved === 1 ? ' item page will change.' : ' item pages will change.'));
     if (layoutChanged) list.push('The room map will change.');
     if (!needsSave) list.push('The website already matches the console.');
@@ -678,7 +714,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     // Scanned straight from the console on a device that has the key: save by itself after a 5-second count, so keeping
     // the website in step is one scan and nothing else. Cancel stops it; nothing to change means nothing is saved.
     clearInterval(autoTimer); $('sync-auto').hidden = true;
-    if (cameFromConsole && !needsSave) { $('home-done').textContent = 'The website already matches the console. Nothing to do.'; $('home-done').hidden = false; }
+    if (cameFromConsole && !needsSave) { $('home-done').textContent = 'The website already matches the console.' + (tag !== null ? '' : ' Nothing to do.'); $('home-done').hidden = false; if (tag !== null) ackGot(tag); }
     if (cameFromConsole && needsSave && keep.get('rl-key')) {
       let left = 5; $('sync-auto').hidden = false;
       const tick = () => { $('sync-auto-text').textContent = 'Saving to the website in ' + left + '...'; if (left-- <= 0) { clearInterval(autoTimer); $('sync-auto').hidden = true; $('sync-publish').click(); } };
@@ -687,9 +723,9 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   }
   const boardBelowIn = (u, n) => { while (n > 1 && u.boards && u.boards.length && !u.boards.includes(n)) n--; return n; };
   const download = (obj, name) => { const blob = new Blob([JSON.stringify(obj, null, 2) + '\n'], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
-  $('sync-publish').addEventListener('click', async e => { if (!outData) return; if (await publish({ 'data.json': outData, 'room.json': outRoom }, 'Website matched to the console (staff page)', e.target)) { $('sync-saved').hidden = false; try { sessionStorage.setItem('rl-done', 'Done: the website now matches the console. Students see the new shelves in about a minute. Nothing else to do.'); } catch (err) { } setTimeout(() => location.reload(), 2500); } });
+  $('sync-publish').addEventListener('click', async e => { if (!outData) return; if (await publish({ 'data.json': outData, 'room.json': outRoom }, 'Website matched to the console (staff page)', e.target)) { $('sync-saved').hidden = false; try { sessionStorage.setItem('rl-done', syncTag !== null ? 'Saved: the website now matches the console. Students see the new shelves in about a minute. One last step below.' : 'Done: the website now matches the console. Students see the new shelves in about a minute. Nothing else to do.'); if (syncTag !== null) sessionStorage.setItem('rl-ack', String(syncTag)); } catch (err) { } setTimeout(() => location.reload(), 2500); } });
   // after that reload, say plainly that it worked (the page used to come back looking as if nothing had happened)
-  try { const done = sessionStorage.getItem('rl-done'); if (done) { sessionStorage.removeItem('rl-done'); $('home-done').textContent = done; $('home-done').hidden = false; } } catch (err) { }
+  try { const done = sessionStorage.getItem('rl-done'); if (done) { sessionStorage.removeItem('rl-done'); $('home-done').textContent = done; $('home-done').hidden = false; } const ack = sessionStorage.getItem('rl-ack'); if (ack !== null) { sessionStorage.removeItem('rl-ack'); ackGot(ack); } } catch (err) { }
   $('web-reset').addEventListener('click', async e => {
     if (!confirm('Put the website back to the Nov 16 setup? Every change brought over from the console since then, and every edit made here, is taken off the website.')) return;
     const [d, r] = await Promise.all([fetch('backup/2026-11-16/data.json?x=' + Date.now()).then(x => x.json()), fetch('backup/2026-11-16/room.json?x=' + Date.now()).then(x => x.json())]);

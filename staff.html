@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400..700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=compact-loki-1"><link rel="stylesheet" href="staff-layout.css?v=one-code-2"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
+  <link rel="stylesheet" href="styles.css?v=compact-loki-1"><link rel="stylesheet" href="staff-layout.css?v=ack-1"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
 <main class="staff-main">
 <h1>Staff tools</h1>
 
@@ -15,6 +15,12 @@
 
 <section class="home-status">
 <p id="home-done" class="home-done" role="status" hidden></p>
+<section id="ack" class="ack" hidden aria-live="polite">
+<h2 id="ack-title">Last step: show this to the console</h2>
+<div id="ack-qr" class="qr"></div>
+<p id="ack-what">Hold it about 10 cm from the console's scanner. The console then knows the website has these changes and stops asking for an update.</p>
+<button type="button" id="ack-done" class="button-secondary">The console took it</button>
+</section>
 <p class="status-line"><span id="home-sync"></span> <span id="home-key"></span> <button type="button" id="home-key-set" class="link-button"></button></p>
 <p id="home-expiry" class="health-warn" hidden></p>
 </section>
@@ -272,4 +278,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="room3d.js?v=20261116g"></script>
-<script src="staff.js?v=one-code-3" defer></script></body></html>
+<script src="staff.js?v=ack-1" defer></script></body></html>

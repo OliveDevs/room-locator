@@ -145,7 +145,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.45";
+const char VERSION[] PROGMEM = "5.46";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -806,32 +806,35 @@ void loadMoves() {
   }
   if (f) f.close();
 }
-// ---------- What the website already has (v5.45)
-// The website code always carries the whole change list, so the website ends up matching the console exactly. The console
-// cannot see whether a phone really saved it; it takes it that it did once the last page of the code has been on screen.
-// It remembers how long MOVES.TSV was at that moment (webSentBytes, kept in SENT.TSV so a power cut does not forget).
-// Lines after that point are "new". Undoing a line from before that point means the website now has a change the
-// console no longer has (webExtra), which also needs an update.
+// ---------- What the website already has (v5.46)
+// The website code carries only the changes the website does not have yet. The console cannot see a phone, so it does
+// not guess: after the staff page has saved, it shows an answer-back code, RL:GOT:<n>, and only when the console scans
+// that does it count those changes as on the website. <n> is how long MOVES.TSV was when the website code was made.
+// webSentBytes = how much of MOVES.TSV the website is known to have (kept in ACKED.TSV, so a power cut does not forget).
+// webExtra = a change the website HAS was undone here (or the list was cleared): the next code sends everything again
+// from the start, and the staff page rebuilds the website from the Nov 16 setup.
+long syncTag = -1;                              // the length MOVES.TSV had when the website code now on show was made
 long movesSize() { File m = cardOpen("MOVES.TSV"); long n = m ? (long)m.size() : 0; if (m) m.close(); return n; }
+long syncFrom() { return webExtra ? 0 : webSentBytes; }           // where in MOVES.TSV the next website code starts
 void webCheck() { webDirty = webExtra || webSentBytes < movesSize(); }
 void saveSent() {
-  cardRemove("SENT.TSV"); File f = cardOpen("SENT.TSV", FILE_WRITE);
+  cardRemove("ACKED.TSV"); File f = cardOpen("ACKED.TSV", FILE_WRITE);
   if (f) { char buf[20]; snprintf_P(buf, sizeof(buf), PSTR("%ld\t%d"), webSentBytes, webExtra ? 1 : 0); f.println(buf); f.close(); }
   webCheck();
 }
 void loadSent() {
   webSentBytes = 0; webExtra = false;
-  File f = cardOpen("SENT.TSV");
+  File f = cardOpen("ACKED.TSV");
   if (f) { if (readLine(f, 0) >= 0) { webSentBytes = atol(field[0]); webExtra = atoi(field[1]) != 0; } f.close(); }
-  long size = movesSize(); if (webSentBytes < 0 || webSentBytes > size) { webSentBytes = size; webExtra = true; }
+  long size = movesSize(); if (webSentBytes < 0 || webSentBytes > size) { webSentBytes = 0; webExtra = true; }
   webCheck();
 }
-void sentAll() { webSentBytes = movesSize(); webExtra = false; saveSent(); }             // the website code has been shown to the end
 void sentCut(long from, long to) {                                                    // the letters from..to left MOVES.TSV (an undo)
-  if (from < webSentBytes) { webSentBytes -= (to < webSentBytes ? to : webSentBytes) - from; webExtra = true; }
+  syncTag = -1;                                                                       // a code made before this no longer counts
+  if (from < webSentBytes) { webSentBytes = 0; webExtra = true; }
   saveSent();
 }
-void sentCleared() { webExtra = webExtra || webSentBytes > 0; webSentBytes = 0; saveSent(); }   // the whole list went (Start over)
+void sentCleared() { syncTag = -1; webExtra = webExtra || webSentBytes > 0; webSentBytes = 0; saveSent(); }   // the whole list went (Start over)
 bool saveChange(char type, const byte* a) {     // adds one line to MOVES.TSV
   File f = cardOpen("MOVES.TSV", FILE_WRITE);                      // FILE_WRITE adds to the end
   if (!f) return false;
@@ -1925,8 +1928,29 @@ void allCode(char* c) {
   staffUntil = millis() + STAFF_MS; if (!staffUntil) staffUntil = 1;
   drawBatch();
 }
+// RL:GOT:<n>  the staff page's answer after it saved: the website now has MOVES.TSV up to letter <n>.
+// RL:RESEND   the staff page and the console have lost track of each other: send everything again from the start.
+void gotCode(char* c) {
+  if (strcasecmp_P(c, PSTR("RESEND")) == 0) {
+    webSentBytes = 0; webExtra = true; saveSent();
+    backDepth = 0; mode = SYNC; syncPages = countSyncPages(); syncPage = 0; draw(); return;        // the full list, straight away
+  }
+  long n = atol(c + 4);
+  if (strncasecmp_P(c, PSTR("GOT:"), 4) != 0 || !isdigit(c[4]) || n < 0 || !(n == syncTag || n == movesSize())) {
+    backDepth = 0; mode = HOME; homeMessage = true; offerSync = false;
+    header("Phone code not used", NULL); textF(18, 90, F("That answer is for an older website code."), WHITE, SMALL);   // (headers live in memory: reuse one)
+    textF(18, 130, F("Open Send to website here and scan it again."), DIM, SMALL); footer(F("Any button = Home")); return;
+  }
+  webSentBytes = n; webExtra = false; saveSent();
+  backDepth = 0; mode = HOME; homeMessage = true; offerSync = false;
+  header("To the website", NULL);
+  textF(18, 100, webDirty ? F("The website has those changes.") : F("The website has every change."), WHITE, BOLD);
+  if (webDirty) { textF(18, 150, F("Newer changes were made here since."), DIM, SMALL); textF(18, 174, F("Open Send to website for those."), DIM, SMALL); footer(F("Any button = Home")); }
+  else { textF(18, 150, F("The console and the website match."), DIM, SMALL); doneBar(F("Done. Website up to date.")); }
+}
 void runCode(char* c) {
   c += 3;
+  if (strncasecmp_P(c, PSTR("GOT:"), 4) == 0 || strcasecmp_P(c, PSTR("RESEND")) == 0) { gotCode(c); return; }
   if (strncasecmp_P(c, PSTR("Q:"), 2) == 0) { allCode(c + 2); return; }
   if (strncasecmp_P(c, PSTR("B:"), 2) == 0) { batchWhole = false; batchCode(c + 2); return; }
   if (strncasecmp_P(c, PSTR("WEB:"), 4) == 0) {                  // the website pass, handed over once by the staff page
@@ -2192,7 +2216,7 @@ void undoLast() {                                // takes the last change back
 // staff page reads the changes straight out of the address, so nobody has to open the site first and scan from inside it.
 // Only letters, digits, - and . are safe everywhere in an address, so: tab is written ~, end of line is written !,
 // and anything else (a space in an item's name) as % and its two-digit code, like %20.
-const byte SYNC_BYTES = 96;                    // letters of the change list per QR page, counted the way they are written in the address
+const byte SYNC_BYTES = 80;                    // letters of the change list per QR page, counted the way they are written in the address
 bool syncPlain(char c) { return isalnum(c) || c == '-' || c == '.'; }
 int syncLen(File& f, long pos, long next) {      // how long the line from pos to next gets in the address
   int n = 0; f.seek(pos);
@@ -2200,22 +2224,22 @@ int syncLen(File& f, long pos, long next) {      // how long the line from pos t
   return n;
 }
 byte countSyncPages() {
-  File f = cardOpen("MOVES.TSV"); long pos = 0, next; int used = 0; byte pages = 1;
+  File f = cardOpen("MOVES.TSV"); long pos = syncFrom(), next; int used = 0; byte pages = 1;
   while (f && (next = readLine(f, pos)) >= 0) { int len = syncLen(f, pos, next); if (used && used + len > SYNC_BYTES) { pages++; used = 0; } used += len; pos = next; }
   if (f) f.close();
   return pages;
 }
 // writes the address for page `page` (0 = the first) into out. Returns how many lines are in it; *first = the number of its first line, *total = all lines
-int syncFresh = 0;                              // how many lines of the list the website has not been sent yet
 int syncText(char* out, int size, byte page, byte pages, int* first, int* total) {
-  int len = 0, lines = 0, used = 0, index = 0; byte at = 0; *first = -1; *total = 0; syncFresh = 0;
-  File f = cardOpen("MOVES.TSV"); long pos = 0, next;
-  while (f && (next = readLine(f, pos)) >= 0) { (*total)++; if (pos >= webSentBytes) syncFresh++; pos = next; }
+  int len = 0, lines = 0, used = 0, index = 0; byte at = 0; *first = -1; *total = 0;
+  File f = cardOpen("MOVES.TSV"); const long from = syncFrom(); long pos = from, next;
+  while (f && (next = readLine(f, pos)) >= 0) { (*total)++; pos = next; }
+  syncTag = f ? (long)f.size() : 0;
   strcpy_P(out, STAFF_URL); len = strlen(out);
   out[len++] = '#'; out[len] = '\0';
   if (webPass[0]) len += snprintf_P(out + len, size - len, PSTR("k=%s&"), webPass);   // the website pass first, so the page can save
-  len += snprintf_P(out + len, size - len, PSTR("RLSYNC~%d~%d~%d!"), page + 1, pages, *total);
-  pos = 0;
+  len += snprintf_P(out + len, size - len, PSTR("RLSYNC~%d~%d~%d~%ld~%ld!"), page + 1, pages, *total, from, syncTag);   // (v5.46: where these start, and where they end)
+  pos = from;
   while (f && (next = readLine(f, pos)) >= 0) {
     int n = syncLen(f, pos, next);
     if (used && used + n > SYNC_BYTES) { at++; used = 0; }
@@ -2240,7 +2264,7 @@ int syncText(char* out, int size, byte page, byte pages, int* first, int* total)
 void drawSync() {
   char right[16]; snprintf_P(right, sizeof(right), PSTR("%d of %d"), syncPage + 1, syncPages);
   header("To the website", right);
-  char qtext[SYNC_BYTES + 104]; int first, total;
+  char qtext[SYNC_BYTES + 128]; int first, total;
   int lines = syncText(qtext, sizeof(qtext), syncPage, syncPages, &first, &total);
   textF(18, 90, F("Making the code. About 3 seconds..."), DIM, SMALL);     // this big QR takes the Mega a while: say so
   QRCode qr;
@@ -2253,13 +2277,9 @@ void drawSync() {
   char buf[40];
   textF(276, 72, F("Point a phone's"), WHITE, SMALL); textF(276, 94, F("camera at this."), WHITE, SMALL); textF(276, 116, F("The staff page opens"), WHITE, SMALL); textF(276, 138, F("with these changes."), WHITE, SMALL);
   if (total) { snprintf_P(buf, sizeof(buf), PSTR("Changes %d to %d of %d"), first + 1, first + lines, total); text(276, 178, buf, DIM, SMALL, 196); }
-  else { textF(276, 178, F("No changes here: this"), DIM, SMALL); textF(276, 200, F("puts the website back to"), DIM, SMALL); textF(276, 222, F("the Nov 16 setup too."), DIM, SMALL); }
-  if (total && syncFresh < total) {                                // say which of these the website should already have
-    if (syncFresh) snprintf_P(buf, sizeof(buf), PSTR("%d new, %d sent before"), syncFresh, total - syncFresh); else snprintf_P(buf, sizeof(buf), PSTR("All sent before"));
-    text(276, 200, buf, syncFresh ? ACCENT : DIM, SMALL, 196);
-  }
-  if (syncPages > 1) textF(276, 222, F("Scan every page."), DIM, SMALL);
-  if (syncPage + 1 >= syncPages) sentAll();                        // the last page is up: take it that the phone has it
+  else if (syncFrom() == 0) { textF(276, 178, F("No changes here: this"), DIM, SMALL); textF(276, 200, F("puts the website back to"), DIM, SMALL); textF(276, 222, F("the Nov 16 setup too."), DIM, SMALL); }
+  else { textF(276, 178, F("Nothing new to send."), DIM, SMALL); textF(276, 200, F("The website has every"), DIM, SMALL); textF(276, 222, F("change made here."), DIM, SMALL); }
+  if (total) { textF(276, 212, F("Then show the phone's"), ACCENT, SMALL); textF(276, 234, F("code to the scanner."), ACCENT, SMALL); }
   footer(syncPages > 1 ? F("Up / Down = next page     Back") : F("Back"));
 }
 
@@ -2375,7 +2395,7 @@ void entered(char* textIn) {
   if (strncasecmp_P(textIn, PSTR("RL:KIT:"), 7) == 0) { kitCode(textIn + 7); return; }      // a kit from the website: lights only, no PIN
   if (strncasecmp_P(textIn, PSTR("RL:"), 3) == 0) {                            // a code made on the website's staff page
     queryLen = 0; query[0] = '\0'; live = false; livePending = false;   // a staff code ends any search that was being typed
-    if (staffOK()) runCode(textIn);
+    if (staffOK() || strncasecmp_P(textIn, PSTR("RL:GOT:"), 7) == 0) runCode(textIn);   // the website's answer needs no PIN: it moves nothing and shows nothing
     else { if (textIn != scanBuf) { copyText(scanBuf, textIn, BIG_CODE); scanLen = 0; scanDone = false; } pendingInScan = true; askPin(AFTER_CODE); }   // it waits in scanBuf
     return;
   }
