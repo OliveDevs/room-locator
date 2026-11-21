@@ -2850,13 +2850,13 @@
       "c": "Virtual Reality",
       "t": "Other",
       "x": 3,
-      "w": "VR, shelf 2",
+      "w": "Audio, shelf 4",
       "in": true,
       "g": "",
       "d": "",
       "h": "d469fa",
-      "u": "VR",
-      "s": 2,
+      "u": "AUD",
+      "s": 4,
       "r": [
         [
           "HTC Vive user guide (PDF, HTC)",
@@ -6077,5 +6077,5 @@
       "Soft Tech/Cricut Accessories"
     ]
   },
-  "published": "2026-11-21T17:01:00.336Z"
+  "published": "2026-11-21T17:42:40.559Z"
 }
