@@ -1537,13 +1537,13 @@
       "c": "Shop & Tools",
       "t": "Accessories",
       "x": 1,
-      "w": "Computing, shelf 4",
+      "w": "Shop, shelf 6",
       "in": true,
       "g": "",
       "d": "",
       "h": "5b6b37",
-      "u": "CMP",
-      "s": 4,
+      "u": "SHOP",
+      "s": 6,
       "r": [
         [
           "DeWalt DCB107 charger instruction manual (ManualsLib)",
@@ -2635,13 +2635,13 @@
       "c": "Shop & Tools",
       "t": "Hammers",
       "x": 2,
-      "w": "VR, shelf 5",
+      "w": "Shop, shelf 2",
       "in": true,
       "g": "",
       "d": "",
       "h": "287819",
-      "u": "VR",
-      "s": 5
+      "u": "SHOP",
+      "s": 2
     },
     {
       "n": "HDMI (out) to VGA",
@@ -2850,13 +2850,13 @@
       "c": "Virtual Reality",
       "t": "Other",
       "x": 3,
-      "w": "Audio, shelf 4",
+      "w": "VR, shelf 2",
       "in": true,
       "g": "",
       "d": "",
       "h": "d469fa",
-      "u": "AUD",
-      "s": 4,
+      "u": "VR",
+      "s": 2,
       "r": [
         [
           "HTC Vive user guide (PDF, HTC)",
@@ -6077,5 +6077,5 @@
       "Soft Tech/Cricut Accessories"
     ]
   },
-  "published": "2026-11-21T17:42:40.559Z"
+  "published": "2026-11-21T17:46:42.606Z"
 }
