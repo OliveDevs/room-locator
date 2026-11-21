@@ -128,6 +128,7 @@
 //   @MOVES        prints MOVES.TSV, then @END
 //   @CLEARMOVES   deletes MOVES.TSV (after the laptop has collected the changes)
 //   @ADDED        prints the items added at the console (and their barcodes), then @END
+//   @FILES        prints every file on the card and its size, then @END (v5.48)
 //   @PUT NAME N   the laptop sends a .TSV file of N bytes for the card
 //   anything else is a barcode or a search word
 
@@ -145,7 +146,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.47";
+const char VERSION[] PROGMEM = "5.48";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -316,7 +317,6 @@ void textF(int x, int y, const __FlashStringHelper* s, uint16_t color, Font f) {
   char buf[64]; strncpy_P(buf, (const char*)s, sizeof(buf) - 1); buf[sizeof(buf) - 1] = '\0';
   text(x, y, buf, color, f);
 }
-void rightText(const char* s) { useFont(SMALL); text(466 - textWidth(s), 28, s, DIM, SMALL); }     // grey text at the top right
 void headRight(const char* s) { tft.fillRect(330, 0, 150, 40, CMU_RED); useFont(SMALL); text(466 - textWidth(s), 27, s, WHITE, SMALL); }   // the "3 of 31" on the red title band, drawn again as the cursor moves
 // a paragraph: breaks at spaces, at most maxLines lines. Returns how many lines it used
 byte paragraph(int x, int y, const char* s, uint16_t color, int maxW, byte maxLines) {
@@ -564,7 +564,6 @@ void showTick() {
   if (showStep++ >= showSteps) showPics = NULL;                    // the last picture stays
 }
 void lightsOff() { strip.clear(); strip.show(); }
-void lightOne(int led, uint32_t color) { strip.clear(); if (led >= 0) strip.setPixelColor(led, color); strip.show(); }
 void addLights(int first, byte span, uint32_t color) { if (first < 0) return; for (byte i = 0; i < span; i++) if (first + i < NUM_LEDS) strip.setPixelColor(first + i, color); }
 // is a light with this blink ON at time t?
 bool blinkOn(byte pattern, unsigned long t) {
@@ -2545,6 +2544,7 @@ void receiveFile(char* args) {
   f.close();
   if (wasKinds) kindsFile = cardOpen("KINDS.TSV");
   if (got == size) { Serial.print(F("@OK ")); Serial.println(got); } else Serial.println(F("@ERR timeout"));
+  { char old[10]; strcpy_P(old, PSTR("SENT.TSV")); cardRemove(old); }   // v5.45 kept its notes here; ACKED.TSV replaced it
   loadUnits(); loadBoards(); loadMoves(); loadSent(); loadStaff(); loadWeb(); findAddedFrom(); goHome();
 }
 void readLaptop() {                              // a line of text from the Serial Monitor or the laptop tools
@@ -2563,6 +2563,13 @@ void readLaptop() {                              // a line of text from the Seri
       File f = cardOpen("MOVES.TSV"); while (f && f.available()) Serial.write(f.read()); if (f) f.close();
       Serial.println(F("@END")); continue;
     }
+#ifdef __AVR__
+    if (strcasecmp_P(buf, PSTR("@FILES")) == 0) {                    // what is on the card: name, tab, size
+      File root = SD.open("/");
+      for (File e = root.openNextFile(); e; e = root.openNextFile()) { Serial.print(e.name()); Serial.print('\t'); Serial.println(e.size()); e.close(); }
+      root.close(); Serial.println(F("@END")); return;
+    }
+#endif
     if (strcasecmp_P(buf, PSTR("@ADDED")) == 0) {                    // items added at the console, then their barcodes
       long pos = addedFrom, next;
       while (addedFrom > 0 && (next = readLine(kindsFile, pos)) >= 0) {
