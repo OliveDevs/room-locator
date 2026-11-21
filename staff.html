@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400..700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=compact-loki-1"><link rel="stylesheet" href="staff-layout.css?v=trim-1"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
+  <link rel="stylesheet" href="styles.css?v=compact-loki-1"><link rel="stylesheet" href="staff-layout.css?v=one-code-2"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
 <main class="staff-main">
 <h1>Staff tools</h1>
 
@@ -88,11 +88,12 @@
 <label class="wide">First steps, one per line<textarea name="start" rows="3"></textarea></label>
 <label class="wide">Useful tips, one per line<textarea name="tips" rows="2"></textarea></label>
 <label class="wide">Link to the maker's manual, only if you checked the model matches<input name="manual" type="url" placeholder="https://..."></label>
-<label class="wide">Photo URL, only if Lending is allowed to use it<input name="photo" placeholder="https://... or photos/name.jpg"><small class="field-help">No photo is better than the wrong photo. Leave it blank if you are not sure.</small></label>
+<label class="wide">Take or choose a photo<input name="photofile" type="file" accept="image/*"><small class="field-help">From this phone's camera or photo library. Only photos Lending took. <span id="add-photo-note" role="status"></span></small></label>
+<label class="wide">Or a photo URL<input name="photo" placeholder="https://... or photos/name.jpg"><small class="field-help">No photo is better than the wrong photo. Leave both blank if you are not sure.</small></label>
 <label>Photo credit or maker<input name="credit" placeholder="IDeATe Lending staff"></label>
 <label>Photo source or licence URL<input name="crediturl" type="url" placeholder="https://..."></label>
 <button type="button" id="add-publish" class="wide">Save its guide page to the website</button>
-<p class="wide tool-note">Scan the console code above as well, so the console knows the item too.</p>
+<p class="wide tool-note">Not finished? Save what you have. The item shows up under Edit an item as needing a photo, and you can add the rest there any time.</p>
 </div>
 </details>
 </form>
@@ -100,7 +101,8 @@
 
 <section id="tool-edit" class="tool" role="tabpanel" aria-labelledby="tab-edit" hidden>
 <form id="edit-form" class="staff-form">
-<p class="wide tool-note">Change the photo, the manual link or the description on an item's guide page. This only changes the website, not the console.</p>
+<p class="wide tool-note">Change anything on an item's guide page: photo, description, what it is good for, the checklists, the manual link, the count. To change its shelf use Move an item.</p>
+<details class="wide edit-todo" id="edit-todo" hidden><summary id="edit-todo-title"></summary><p class="tool-note">Tap one to fix it.</p><ul class="edit-matches" id="edit-todo-list"></ul></details>
 <label class="wide">Find an item<input name="thing" type="search" placeholder="Type part of the item name" autocomplete="off" aria-describedby="edit-search-status"></label>
 <div class="wide" id="edit-search-results" hidden>
 <p class="tool-note" id="edit-search-status" role="status"></p>
@@ -116,7 +118,11 @@
 <label class="wide check"><input type="checkbox" name="nophoto"> The photo it shows is wrong: show "No photo yet" instead</label>
 <label>Manual link name<input name="manualname" placeholder="Owner's manual (PDF)"></label>
 <label>Manual link<input name="manual" type="url" placeholder="https://..."></label>
-<label class="wide">Short description<textarea name="description" rows="2" placeholder="What this item is useful for"></textarea></label>
+<label class="wide">Short description<textarea name="description" rows="2" placeholder="What this item is"></textarea></label>
+<label class="wide">Good for<input name="good" placeholder="podcasts, interviews, recording outdoors"><small class="field-help">A few uses, separated by commas. Students can search for these words. Blank uses the standard line for its type.</small></label>
+<label class="wide">What the borrower needs, one per line<textarea name="need" rows="3"></textarea></label>
+<label class="wide">First steps, one per line<textarea name="start" rows="3"></textarea><small class="field-help">Fill in both lists to replace the standard guide for its type. Blank keeps the standard one.</small></label>
+<label class="wide">Useful tips, one per line<textarea name="tips" rows="3"></textarea></label>
 <label>How many Lending has<input name="copies" type="number" min="1" max="250" step="1" inputmode="numeric"></label>
 <button type="button" id="edit-publish" class="wide">Save to the website</button>
 <button type="button" id="edit-count-code" class="wide button-secondary">Only tell the console the new count</button>
@@ -168,19 +174,20 @@
 <div class="code-steps">
 <h2 id="code-title">Show this to the console</h2>
 <p id="code-what"></p>
-<ol>
+<ol id="code-how">
 <li>Hold your phone about 10 cm from the console's scanner, screen bright.</li>
 <li>Type the staff PIN on the console.</li>
-<li>Check the screen and the lights, then press Select.</li>
+<li id="code-how-last">Check the screen and the lights, then press Select.</li>
 </ol>
-<p class="note">Code text: <code id="code-text"></code></p>
-<p class="note" id="code-extra"></p>
+<div id="code-many" class="code-many" hidden><button type="button" id="code-prev" class="button-secondary">Previous</button><span id="code-count"></span><button type="button" id="code-next" class="button-secondary">Next code</button></div>
+<button type="button" id="code-done">The console took it</button>
 <div id="code-all" class="code-all" hidden>
 <h3 id="code-all-title"></h3>
 <p id="code-all-what"></p>
 <ul id="code-all-list" class="code-all-list"></ul>
-<button type="button" id="code-all-go">Send them all to the console</button>
-<button type="button" id="code-add-more" class="link-button">Queue another change</button>
+<button type="button" id="code-add-more" class="link-button">Add another change</button>
+<button type="button" id="code-clear" class="link-button">Empty the list</button>
+<button type="button" id="code-all-go" class="link-button" hidden>Console did not read it? Show them one at a time</button>
 </div>
 <div id="code-play" class="code-play" hidden>
 <p id="code-play-count" class="code-play-count"></p>
@@ -192,7 +199,8 @@
 <button type="button" id="code-play-done">The console says all of them are in</button>
 <button type="button" id="code-play-stop" class="button-secondary">Stop</button>
 </div>
-<div id="code-many" class="code-many" hidden><button type="button" id="code-prev" class="button-secondary">Previous</button><span id="code-count"></span><button type="button" id="code-next">Next code</button><button type="button" id="code-clear" class="link-button">Empty the list</button></div>
+<p class="note">Code text: <code id="code-text"></code></p>
+<p class="note" id="code-extra"></p>
 </div>
 </section>
 
@@ -264,4 +272,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="room3d.js?v=20261116g"></script>
-<script src="staff.js?v=staff-photo-1" defer></script></body></html>
+<script src="staff.js?v=one-code-2" defer></script></body></html>

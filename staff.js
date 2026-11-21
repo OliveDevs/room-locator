@@ -222,6 +222,13 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   }
 
   document.querySelectorAll('.staff-form select').forEach(s => { if (/shelf/i.test(s.name) && !s.options.length) s.disabled = true; });   // nothing to pick until a unit is chosen
+  function readPhoto(file) {                                         // shrink a phone photo to at most 1200 px, as a JPEG
+    return new Promise((yes, no) => { const i = new Image(); i.onload = () => {
+      const scale = Math.min(1, 1200 / Math.max(i.naturalWidth, i.naturalHeight)), w = Math.max(1, Math.round(i.naturalWidth * scale)), h = Math.max(1, Math.round(i.naturalHeight * scale));
+      const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.drawImage(i, 0, 0, w, h); URL.revokeObjectURL(i.src);
+      const url = c.toDataURL('image/jpeg', 0.82), base64 = url.split(',')[1]; yes({ url, base64, w, h, kb: Math.round(base64.length * 0.75 / 1024) });
+    }; i.onerror = () => no(Error('unreadable')); i.src = URL.createObjectURL(file); });
+  }
   // ---- tabs
   const tabs = ['move', 'shelf', 'many', 'add', 'edit', 'sync'];
   tabs.forEach(t => $('tab-' + t).addEventListener('click', () => {
@@ -253,21 +260,60 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   // ---- the QR code
   // Every code made this visit is kept in a list, so several changes can be set up first and then shown to the console
   // one after another: the PIN is typed once, then it is scan, Select, Next.
-  const made = []; let madeAt = -1;
+  const made = []; let madeAt = -1;          // madeAt: which CODE (step) is on screen, see steps()
+  // ---- one code for the whole list (console v5.44): RL:Q:<id>:<how many>:<check>:<change>*<change>*...
+  // The console works through the changes in the order they are listed, so anything can ride together. A code holds
+  // about 13 changes (the scanner has to read it off a phone); more than that become a second code. New items (RL:ADD)
+  // are always scanned on their own, because the console asks for their barcode.
+  const BIG_BODY = 262; let sendNonce = Math.floor(Math.random() * 250);
+  const canBatch = c => /^RL:(MOVE|SHELF|COUNT):/.test(c.code);
+  function steps() {
+    const out = []; let cur = null;
+    for (const c of made) {
+      if (!canBatch(c)) { out.push({ items: [c], code: c.code }); cur = null; continue; }
+      const part = c.code.slice(3).toUpperCase();
+      if (!cur || cur.body.length + part.length + 1 > BIG_BODY || cur.items.length === 64) { cur = { items: [], body: '' }; out.push(cur); }
+      cur.items.push(c); cur.body += (cur.body ? '*' : '') + part;
+    }
+    for (const s of out) {
+      if (s.code) continue;
+      if (s.items.length === 1) { s.code = s.items[0].code; continue; }
+      let x = 1, y = 0; for (let i = 0; i < s.body.length; i++) { x = (x + s.body.charCodeAt(i)) % 251; y = (y + x) % 251; }
+      const check = (y << 8) | x, id = (check + sendNonce) % 255 + 1;
+      s.code = 'RL:Q:' + id.toString(16).toUpperCase().padStart(2, '0') + ':' + s.items.length + ':' + check.toString(16).toUpperCase().padStart(4, '0') + ':' + s.body; s.big = true;
+    }
+    return out;
+  }
   function drawCode() {
-    const c = made[madeAt]; if (!c) { $('code-out').hidden = true; return; }
-    const qr = qrcode(0, 'M'); qr.addData(c.code); qr.make();
+    const all = steps(); if (!all.length) { madeAt = -1; $('code-out').hidden = true; return; }
+    madeAt = Math.max(0, Math.min(madeAt, all.length - 1));
+    const s = all[madeAt], c = s.items[0];
+    const qr = qrcode(0, 'M'); if (s.big) qr.addData(s.code, 'Alphanumeric'); else qr.addData(s.code); qr.make();
     $('qr').innerHTML = qr.createSvgTag({ cellSize: 8, margin: 4, scalable: true });
-    $('code-title').textContent = c.title; $('code-what').textContent = c.what; $('code-text').textContent = c.code; $('code-extra').textContent = c.extra || '';
-    $('code-many').hidden = made.length < 2;
-    $('code-count').textContent = 'Code ' + (madeAt + 1) + ' of ' + made.length;
-    $('code-prev').disabled = madeAt === 0; $('code-next').disabled = madeAt === made.length - 1;
-    drawAll();
+    $('qr').classList.toggle('qr-big', !!s.big);
+    $('code-title').textContent = s.big ? s.items.length + ' changes in one code' : c.title;
+    $('code-what').textContent = s.big ? 'One scan sends all of them. The console saves them in this order and shows how many it saved.' : c.what;
+    $('code-how-last').textContent = s.big ? 'The console lists how many it saved. Nothing else to press there.' : 'Check the screen and the lights, then press Select.';
+    $('code-text').textContent = s.code; $('code-extra').textContent = s.big ? '' : c.extra || '';
+    $('code-many').hidden = all.length < 2;
+    $('code-count').textContent = 'Code ' + (madeAt + 1) + ' of ' + all.length;
+    $('code-prev').disabled = madeAt === 0; $('code-next').disabled = madeAt === all.length - 1;
+    $('code-done').textContent = all.length > 1 && madeAt < all.length - 1 ? 'The console took it: next code' : 'The console took it';
+    $('code-done').hidden = !!playTimer;
+    drawAll(all);
     $('code-out').hidden = false;
   }
+  $('code-done').addEventListener('click', () => {
+    const all = steps(), s = all[madeAt]; if (!s) return;
+    for (const c of s.items) made.splice(made.indexOf(c), 1);
+    sendNonce++;
+    const left = steps().length;
+    status.textContent = left ? 'Good. ' + left + (left === 1 ? ' more code' : ' more codes') + ' to show.' : 'All sent. To bring the website up to date, press Select on the console and scan the code it shows with this phone.';
+    drawCode();
+    if (!left) $('staff-status').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
   // ---- send the whole list in one go (console v5.15): each code becomes a numbered part, RL:B:<id>:<part>/<parts>:<code>,
   // and the parts are shown one after another, round and round, until staff say the console has them all.
-  const canBatch = c => /^RL:(MOVE|SHELF|COUNT):/.test(c.code);
   let playTimer = null, playAt = 0, playParts = [], playSent = [], lastBatch = 0;
   // The console saves each part as it arrives, in whatever order the scanner catches them. So one round only holds changes
   // whose order cannot matter: the same item is not moved or counted twice, and a whole-shelf move never shares a round
@@ -282,28 +328,24 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     }
     return round;
   }
-  function drawAll() {
-    const ok = made.filter(canBatch), box = $('code-all');
+  function drawAll(all) {
+    const box = $('code-all'), now = all[madeAt];
     box.hidden = !made.length || !!playTimer;
     if (box.hidden) return;
-    const first = nextRound().length;
-    $('code-all-title').textContent = made.length + (made.length === 1 ? ' change queued' : ' changes queued');
-    $('code-all-go').hidden = ok.length < 2;
-    $('code-all-go').textContent = first < ok.length ? 'Send the first ' + first + ' to the console' : 'Send them all to the console';
-    $('code-all-what').textContent = (first < ok.length ? (first === 64 ? 'The console takes 64 at a time. ' : 'Some changes must go in order. ') + 'Send the rest after the first round. ' : '') + (made.length > ok.length ? 'New item codes are scanned individually.' : '');
-    $('code-all-list').innerHTML = made.map((c, i) => '<li><strong>' + esc(c.title) + '</strong> ' + esc(c.what) + ' <button type="button" class="link-button" data-remove-code="' + i + '" aria-label="' + esc('Remove ' + c.title) + '">Remove</button></li>').join('');
+    $('code-all-title').textContent = made.length + (made.length === 1 ? ' change on the list' : ' changes on the list');
+    $('code-all-what').textContent = all.length > 1 ? 'They do not all fit in one code. The ones in the code on screen are marked.' : made.length > 1 ? 'All of them are in the code on screen.' : '';
+    $('code-all-go').hidden = !(now && now.big);
+    $('code-all-list').innerHTML = made.map((c, i) => '<li data-code="' + esc(c.code) + '" class="' + (now.items.includes(c) ? 'in-code' : 'not-in-code') + '"><span><strong>' + esc(c.title) + '</strong> ' + esc(c.what) + (all.length > 1 && !now.items.includes(c) ? ' <em>(code ' + (all.findIndex(s => s.items.includes(c)) + 1) + ')</em>' : '') + '</span><button type="button" class="remove-code" data-remove-code="' + i + '" aria-label="' + esc('Remove ' + c.title) + '">Remove</button></li>').join('');
   }
   $('code-all-list').addEventListener('click', e => {
     const button = e.target.closest('[data-remove-code]');
     if (!button) return;
     const index = Number(button.dataset.removeCode);
     made.splice(index, 1);
-    if (index < madeAt) madeAt--;
-    madeAt = Math.min(madeAt, made.length - 1);
     drawCode();
     const next = $('code-all-list').querySelectorAll('button');
     (next[Math.min(index, next.length - 1)] || $('tab-move')).focus();
-    status.textContent = made.length ? 'Change removed from the queue.' : 'The queue is empty.';
+    status.textContent = made.length ? 'Removed. The code on screen now holds what is left.' : 'The list is empty.';
   });
   $('code-add-more').addEventListener('click', () => {
     const tab = document.querySelector('.tool-tabs [aria-selected="true"]');
@@ -312,11 +354,11 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   });
   function stopPlay(finished) {
     if (playTimer) clearInterval(playTimer); playTimer = null;
-    $('code-play').hidden = true; document.querySelector('#code-out .code-steps > ol').hidden = false;
+    $('code-play').hidden = true; $('code-how').hidden = false;
     if (finished) {
       for (let i = made.length - 1; i >= 0; i--) if (playSent.includes(made[i])) made.splice(i, 1);
-      madeAt = made.length ? 0 : -1; const left = made.filter(canBatch).length;
-      status.textContent = left === 1 ? 'Sent. One more is left: show the code below to the console too.' : left ? 'Sent. ' + left + ' more to send: press the send button again.' : 'Sent. On the console, open the map and choose "To the website" to bring the website up to date.';
+      madeAt = made.length ? 0 : -1; sendNonce++; const left = made.filter(canBatch).length;
+      status.textContent = left ? 'Sent. ' + left + ' more to send: the code below holds them.' : 'All sent. To bring the website up to date, press Select on the console and scan the code it shows with this phone.';
     }
     playSent = [];
     drawCode();
@@ -337,7 +379,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const id = idNumber.toString(16).padStart(2, '0');
     playParts = ok.map((c, i) => ({ code: 'RL:B:' + id + ':' + (i + 1) + '/' + ok.length + ':' + c.code.slice(3), title: c.title, what: c.what }));
     const long = playParts.find(p => p.code.length > 71); if (long) { status.textContent = 'One change is too long to send in a batch: ' + long.title + '. Show that one on its own.'; return; }
-    playSent = ok; playAt = 0; $('code-all').hidden = true; $('code-many').hidden = true; $('code-play').hidden = false; document.querySelector('#code-out .code-steps > ol').hidden = true;
+    playSent = ok; playAt = 0; $('code-all').hidden = true; $('code-many').hidden = true; $('code-done').hidden = true; $('code-play').hidden = false; $('code-how').hidden = true; $('qr').classList.remove('qr-big');
     showPart(); playTimer = setInterval(() => { playAt = (playAt + 1) % playParts.length; showPart(); }, 2300);   // the scanner ignores a repeat of the same code within 2 seconds
     $('code-out').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
@@ -345,17 +387,19 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   $('code-play-stop').addEventListener('click', () => stopPlay(false));
   function showCode(code, title, what, extra, reveal = true) {
     if (code.length >= MAX_CODE) { status.textContent = 'That code is too long for the scanner (' + code.length + ' characters). Use a shorter name.'; $('code-out').hidden = true; return; }
-    const had = made.findIndex(c => c.code === code);
-    if (had >= 0) madeAt = had; else { made.push({ code, title, what, extra }); madeAt = made.length - 1; }
-    status.textContent = made.length > 1 ? 'Added. ' + made.length + ' codes are ready: set up more, or show them to the console one after another.' : '';
+    if (playTimer) stopPlay(false);
+    let c = made.find(m => m.code === code);
+    if (!c) { c = { code, title, what, extra }; made.push(c); }
+    madeAt = canBatch(c) ? 0 : steps().findIndex(s => s.items.includes(c));   // codes are sent in order, so the first one is the one to show
+    status.textContent = made.length > 1 ? 'Added. ' + made.length + ' changes are on the list: add more, or show the code to the console.' : '';
     if (reveal) {
       drawCode();
       $('code-out').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }
   $('code-prev').addEventListener('click', () => { if (madeAt > 0) { madeAt--; drawCode(); } });
-  $('code-next').addEventListener('click', () => { if (madeAt < made.length - 1) { madeAt++; drawCode(); } });
-  $('code-clear').addEventListener('click', () => { if (playTimer) stopPlay(false); made.length = 0; madeAt = -1; drawCode(); status.textContent = 'The list of codes is empty.'; });
+  $('code-next').addEventListener('click', () => { madeAt++; drawCode(); });
+  $('code-clear').addEventListener('click', () => { if (playTimer) stopPlay(false); made.length = 0; madeAt = -1; drawCode(); status.textContent = 'The list is empty.'; });
 
   // ---- move a thing
   const mf = $('move-form');
@@ -470,7 +514,14 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const problem = checkAdd(); if (problem) { status.textContent = problem; return; }
     const f = af.elements, name = f.name.value.trim(), t = types[Number(f.type.value)], s = Number(f.shelf.value || 0);
     showCode(addCode(), 'Add ' + name, CAT_ORDER[t[0]] + ' / ' + t[1] + ', ' + f.copies.value + (f.copies.value === '1' ? ' copy' : ' copies') + ', goes to ' + placeName(f.unit.value, s && unitBy[f.unit.value].shelves ? boardBelow(unitBy[f.unit.value], s) : 0) + '.',
-      'On the console: scan this, type the PIN, check the details, scan the new item’s barcode sticker (or skip), check the spot, then Select. Its page code will be ' + nameCode(name) + '.');
+      'On the console: scan this, type the PIN, check the details, scan the new item’s barcode sticker (or skip), check the spot, then Select. Next, give it a photo and a description in the guide section of the form, or later under Edit an item.');
+    document.querySelector('.add-extra').open = true;
+  });
+  let addPhoto = null;
+  af.elements.photofile.addEventListener('change', async () => {
+    addPhoto = null; if (!af.elements.photofile.files[0]) return;
+    try { addPhoto = await readPhoto(af.elements.photofile.files[0]); $('add-photo-note').textContent = 'Photo ready (' + addPhoto.kb + ' KB).'; }
+    catch (err) { af.elements.photofile.value = ''; $('add-photo-note').textContent = 'That file could not be read as a picture. Try a JPEG or PNG.'; }
   });
   $('add-publish').addEventListener('click', async e => {
     const problem = checkAdd(); if (problem) { status.textContent = problem; return; }
@@ -480,9 +531,12 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const need = lines(f.need.value), start = lines(f.start.value), tips = lines(f.tips.value);
     if (need.length) item.need = need; if (start.length) item.start = start; if (tips.length) item.tips = tips;
     if (f.manual.value.trim()) item.r = [['Official maker instructions', f.manual.value.trim()]];
-    if (f.photo.value.trim()) item.p = { url: f.photo.value.trim(), page: f.crediturl.value.trim() || '#', artist: f.credit.value.trim() || 'IDeATe Lending', license: 'Photo source' };
+    let blob;
+    if (addPhoto) { const path = 'photos/' + item.h + '-' + Date.now().toString(36) + '.jpg'; item.p = { url: path, w: addPhoto.w, h: addPhoto.h, own: true, artist: f.credit.value.trim() || 'IDeATe Lending staff' }; blob = { [path]: addPhoto.base64 }; }
+    else if (f.photo.value.trim()) item.p = { url: f.photo.value.trim(), page: f.crediturl.value.trim() || '#', artist: f.credit.value.trim() || 'IDeATe Lending', license: 'Photo source' };
     const out = { ...data, kinds: [...kinds, item].sort((a, b) => a.n.localeCompare(b.n)) };
-    if (!(await publish({ 'data.json': out }, 'Add ' + name + ' (staff page)', e.target))) return;
+    if (!(await publish({ 'data.json': out }, 'Add ' + name + ' (staff page)', e.target, blob))) return;
+    addPhoto = null; f.photofile.value = ''; $('add-photo-note').textContent = '';
     kinds.push(item);                                              // so pressing twice cannot add it twice
     showCode(addCode(), 'Add ' + name, 'Its guide page is saved. Now show this to the console so it knows the item too.', 'On the console: scan this, type the PIN, check the details, scan the new item’s barcode sticker (or skip), check the spot, then Select.');
     status.textContent = 'Saved: ' + name + ' has a guide page in about a minute. Show the code below to the console.';
@@ -818,28 +872,36 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   // a photo straight from the phone: shrunk here, saved into photos/ in the same step as the item
   let newPhoto = null;
   ef.elements.photofile.addEventListener('change', async () => {
-    const file = ef.elements.photofile.files[0], note = $('edit-photo-note'); newPhoto = null; if (!file) return;
+    const note = $('edit-photo-note'); newPhoto = null; if (!ef.elements.photofile.files[0]) return;
     try {
-      const img = await new Promise((yes, no) => { const i = new Image(); i.onload = () => yes(i); i.onerror = () => no(Error('unreadable')); i.src = URL.createObjectURL(file); });
-      const scale = Math.min(1, 1200 / Math.max(img.naturalWidth, img.naturalHeight)), w = Math.max(1, Math.round(img.naturalWidth * scale)), h = Math.max(1, Math.round(img.naturalHeight * scale));
-      const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.drawImage(img, 0, 0, w, h); URL.revokeObjectURL(img.src);
-      const url = c.toDataURL('image/jpeg', 0.82); newPhoto = { base64: url.split(',')[1], w, h };
-      preview.innerHTML = '<img src="' + url + '" alt=""><span>New photo. It is not on the website until you press Save.</span>';
-      ef.elements.nophoto.checked = false; note.textContent = 'Photo ready (' + Math.round(newPhoto.base64.length * 0.75 / 1024) + ' KB).';
+      newPhoto = await readPhoto(ef.elements.photofile.files[0]);
+      preview.innerHTML = '<img src="' + newPhoto.url + '" alt=""><span>New photo. It is not on the website until you press Save.</span>';
+      ef.elements.nophoto.checked = false; note.textContent = 'Photo ready (' + newPhoto.kb + ' KB).';
     } catch (err) { ef.elements.photofile.value = ''; note.textContent = 'That file could not be read as a picture. Try a JPEG or PNG, or take the photo again.'; }
   });
+  // what still needs doing: items with no photo at all, then items showing a look-alike picture
+  const photoKind = k => k.p && k.p.none ? 'none' : k.p ? 'own' : photos?.lending?.[k.n] ? 'lending' : photos?.images?.[photos?.items?.[k.n]] ? 'alike' : 'none';
+  function drawTodo() {
+    const none = kinds.filter(k => photoKind(k) === 'none'), alike = kinds.filter(k => photoKind(k) === 'alike');
+    $('edit-todo').hidden = !(none.length + alike.length);
+    $('edit-todo-title').textContent = (none.length ? none.length + (none.length === 1 ? ' item has' : ' items have') + ' no photo' : 'Every item has a photo') + (alike.length ? ', ' + alike.length + ' show a look-alike' : '');
+    $('edit-todo-list').innerHTML = none.concat(alike).map(k => '<li><button type="button" class="link-button" data-todo="' + esc(k.h) + '">' + esc(k.n) + '</button> <span class="tool-note">' + (photoKind(k) === 'none' ? 'no photo' : 'look-alike photo') + ' · ' + esc(k.w || '') + '</span></li>').join('');
+  }
+  $('edit-todo-list').addEventListener('click', e => { const b = e.target.closest('[data-todo]'); if (!b) return; const k = kinds.find(x => x.h === b.dataset.todo); if (k) { selectEditItem(k); $('edit-todo').open = false; $('edit-fields').scrollIntoView({ behavior: 'smooth', block: 'start' }); } });
+  $('tab-edit').addEventListener('click', drawTodo); drawTodo();
   function selectEditItem(k) {
     selectedEditItem = k;
     editSearch.value = k.n;
     editResults.hidden = true;
     $('edit-search-status').textContent = '';
     $('edit-fields').hidden = false;
-    const shared = photos?.images?.[photos?.items?.[k.n]];
+    const shared = photos?.lending?.[k.n] || photos?.images?.[photos?.items?.[k.n]];
     ef.elements.photo.value = k.p ? k.p.url : ''; ef.elements.credit.value = k.p ? k.p.artist || '' : ''; ef.elements.crediturl.value = k.p && k.p.page !== '#' ? k.p.page || '' : '';
     ef.elements.nophoto.checked = false; newPhoto = null; ef.elements.photofile.value = ''; $('edit-photo-note').textContent = '';
     ef.elements.manualname.value = k.r && k.r[0] ? k.r[0][0] : ''; ef.elements.manual.value = k.r && k.r[0] ? k.r[0][1] : '';
     ef.elements.description.value = k.d || ''; ef.elements.copies.value = k.x || 1;
-    showPreview(k.p ? k.p.url : shared ? shared.url : '');
+    ef.elements.good.value = k.g || ''; ef.elements.need.value = (k.need || []).join('\n'); ef.elements.start.value = (k.start || []).join('\n'); ef.elements.tips.value = (k.tips || []).join('\n');
+    showPreview(k.p && !k.p.none ? k.p.url : !k.p && shared ? shared.url : '');
   }
   const updateEditSearch = () => {
     selectedEditItem = null;
@@ -885,6 +947,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     else delete item.p;
     if (link) item.r = [[f.manualname.value.trim() || 'Manual', link]].concat((item.r || []).slice(1)); else if (item.r && !f.manualname.value.trim()) delete item.r;
     if (f.description.value.trim()) item.d = f.description.value.trim(); else item.d = '';
+    item.g = f.good.value.trim();
+    for (const part of ['need', 'start', 'tips']) { const list = lines(f[part].value); if (list.length) item[part] = list; else delete item[part]; }
     item.x = copies;
     return d;
   };

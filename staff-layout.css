@@ -69,3 +69,20 @@
 .staff-main .sync-paste summary { color: var(--ink); }
 .staff-form select:disabled { opacity: .45; }
 #device h2 { font-size: 17px; margin: 18px 0 6px; }
+
+/* one code for the whole list */
+.code-out .qr.qr-big { max-width: 420px; }
+.code-all-list { list-style: none; padding: 0; margin: 10px 0 14px; }
+.code-all-list li { display: flex; gap: 12px; align-items: baseline; justify-content: space-between; padding: 9px 0; border-top: 1px solid var(--soft); }
+.code-all-list li:last-child { border-bottom: 1px solid var(--soft); }
+.code-all-list li.not-in-code { color: #6d6e71; }
+.code-all-list em { font-style: normal; font-size: 13px; }
+.code-all-list .remove-code { flex: none; background: none; border: 0; padding: 4px 0; font: inherit; font-size: 14px; font-weight: 700; color: var(--red); cursor: pointer; text-decoration: underline; }
+#code-done { margin: 6px 0 18px; }
+.code-all .link-button { display: block; margin: 8px 0; text-align: left; }
+.staff-main .code-all-list, .code-all-list { max-height: none; overflow: visible; }
+#code-done { display: block; width: 100%; max-width: 360px; background: #000; color: #fff; border: 0; border-radius: 10px; padding: 14px 18px; font: 700 16px var(--body, inherit); cursor: pointer; }
+
+.edit-todo { margin: 0 0 6px; }
+.edit-todo > summary { cursor: pointer; font-weight: 700; }
+.edit-todo ul { max-height: 260px; overflow: auto; }
