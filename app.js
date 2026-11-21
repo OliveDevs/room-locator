@@ -264,7 +264,7 @@ function guideFor(k){
 const listItems = items => '<ul>'+items.map(s=>'<li>'+esc(s)+'</li>').join('')+'</ul>';
 function external(label,url){return '<a class="source-link" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">'+esc(label)+' ↗</a>'}
 // the library catalog's own picture of the item comes first; a general stand-in photo is the fallback
-function photoFor(k){if(k.p&&k.p.none)return null;if(k.p)return k.p;const own=PHOTO.lending?.[k.n];return own?{...own,kind:'lending'}:PHOTO.images?.[PHOTO.items?.[k.n]]}
+function photoFor(k){if(k.p&&k.p.none)return null;if(k.p)return k.p.own?{...k.p,kind:'lending',source:'staff'}:k.p;const own=PHOTO.lending?.[k.n];return own?{...own,kind:'lending'}:PHOTO.images?.[PHOTO.items?.[k.n]]}
 // a small picture for the list. Only Wikimedia thumbnails, which come in a 120-pixel size; each loads when it scrolls into view
 function thumbHtml(k){
   const photo=photoFor(k), small=!photo?'':photo.thumb||(photo.kind==='lending'?photo.url:/\/\d+px-/.test(photo.url)?photo.url.replace(/\/\d+px-/,'/330px-'):/Special:FilePath\/.*[?&]width=\d+/.test(photo.url)?photo.url.replace(/width=\d+/,'width=330'):'');
@@ -281,6 +281,7 @@ function photoHtml(k){
     return '<figure class="item-photo no-photo"><div class="no-photo-tile" aria-hidden="true"><span>' + esc(k.t) + '</span></div><figcaption>' + caption + '</figcaption></figure>';
   }
   if (photo.kind === 'lending') {
+    if (photo.source === 'staff') return '<figure class="item-photo item-photo-own"><img src="' + esc(photo.url) + '" alt="' + esc('Photo of ' + k.n + ' taken at IDeATe Lending') + '" style="width:' + Math.round(photo.w*Math.min(2,300/photo.h,480/photo.w)) + 'px" loading="eager"><figcaption><strong>Photo taken at Lending</strong><span>This is the item on the shelf.</span><small>Photo: ' + esc(photo.artist || 'IDeATe Lending staff') + '</small></figcaption></figure>';
     const archive = photo.source === 'image-library';
     const title = archive ? 'From the Lending image library' : 'From the Lending catalog';
     const detail = archive ? 'Compare the photo against the unit at the desk.' : 'The library’s own picture of this item.';

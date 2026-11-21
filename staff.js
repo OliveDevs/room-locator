@@ -83,7 +83,7 @@ async function checkKey() {
   const info = await r.json();
   return info.permissions && info.permissions.push ? '' : 'This key can read the site but not change it. It needs Contents: Read and write.';
 }
-async function publishTogether(files, message) {
+async function publishTogether(files, message, blobs) {
   async function gitJson(path, method = 'GET', body) {
     const response = await gh('/git/' + path, { method, ...(body ? { body: JSON.stringify(body) } : {}) });
     if (!response.ok) {
@@ -102,22 +102,23 @@ async function publishTogether(files, message) {
   const entries = Object.entries(files).map(([path, value]) => ({
     path, mode: '100644', type: 'blob', content: JSON.stringify(value, null, 2) + '\n'
   }));
+  for (const [path, content] of Object.entries(blobs || {})) entries.push({ path, mode: '100644', type: 'blob', sha: (await gitJson('blobs', 'POST', { content, encoding: 'base64' })).sha });   // pictures
   const tree = await gitJson('trees', 'POST', { base_tree: base.tree.sha, tree: entries });
   const commit = await gitJson('commits', 'POST', { tree: tree.sha, parents: [head], message });
   await gitJson('refs/' + ref, 'PATCH', { sha: commit.sha, force: false });
 }
 // Returns true when the branch contains the update.
-async function publish(files, message, button) {
-  if (!keep.get('rl-key')) { afterKey = () => button ? button.click() : publish(files, message, button); askForKey('Saving to the website needs the staff passcode on this device, once.'); return false; }
+async function publish(files, message, button, blobs) {
+  if (!keep.get('rl-key')) { afterKey = () => button ? button.click() : publish(files, message, button, blobs); askForKey('Saving to the website needs the staff passcode on this device, once.'); return false; }
   const label = button ? button.textContent : ''; if (button) { button.disabled = true; button.textContent = 'Saving...'; }
   try {
     const stamp = new Date().toISOString();
     const entries = Object.entries(files);
     for (const [path, value] of entries) if (path === 'data.json' || path === 'room.json') value.published = stamp;
-    if (entries.length > 1) await publishTogether(files, message);
+    if (entries.length > 1 || blobs) await publishTogether(files, message, blobs);
     else for (const [path, value] of entries) {
       const now = await gh('/contents/' + path + '?ref=' + BRANCH);
-      if (now.status === 401 || now.status === 403) { keep.set('rl-key', null); afterKey = () => button ? button.click() : publish(files, message, button); askForKey('The saved key no longer works. Paste a new one.'); return false; }
+      if (now.status === 401 || now.status === 403) { keep.set('rl-key', null); afterKey = () => button ? button.click() : publish(files, message, button, blobs); askForKey('The saved key no longer works. Paste a new one.'); return false; }
       const sha = now.ok ? (await now.json()).sha : undefined;
       const put = await gh('/contents/' + path, { method: 'PUT', body: JSON.stringify({ message, content: toBase64(JSON.stringify(value, null, 2) + '\n'), sha, branch: BRANCH }) });
       if (!put.ok) throw Error('GitHub answered ' + put.status + ' for ' + path);
@@ -814,6 +815,19 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   let selectedEditItem = null, matchingEditItems = [];
   const editItem = () => selectedEditItem;
   const showPreview = url => { preview.innerHTML = url ? '<img src="' + esc(url) + '" alt="" referrerpolicy="no-referrer"><span>This is the photo the page shows now.</span>' : '<span>This item has no photo yet.</span>'; };
+  // a photo straight from the phone: shrunk here, saved into photos/ in the same step as the item
+  let newPhoto = null;
+  ef.elements.photofile.addEventListener('change', async () => {
+    const file = ef.elements.photofile.files[0], note = $('edit-photo-note'); newPhoto = null; if (!file) return;
+    try {
+      const img = await new Promise((yes, no) => { const i = new Image(); i.onload = () => yes(i); i.onerror = () => no(Error('unreadable')); i.src = URL.createObjectURL(file); });
+      const scale = Math.min(1, 1200 / Math.max(img.naturalWidth, img.naturalHeight)), w = Math.max(1, Math.round(img.naturalWidth * scale)), h = Math.max(1, Math.round(img.naturalHeight * scale));
+      const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.drawImage(img, 0, 0, w, h); URL.revokeObjectURL(img.src);
+      const url = c.toDataURL('image/jpeg', 0.82); newPhoto = { base64: url.split(',')[1], w, h };
+      preview.innerHTML = '<img src="' + url + '" alt=""><span>New photo. It is not on the website until you press Save.</span>';
+      ef.elements.nophoto.checked = false; note.textContent = 'Photo ready (' + Math.round(newPhoto.base64.length * 0.75 / 1024) + ' KB).';
+    } catch (err) { ef.elements.photofile.value = ''; note.textContent = 'That file could not be read as a picture. Try a JPEG or PNG, or take the photo again.'; }
+  });
   function selectEditItem(k) {
     selectedEditItem = k;
     editSearch.value = k.n;
@@ -822,7 +836,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     $('edit-fields').hidden = false;
     const shared = photos?.images?.[photos?.items?.[k.n]];
     ef.elements.photo.value = k.p ? k.p.url : ''; ef.elements.credit.value = k.p ? k.p.artist || '' : ''; ef.elements.crediturl.value = k.p && k.p.page !== '#' ? k.p.page || '' : '';
-    ef.elements.nophoto.checked = false;
+    ef.elements.nophoto.checked = false; newPhoto = null; ef.elements.photofile.value = ''; $('edit-photo-note').textContent = '';
     ef.elements.manualname.value = k.r && k.r[0] ? k.r[0][0] : ''; ef.elements.manual.value = k.r && k.r[0] ? k.r[0][1] : '';
     ef.elements.description.value = k.d || ''; ef.elements.copies.value = k.x || 1;
     showPreview(k.p ? k.p.url : shared ? shared.url : '');
@@ -865,6 +879,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     if (link && !/^https?:\/\//.test(link)) { status.textContent = 'The manual link has to start with https://'; return; }
     const d = JSON.parse(JSON.stringify(data)), item = d.kinds.find(x => x.h === k.h);
     if (f.nophoto.checked) item.p = { none: true };
+    else if (newPhoto) item.p = { url: (newPhoto.path = 'photos/' + k.h + '-' + Date.now().toString(36) + '.jpg'), w: newPhoto.w, h: newPhoto.h, own: true, artist: f.credit.value.trim() || 'IDeATe Lending staff' };
+    else if (url && k.p && k.p.url === url) { /* same photo as before: leave it */ }
     else if (url) item.p = { url, page: f.crediturl.value.trim() || '#', artist: f.credit.value.trim() || 'IDeATe Lending', license: 'Photo source' };
     else delete item.p;
     if (link) item.r = [[f.manualname.value.trim() || 'Manual', link]].concat((item.r || []).slice(1)); else if (item.r && !f.manualname.value.trim()) delete item.r;
@@ -874,7 +890,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   };
   $('edit-publish').addEventListener('click', async e => {
     const d = editedData(); if (!d) return; const k = editItem(), copies = d.kinds.find(x => x.h === k.h).x;
-    if (!(await publish({ 'data.json': d }, 'Edit ' + k.n + ' (staff page)', e.target))) return;
+    const usePhoto = newPhoto && newPhoto.path && !ef.elements.nophoto.checked ? { [newPhoto.path]: newPhoto.base64 } : undefined;
+    if (!(await publish({ 'data.json': d }, 'Edit ' + k.n + ' (staff page)', e.target, usePhoto))) return;
     if (copies !== k.x) { k.x = copies; showCode('RL:COUNT:' + k.h + ':' + copies, 'Show this to the console too', k.n + ': Lending now has ' + copies + '. The website is saved; this tells the console.', 'Without this the console keeps showing the old count.'); }
     else setTimeout(() => location.reload(), 1500);
   });
