@@ -260,6 +260,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   // ---- the QR code
   // Every code made this visit is kept in a list, so several changes can be set up first and then shown to the console
   // one after another: the PIN is typed once, then it is scan, Select, Next.
+  let afterSend = false;                      // the camera was opened by this page right after the last code went to the console
   const made = []; let madeAt = -1;          // madeAt: which CODE (step) is on screen, see steps()
   // ---- one code for the whole list (console v5.44): RL:Q:<id>:<how many>:<check>:<change>*<change>*...
   // The console works through the changes in the order they are listed, so anything can ride together. A code holds
@@ -308,9 +309,12 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     for (const c of s.items) made.splice(made.indexOf(c), 1);
     sendNonce++;
     const left = steps().length;
-    status.textContent = left ? 'Good. ' + left + (left === 1 ? ' more code' : ' more codes') + ' to show.' : 'All sent. To bring the website up to date, press Select on the console and scan the code it shows with this phone.';
     drawCode();
-    if (!left) $('staff-status').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (left) { status.textContent = 'Good. ' + left + (left === 1 ? ' more code' : ' more codes') + ' to show.'; return; }
+    // nothing left to show the console: go straight on to the website, with this page's own camera
+    afterSend = true; $('tab-sync').click(); $('sync-start').click();
+    status.textContent = 'All sent. Now press Select on the console and point this phone at the code it shows.';
+    $('staff-status').scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
   // ---- send the whole list in one go (console v5.15): each code becomes a numbered part, RL:B:<id>:<part>/<parts>:<code>,
   // and the parts are shown one after another, round and round, until staff say the console has them all.
@@ -388,6 +392,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   function showCode(code, title, what, extra, reveal = true) {
     if (code.length >= MAX_CODE) { status.textContent = 'That code is too long for the scanner (' + code.length + ' characters). Use a shorter name.'; $('code-out').hidden = true; return; }
     if (playTimer) stopPlay(false);
+    $('ack').hidden = true;                    // an answer for the console from an earlier sync is no longer the thing to show
     let c = made.find(m => m.code === code);
     if (!c) { c = { code, title, what, extra }; made.push(c); }
     madeAt = canBatch(c) ? 0 : steps().findIndex(s => s.items.includes(c));   // codes are sent in order, so the first one is the one to show
@@ -606,8 +611,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
       }
       stream = camera;
       video.srcObject = stream; video.hidden = false; await video.play();
-      scanning = true; $('sync-start').hidden = true; $('sync-stop').hidden = false; status.textContent = ''; tick();
-    } catch (e) { status.textContent = 'The camera did not start. Allow camera access, or use "Paste instead".'; }
+      scanning = true; cameFromConsole = true; $('sync-start').hidden = true; $('sync-stop').hidden = false; if (!afterSend) status.textContent = ''; afterSend = false; tick();
+    } catch (e) { status.textContent = afterSend ? 'All sent. Now press Select on the console and point this phone\'s camera at the code it shows.' : 'The camera did not start. Allow camera access, or point the phone\'s own camera at the console.'; afterSend = false; }
   });
   $('sync-stop').addEventListener('click', stopCamera);
   $('sync-use-paste').addEventListener('click', () => {
@@ -638,7 +643,13 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   async function apply(lines, from = 0, tag = null) {
     syncTag = tag; $('ack').hidden = true;
     const allLines = lines.length;
-    const [liveData, liveRoom] = await Promise.all([fetch('data.json?x=' + Date.now()).then(x => x.json()), fetch('room.json?x=' + Date.now()).then(x => x.json())]);
+    // Straight from the repository when it answers: the public pages lag about a minute behind a save, and a second
+    // sync inside that minute would otherwise be judged against the website as it was before the first one.
+    const fresh = async name => {
+      try { const res = await fetch(API + '/contents/' + name + '?ref=' + BRANCH + '&x=' + Date.now(), { headers: { Accept: 'application/vnd.github.raw+json', ...(keep.get('rl-key') ? { Authorization: 'Bearer ' + keep.get('rl-key') } : {}) } }); if (res.ok) { const got = await res.json(); if (got && (got.kinds || got.units)) return got; } } catch (e) {}
+      return fetch(name + '?x=' + Date.now()).then(x => x.json());
+    };
+    const [liveData, liveRoom] = await Promise.all([fresh('data.json'), fresh('room.json')]);
     const have = liveRoom.synced && Number.isInteger(liveRoom.synced.bytes) ? liveRoom.synced.bytes : -1;   // how far into the console's list the website already is
     const adding = from > 0;                    // the console sent only what is new: add it to the website as it is now
     if (adding) {
@@ -725,11 +736,11 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   const download = (obj, name) => { const blob = new Blob([JSON.stringify(obj, null, 2) + '\n'], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
   $('sync-publish').addEventListener('click', async e => { if (!outData) return; if (await publish({ 'data.json': outData, 'room.json': outRoom }, 'Website matched to the console (staff page)', e.target)) { $('sync-saved').hidden = false; try { sessionStorage.setItem('rl-done', syncTag !== null ? 'Saved: the website now matches the console. Students see the new shelves in about a minute. One last step below.' : 'Done: the website now matches the console. Students see the new shelves in about a minute. Nothing else to do.'); if (syncTag !== null) sessionStorage.setItem('rl-ack', String(syncTag)); } catch (err) { } setTimeout(() => location.reload(), 2500); } });
   // after that reload, say plainly that it worked (the page used to come back looking as if nothing had happened)
-  try { const done = sessionStorage.getItem('rl-done'); if (done) { sessionStorage.removeItem('rl-done'); $('home-done').textContent = done; $('home-done').hidden = false; } const ack = sessionStorage.getItem('rl-ack'); if (ack !== null) { sessionStorage.removeItem('rl-ack'); ackGot(ack); } } catch (err) { }
+  try { const done = sessionStorage.getItem('rl-done'); if (done) { sessionStorage.removeItem('rl-done'); $('home-done').textContent = done; $('home-done').hidden = false; } const ack = sessionStorage.getItem('rl-ack'); if (ack !== null) { sessionStorage.removeItem('rl-ack'); if (ack === 'RESEND') showAck('RL:RESEND', 'Does the console still hold changes?', 'The website is back to the Nov 16 setup. If the console has changes you want kept, show it this code and type the PIN: it then shows a code with everything it has, and you scan that. To clear the console as well, use Start over on the console.'); else ackGot(ack); } } catch (err) { }
   $('web-reset').addEventListener('click', async e => {
     if (!confirm('Put the website back to the Nov 16 setup? Every change brought over from the console since then, and every edit made here, is taken off the website.')) return;
     const [d, r] = await Promise.all([fetch('backup/2026-11-16/data.json?x=' + Date.now()).then(x => x.json()), fetch('backup/2026-11-16/room.json?x=' + Date.now()).then(x => x.json())]);
-    if (await publish({ 'data.json': d, 'room.json': r }, 'Website back to the Nov 16 setup (staff page)', e.target)) setTimeout(() => location.reload(), 1500);
+    if (await publish({ 'data.json': d, 'room.json': r }, 'Website back to the Nov 16 setup (staff page)', e.target)) { try { sessionStorage.setItem('rl-ack', 'RESEND'); } catch (err) { } setTimeout(() => location.reload(), 1500); }
   });
   // ---- the 3D room: click a shelf instead of using the two menus
   const card = $('room3d-card'), help = $('room3d-help');

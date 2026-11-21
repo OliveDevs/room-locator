@@ -145,7 +145,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.46";
+const char VERSION[] PROGMEM = "5.47";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -265,6 +265,7 @@ extern char scanBuf[]; extern int scanLen; extern bool scanDone, scanInUse;     
 bool webDirty = false;                           // the website is behind the console (v5.26). Worked out by webCheck() since v5.45
 long webSentBytes = 0;                           // how much of MOVES.TSV the website code has already carried (v5.45)
 bool webExtra = false;                           // a change that WAS sent has since been undone, so the website has one too many
+bool webShown = false;                           // a website code has been on screen since the website last answered (v5.47)
 bool offerSync = false;                          // the screen says "Select = update the website": the next Select opens that code
 bool homeMessage = false;                        // a message is on the screen in place of Home: the next button just shows Home
 // a new item from the phone (RL:ADD), set up in 3 steps
@@ -819,22 +820,24 @@ long syncFrom() { return webExtra ? 0 : webSentBytes; }           // where in MO
 void webCheck() { webDirty = webExtra || webSentBytes < movesSize(); }
 void saveSent() {
   cardRemove("ACKED.TSV"); File f = cardOpen("ACKED.TSV", FILE_WRITE);
-  if (f) { char buf[20]; snprintf_P(buf, sizeof(buf), PSTR("%ld\t%d"), webSentBytes, webExtra ? 1 : 0); f.println(buf); f.close(); }
+  if (f) { char buf[20]; snprintf_P(buf, sizeof(buf), PSTR("%ld\t%d\t%d"), webSentBytes, webExtra ? 1 : 0, webShown ? 1 : 0); f.println(buf); f.close(); }
   webCheck();
 }
 void loadSent() {
-  webSentBytes = 0; webExtra = false;
+  webSentBytes = 0; webExtra = false; webShown = false;
   File f = cardOpen("ACKED.TSV");
-  if (f) { if (readLine(f, 0) >= 0) { webSentBytes = atol(field[0]); webExtra = atoi(field[1]) != 0; } f.close(); }
+  if (f) { if (readLine(f, 0) >= 0) { webSentBytes = atol(field[0]); webExtra = atoi(field[1]) != 0; webShown = atoi(field[2]) != 0; } f.close(); }
   long size = movesSize(); if (webSentBytes < 0 || webSentBytes > size) { webSentBytes = 0; webExtra = true; }
   webCheck();
 }
 void sentCut(long from, long to) {                                                    // the letters from..to left MOVES.TSV (an undo)
   syncTag = -1;                                                                       // a code made before this no longer counts
-  if (from < webSentBytes) { webSentBytes = 0; webExtra = true; }
+  // The website may hold the line that just went: for certain if it is before webSentBytes, and possibly if a website
+  // code has been shown since (a phone can save and never bring the answer back). Either way: everything again.
+  if (from < webSentBytes || webShown) { webSentBytes = 0; webExtra = true; }
   saveSent();
 }
-void sentCleared() { syncTag = -1; webExtra = webExtra || webSentBytes > 0; webSentBytes = 0; saveSent(); }   // the whole list went (Start over)
+void sentCleared() { syncTag = -1; webExtra = webExtra || webSentBytes > 0 || webShown; webSentBytes = 0; saveSent(); }   // the whole list went (Start over)
 bool saveChange(char type, const byte* a) {     // adds one line to MOVES.TSV
   File f = cardOpen("MOVES.TSV", FILE_WRITE);                      // FILE_WRITE adds to the end
   if (!f) return false;
@@ -1941,7 +1944,7 @@ void gotCode(char* c) {
     header("Phone code not used", NULL); textF(18, 90, F("That answer is for an older website code."), WHITE, SMALL);   // (headers live in memory: reuse one)
     textF(18, 130, F("Open Send to website here and scan it again."), DIM, SMALL); footer(F("Any button = Home")); return;
   }
-  webSentBytes = n; webExtra = false; saveSent();
+  webSentBytes = n; webExtra = false; webShown = false; saveSent();
   backDepth = 0; mode = HOME; homeMessage = true; offerSync = false;
   header("To the website", NULL);
   textF(18, 100, webDirty ? F("The website has those changes.") : F("The website has every change."), WHITE, BOLD);
@@ -2235,6 +2238,7 @@ int syncText(char* out, int size, byte page, byte pages, int* first, int* total)
   File f = cardOpen("MOVES.TSV"); const long from = syncFrom(); long pos = from, next;
   while (f && (next = readLine(f, pos)) >= 0) { (*total)++; pos = next; }
   syncTag = f ? (long)f.size() : 0;
+  if (!webShown && (*total || webExtra)) { webShown = true; saveSent(); }   // from now on a phone may have it
   strcpy_P(out, STAFF_URL); len = strlen(out);
   out[len++] = '#'; out[len] = '\0';
   if (webPass[0]) len += snprintf_P(out + len, size - len, PSTR("k=%s&"), webPass);   // the website pass first, so the page can save
