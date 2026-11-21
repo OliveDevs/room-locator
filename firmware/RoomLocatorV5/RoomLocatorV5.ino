@@ -145,7 +145,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.43";
+const char VERSION[] PROGMEM = "5.44";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -259,7 +259,9 @@ char pinIn[5], pinNew[5];
 bool pinWrong = false, pinMismatch = false;
 byte pinMisses = 0;                             // wrong PINs in a row
 unsigned long pinRestUntil = 0;                 // 0 = the PIN screen is not resting
-char pendingCode[72];                           // a phone QR code waiting for the PIN
+const int BIG_CODE = 288;                       // the longest code the scanner may hand over (one RL:Q with ~13 changes)
+bool pendingInScan = false;                     // a staff code is waiting in scanBuf for the PIN
+extern char scanBuf[]; extern int scanLen; extern bool scanDone, scanInUse;                           // a phone QR code waiting for the PIN
 bool webDirty = false;                           // something changed since the To the website code was last shown (v5.26)
 bool offerSync = false;                          // the screen says "Select = update the website": the next Select opens that code
 bool homeMessage = false;                        // a message is on the screen in place of Home: the next button just shows Home
@@ -1722,7 +1724,7 @@ void pinDone() {                                 // 4 digits are in
     popScreen();
     if (pinAfter == AFTER_ORGANIZE) startOrganize();
     else if (pinAfter == AFTER_MOVE) startMove();
-    else if (pinAfter == AFTER_CODE) runCode(pendingCode);
+    else if (pinAfter == AFTER_CODE) { pendingInScan = false; scanInUse = true; runCode(scanBuf); scanInUse = false; }
     else if (pinAfter == AFTER_DOMOVE) doMove();
     else draw();
     return;
@@ -1870,9 +1872,37 @@ void batchCode(char* c) {
   staffUntil = millis() + STAFF_MS; if (!staffUntil) staffUntil = 1;
   drawBatch();
 }
+// ---------- Many changes in ONE code (v5.44)
+// RL:Q:<id>:<how many>:<check>:<change>*<change>*...     for example RL:Q:4F:2:1A2B:MOVE:29C081:AUD-5*COUNT:287819:3
+// <check> is a 16-bit sum of everything after it, in hex: a code that was read badly never matches, so nothing is saved
+// and the scanner simply reads it again. The same code seen twice is not saved twice. Each change goes through
+// batchApply(), exactly like the parts of an RL:B slideshow, and the same result screen follows.
+bool batchWhole = false;
+void allCode(char* c) {
+  char* p1 = strchr(c, ':'); char* p2 = p1 ? strchr(p1 + 1, ':') : NULL; char* body = p2 ? strchr(p2 + 1, ':') : NULL;
+  byte id = (byte)strtoul(c, NULL, 16); int n = p1 ? atoi(p1 + 1) : 0; unsigned int want = p2 ? (unsigned int)strtoul(p2 + 1, NULL, 16) : 0;
+  if (!body || n < 1 || n > 64) { codeProblem(F("The code is not complete.")); return; }
+  body++;
+  unsigned int a = 1, b = 0; int stars = 0;
+  for (const char* p = body; *p; p++) { a = (a + (byte)*p) % 251; b = (b + a) % 251; if (*p == '*') stars++; }
+  if (((b << 8) | a) != want || stars != n - 1) { codeProblem(F("The code did not read cleanly. Hold the phone still at the scanner.")); return; }
+  if (!(batchWhole && id == batchId && n == batchParts)) {         // not the one that was just saved
+    batchWhole = true; batchId = id; batchParts = n; batchIn = n; batchSaved = batchSkipped = batchUnchanged = 0; batchWhy = NULL;
+    memset(batchSeen, 255, sizeof(batchSeen));
+    for (char* part = body; part; ) {
+      char* next = strchr(part, '*'); if (next) *next++ = '\0';
+      const __FlashStringHelper* why = NULL;
+      if (batchApply(part, &why)) batchSaved++; else { batchSkipped++; batchWhy = why; }
+      part = next;
+    }
+  }
+  staffUntil = millis() + STAFF_MS; if (!staffUntil) staffUntil = 1;
+  drawBatch();
+}
 void runCode(char* c) {
   c += 3;
-  if (strncasecmp_P(c, PSTR("B:"), 2) == 0) { batchCode(c + 2); return; }
+  if (strncasecmp_P(c, PSTR("Q:"), 2) == 0) { allCode(c + 2); return; }
+  if (strncasecmp_P(c, PSTR("B:"), 2) == 0) { batchWhole = false; batchCode(c + 2); return; }
   if (strncasecmp_P(c, PSTR("WEB:"), 4) == 0) {                  // the website pass, handed over once by the staff page
     if (!passLooksRight(c + 4)) { codeProblem(F("That website pass is not the right shape.")); return; }
     cardRemove("WEB.TSV"); File f = cardOpen("WEB.TSV", FILE_WRITE);
@@ -2313,7 +2343,7 @@ void entered(char* textIn) {
   if (strncasecmp_P(textIn, PSTR("RL:"), 3) == 0) {                            // a code made on the website's staff page
     queryLen = 0; query[0] = '\0'; live = false; livePending = false;   // a staff code ends any search that was being typed
     if (staffOK()) runCode(textIn);
-    else { copyText(pendingCode, textIn, sizeof(pendingCode)); askPin(AFTER_CODE); }
+    else { if (textIn != scanBuf) { copyText(scanBuf, textIn, BIG_CODE); scanLen = 0; scanDone = false; } pendingInScan = true; askPin(AFTER_CODE); }   // it waits in scanBuf
     return;
   }
   if (strncasecmp_P(textIn, PSTR("LOC:"), 4) == 0 && strrchr(textIn, '-')) { scannedShelf(textIn); return; }
@@ -2392,27 +2422,40 @@ void readButtons() {
     last[b] = now;
   }
 }
-void readScanner() {
-  static char buf[72]; static byte len = 0; static unsigned long lastChar = 0;
-  static char lastCode[72] = ""; static unsigned long lastCodeAt = 0;
-  bool done = false;
-  while (Serial1.available()) {
-    char c = Serial1.read(); lastChar = millis();
-    if (c == '\r' || c == '\n') { done = true; break; }
-    if (len < sizeof(buf) - 1) buf[len++] = c;
+// The scanner sends a long code (RL:Q, up to BIG_CODE characters) faster than the Mega's own 64-character serial
+// buffer can hold if a slow job is running, so drainScanner() is also called from pollKeyboard(), which the slow jobs call.
+char scanBuf[BIG_CODE]; int scanLen = 0; bool scanDone = false, scanInUse = false; unsigned long scanLast = 0;
+void drainScanner() {
+  // scanBuf is being read (a code is being carried out), or holds the code the PIN is being typed for: leave it alone.
+  // What the scanner sends meanwhile is dropped; it sends a code again for as long as the phone is held there.
+  if (scanInUse || (pendingInScan && mode == PIN && pinAfter == AFTER_CODE)) { while (Serial1.available()) Serial1.read(); scanLen = 0; scanDone = false; return; }
+  while (!scanDone && Serial1.available()) {
+    char c = Serial1.read(); scanLast = millis();
+    if (c == '\r' || c == '\n') { if (scanLen) scanDone = true; }
+    else if (scanLen < BIG_CODE - 1) scanBuf[scanLen++] = c;
   }
-  if (len && (done || millis() - lastChar > 80)) {
-    buf[len] = '\0'; len = 0;
-    if (strcmp(buf, lastCode) == 0 && millis() - lastCodeAt < 2000) { lastCodeAt = millis(); return; }   // the same code held in view
-    strcpy(lastCode, buf); lastCodeAt = millis();
-    Serial.print(F("@SCAN ")); Serial.println(buf);                // so a laptop on USB can see exactly what the scanner read
-    entered(buf);
+}
+void readScanner() {
+  static unsigned long lastHash = 0, lastCodeAt = 0;
+  drainScanner();
+  if (scanLen > 40 && !scanDone) {                                 // a long code is arriving: stay with it until it ends
+    unsigned long began = millis();
+    while (!scanDone && millis() - scanLast <= 80 && millis() - began < 1500) drainScanner();
+  }
+  if (scanLen && (scanDone || millis() - scanLast > 80)) {
+    scanBuf[scanLen] = '\0'; scanLen = 0; scanDone = false;
+    unsigned long h = 2166136261UL; for (const char* p = scanBuf; *p; p++) h = (h ^ (byte)*p) * 16777619UL;
+    if (h == lastHash && millis() - lastCodeAt < 2000) { lastCodeAt = millis(); return; }   // the same code held in view
+    lastHash = h; lastCodeAt = millis();
+    Serial.print(F("@SCAN ")); Serial.println(scanBuf);            // so a laptop on USB can see exactly what the scanner read
+    scanInUse = true; entered(scanBuf); scanInUse = false;
   }
 }
 // The keyboard only remembers the last key pressed, so it has to be asked often. pollKeyboard() is also called from
 // inside the slow jobs (reading the card, drawing text): keys typed meanwhile wait in keyQueue and nothing is lost.
 void pollKeyboard() {
   static unsigned long lastPoll = 0;
+  drainScanner();
   if (millis() - lastPoll < 20) return;
   lastPoll = millis();
   if (Wire.requestFrom(KEYBOARD_ADDR, (byte)1) != 1) return;
