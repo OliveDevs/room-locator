@@ -145,7 +145,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.44";
+const char VERSION[] PROGMEM = "5.45";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -259,10 +259,12 @@ char pinIn[5], pinNew[5];
 bool pinWrong = false, pinMismatch = false;
 byte pinMisses = 0;                             // wrong PINs in a row
 unsigned long pinRestUntil = 0;                 // 0 = the PIN screen is not resting
-const int BIG_CODE = 288;                       // the longest code the scanner may hand over (one RL:Q with ~13 changes)
+const int BIG_CODE = 264;                       // the longest code the scanner may hand over (one RL:Q with ~12 changes)
 bool pendingInScan = false;                     // a staff code is waiting in scanBuf for the PIN
 extern char scanBuf[]; extern int scanLen; extern bool scanDone, scanInUse;                           // a phone QR code waiting for the PIN
-bool webDirty = false;                           // something changed since the To the website code was last shown (v5.26)
+bool webDirty = false;                           // the website is behind the console (v5.26). Worked out by webCheck() since v5.45
+long webSentBytes = 0;                           // how much of MOVES.TSV the website code has already carried (v5.45)
+bool webExtra = false;                           // a change that WAS sent has since been undone, so the website has one too many
 bool offerSync = false;                          // the screen says "Select = update the website": the next Select opens that code
 bool homeMessage = false;                        // a message is on the screen in place of Home: the next button just shows Home
 // a new item from the phone (RL:ADD), set up in 3 steps
@@ -623,7 +625,6 @@ bool moveListHasRoom(char type, unsigned long key) {   // a thing already on the
   return false;
 }
 void rememberChange(char type, const byte* a) {          // call moveListHasRoom() first. A thing moved again: its old line goes, the new one is last
-  webDirty = true;
   if (type == 'I' || type == 'C') {                          // (a new count for a thing replaces its older new count the same way)
     for (byte i = 0; i < moveTotal; i++) if (changes[i].type == type && changes[i].a[0] == a[0] && changes[i].a[1] == a[1] && changes[i].a[2] == a[2]) {
       for (byte j = i; j + 1 < moveTotal; j++) changes[j] = changes[j + 1];
@@ -805,6 +806,32 @@ void loadMoves() {
   }
   if (f) f.close();
 }
+// ---------- What the website already has (v5.45)
+// The website code always carries the whole change list, so the website ends up matching the console exactly. The console
+// cannot see whether a phone really saved it; it takes it that it did once the last page of the code has been on screen.
+// It remembers how long MOVES.TSV was at that moment (webSentBytes, kept in SENT.TSV so a power cut does not forget).
+// Lines after that point are "new". Undoing a line from before that point means the website now has a change the
+// console no longer has (webExtra), which also needs an update.
+long movesSize() { File m = cardOpen("MOVES.TSV"); long n = m ? (long)m.size() : 0; if (m) m.close(); return n; }
+void webCheck() { webDirty = webExtra || webSentBytes < movesSize(); }
+void saveSent() {
+  cardRemove("SENT.TSV"); File f = cardOpen("SENT.TSV", FILE_WRITE);
+  if (f) { char buf[20]; snprintf_P(buf, sizeof(buf), PSTR("%ld\t%d"), webSentBytes, webExtra ? 1 : 0); f.println(buf); f.close(); }
+  webCheck();
+}
+void loadSent() {
+  webSentBytes = 0; webExtra = false;
+  File f = cardOpen("SENT.TSV");
+  if (f) { if (readLine(f, 0) >= 0) { webSentBytes = atol(field[0]); webExtra = atoi(field[1]) != 0; } f.close(); }
+  long size = movesSize(); if (webSentBytes < 0 || webSentBytes > size) { webSentBytes = size; webExtra = true; }
+  webCheck();
+}
+void sentAll() { webSentBytes = movesSize(); webExtra = false; saveSent(); }             // the website code has been shown to the end
+void sentCut(long from, long to) {                                                    // the letters from..to left MOVES.TSV (an undo)
+  if (from < webSentBytes) { webSentBytes -= (to < webSentBytes ? to : webSentBytes) - from; webExtra = true; }
+  saveSent();
+}
+void sentCleared() { webExtra = webExtra || webSentBytes > 0; webSentBytes = 0; saveSent(); }   // the whole list went (Start over)
 bool saveChange(char type, const byte* a) {     // adds one line to MOVES.TSV
   File f = cardOpen("MOVES.TSV", FILE_WRITE);                      // FILE_WRITE adds to the end
   if (!f) return false;
@@ -815,7 +842,7 @@ bool saveChange(char type, const byte* a) {     // adds one line to MOVES.TSV
   else if (type == 'X') snprintf_P(buf, sizeof(buf), PSTR("X\t%s\t%d\t%d\t%s\t%d\t%d"), unitCode[a[0]], a[1], a[2], unitCode[a[3]], a[4], a[5]);
   else if (type == 'B') snprintf_P(buf, sizeof(buf), a[3] ? PSTR("B\t%s\t%d\t%d\tS") : PSTR("B\t%s\t%d\t%d"), unitCode[a[0]], a[1], a[2]);
   else snprintf_P(buf, sizeof(buf), PSTR("U\t%s\t%s"), unitCode[a[0]], unitCode[a[1]]);
-  f.println(buf); f.close();
+  f.println(buf); f.close(); webDirty = true;
   return true;
 }
 int ledFor(const char* code, int shelf) {       // the first light of the shelf a thing sits on. -1 = this place has no light
@@ -1077,7 +1104,6 @@ void drawTyping() {                             // the bottom bar while someone 
 }
 
 void doneFooter() {                              // after a change: say it is saved, and what to do by hand
-  webDirty = true;                                     // (an undo counts too)
   if (doneNote == 2) doneBar(F("Done. Now swap the two unit bodies."));
   else if (doneNote == 3) doneBar(F("Undone. Saved on the card."));
   else doneBar(F("Done. Saved on the card."));
@@ -2017,7 +2043,7 @@ void saveNewItem() {                             // adds one line to the end of 
   }
   if (!ok) { header("Could not save", NULL); textF(18, 90, F("The SD card would not write. Is it locked?"), WHITE, SMALL); footer(F("Back")); return; }
   File m = cardOpen("MOVES.TSV", FILE_WRITE);                                   // history line: shows in Recent changes and goes to the website
-  if (m) { char buf[110]; snprintf_P(buf, sizeof(buf), PSTR("A\t%d\t%s\t%s\t%s\t%d\t%d"), addCat, addType, addName, unitCode[addUnit], addShelf, addCopies); m.println(buf); m.close(); }
+  if (m) { char buf[110]; snprintf_P(buf, sizeof(buf), PSTR("A\t%d\t%s\t%s\t%s\t%d\t%d"), addCat, addType, addName, unitCode[addUnit], addShelf, addCopies); m.println(buf); m.close(); webDirty = true; }
   staffUntil = millis() + STAFF_MS;
   backDepth = 0; mode = HOME; justAdded = true; openItem(pos, false);
   strip.clear(); addPlace(unitCode[addUnit], addShelf, LIGHT_ITEM); strip.show();
@@ -2112,6 +2138,7 @@ void undoLine(long at) {
     if (withS && before >= 0) from = before;                       // the things that dropped down with the board go back up too
   }
   if (!cutBytes("MOVES.TSV", from, end)) { header("Could not save", NULL); textF(18, 90, F("The SD card would not write. Is it locked?"), WHITE, SMALL); footer(F("Back")); return; }
+  sentCut(from, end);
   staffUntil = millis() + STAFF_MS;
   reloadData(); loadRecent(); cursor = 0; justChanged = true; doneNote = 3; draw(); lightsOff();
 }
@@ -2119,7 +2146,7 @@ void undoLine(long at) {
 // the console (the lines after the laptop's own in KINDS.TSV, and their barcodes) are taken out. The staff PIN stays.
 void startOver() {
   header("Starting over", NULL); textF(18, 90, F("Putting everything back. A few seconds..."), WHITE, SMALL);
-  cardRemove("MOVES.TSV");
+  cardRemove("MOVES.TSV"); sentCleared();
   loadUnits();                                                     // unit names back in their own spots, every board in
   for (byte u = 0; u < unitTotal; u++) unitBoards[u] = 0xFFFF;
   saveBoards();
@@ -2156,6 +2183,7 @@ void undoLast() {                                // takes the last change back
   bool ok = cut == 0 ? cardRemove("MOVES.TSV") : (copyFile("MOVES.TSV", "MOVES.TMP", cut) && copyFile("MOVES.TMP", "MOVES.TSV", cut));
   cardRemove("MOVES.TMP");
   if (!ok) { header("Could not save", NULL); textF(18, 90, F("The SD card would not write. Is it locked?"), WHITE, SMALL); footer(F("Back")); return; }
+  sentCut(cut, 2147483647L);
   staffUntil = millis() + STAFF_MS;
   reloadData(); loadRecent(); cursor = 0; justChanged = true; doneNote = 3; draw(); lightsOff();
 }
@@ -2178,10 +2206,11 @@ byte countSyncPages() {
   return pages;
 }
 // writes the address for page `page` (0 = the first) into out. Returns how many lines are in it; *first = the number of its first line, *total = all lines
+int syncFresh = 0;                              // how many lines of the list the website has not been sent yet
 int syncText(char* out, int size, byte page, byte pages, int* first, int* total) {
-  int len = 0, lines = 0, used = 0, index = 0; byte at = 0; *first = -1; *total = 0;
+  int len = 0, lines = 0, used = 0, index = 0; byte at = 0; *first = -1; *total = 0; syncFresh = 0;
   File f = cardOpen("MOVES.TSV"); long pos = 0, next;
-  while (f && (next = readLine(f, pos)) >= 0) { (*total)++; pos = next; }
+  while (f && (next = readLine(f, pos)) >= 0) { (*total)++; if (pos >= webSentBytes) syncFresh++; pos = next; }
   strcpy_P(out, STAFF_URL); len = strlen(out);
   out[len++] = '#'; out[len] = '\0';
   if (webPass[0]) len += snprintf_P(out + len, size - len, PSTR("k=%s&"), webPass);   // the website pass first, so the page can save
@@ -2216,7 +2245,6 @@ void drawSync() {
   textF(18, 90, F("Making the code. About 3 seconds..."), DIM, SMALL);     // this big QR takes the Mega a while: say so
   QRCode qr;
   bool made = qrcode_initText(&qr, qrData, SYNC_QR, ECC_LOW, qtext) == 0;
-  if (made && syncPage + 1 >= syncPages) webDirty = false;      // the last page is up: take it that the phone has it
   tft.fillRect(0, 60, 480, 50, BG);
   if (!made) { textF(18, 90, F("Too much for one code."), WHITE, SMALL); footer(F("Back")); return; }
   const int PX = 4, QUIET = 4, SIDE = (qr.size + 2 * QUIET) * PX, X = 14, Y = 50;
@@ -2226,7 +2254,12 @@ void drawSync() {
   textF(276, 72, F("Point a phone's"), WHITE, SMALL); textF(276, 94, F("camera at this."), WHITE, SMALL); textF(276, 116, F("The staff page opens"), WHITE, SMALL); textF(276, 138, F("with these changes."), WHITE, SMALL);
   if (total) { snprintf_P(buf, sizeof(buf), PSTR("Changes %d to %d of %d"), first + 1, first + lines, total); text(276, 178, buf, DIM, SMALL, 196); }
   else { textF(276, 178, F("No changes here: this"), DIM, SMALL); textF(276, 200, F("puts the website back to"), DIM, SMALL); textF(276, 222, F("the Nov 16 setup too."), DIM, SMALL); }
-  if (syncPages > 1) textF(276, 200, F("Scan every page."), DIM, SMALL);
+  if (total && syncFresh < total) {                                // say which of these the website should already have
+    if (syncFresh) snprintf_P(buf, sizeof(buf), PSTR("%d new, %d sent before"), syncFresh, total - syncFresh); else snprintf_P(buf, sizeof(buf), PSTR("All sent before"));
+    text(276, 200, buf, syncFresh ? ACCENT : DIM, SMALL, 196);
+  }
+  if (syncPages > 1) textF(276, 222, F("Scan every page."), DIM, SMALL);
+  if (syncPage + 1 >= syncPages) sentAll();                        // the last page is up: take it that the phone has it
   footer(syncPages > 1 ? F("Up / Down = next page     Back") : F("Back"));
 }
 
@@ -2488,7 +2521,7 @@ void receiveFile(char* args) {
   f.close();
   if (wasKinds) kindsFile = cardOpen("KINDS.TSV");
   if (got == size) { Serial.print(F("@OK ")); Serial.println(got); } else Serial.println(F("@ERR timeout"));
-  loadUnits(); loadBoards(); loadMoves(); loadStaff(); loadWeb(); findAddedFrom(); goHome();
+  loadUnits(); loadBoards(); loadMoves(); loadSent(); loadStaff(); loadWeb(); findAddedFrom(); goHome();
 }
 void readLaptop() {                              // a line of text from the Serial Monitor or the laptop tools
   static char buf[64]; static byte len = 0;
@@ -2517,7 +2550,7 @@ void readLaptop() {                              // a line of text from the Seri
       if (f) f.close();
       Serial.println(F("@END")); continue;
     }
-    if (strcasecmp_P(buf, PSTR("@CLEARMOVES")) == 0) { cardRemove("MOVES.TSV"); loadUnits(); loadBoards(); loadMoves(); Serial.println(F("@OK")); goHome(); continue; }   // units that traded places go back too
+    if (strcasecmp_P(buf, PSTR("@CLEARMOVES")) == 0) { cardRemove("MOVES.TSV"); sentCleared(); loadUnits(); loadBoards(); loadMoves(); Serial.println(F("@OK")); goHome(); continue; }   // units that traded places go back too
     if (strcasecmp_P(buf, PSTR("@LIGHTS")) == 0) {                   // light check: every light red, then green, then blue, then all stay green until a button
       const uint32_t test[3] = {0xFF0000, 0x00FF00, 0x0000FF};
       for (byte t = 0; t < 3; t++) { strip.fill(test[t]); strip.show(); delay(1500); }
@@ -2568,7 +2601,7 @@ void setup() {
   if (!SD.begin(SD_CS_PIN)) { stopWith(F("No SD card"), F("Push the card in and press the reset button")); while (true) {} }
   kindsFile = cardOpen("KINDS.TSV");
   staffUntil = 0;                                                  // a restart locks changes again
-  loadUnits(); loadBoards(); loadMoves(); loadStaff(); loadWeb(); findAddedFrom();
+  loadUnits(); loadBoards(); loadMoves(); loadSent(); loadStaff(); loadWeb(); findAddedFrom();
   if (!kindsFile || unitTotal == 0) {                              // card without the v5 files: wait for the laptop to send them
     stopWith(F("Waiting for the laptop"), F("The SD card needs the data files (push_card.py)"));
     while (!kindsFile || unitTotal == 0) readLaptop();

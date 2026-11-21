@@ -263,9 +263,9 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   const made = []; let madeAt = -1;          // madeAt: which CODE (step) is on screen, see steps()
   // ---- one code for the whole list (console v5.44): RL:Q:<id>:<how many>:<check>:<change>*<change>*...
   // The console works through the changes in the order they are listed, so anything can ride together. A code holds
-  // about 13 changes (the scanner has to read it off a phone); more than that become a second code. New items (RL:ADD)
+  // about 12 changes (the scanner has to read it off a phone); more than that become a second code. New items (RL:ADD)
   // are always scanned on their own, because the console asks for their barcode.
-  const BIG_BODY = 262; let sendNonce = Math.floor(Math.random() * 250);
+  const BIG_BODY = 240; let sendNonce = Math.floor(Math.random() * 250);
   const canBatch = c => /^RL:(MOVE|SHELF|COUNT):/.test(c.code);
   function steps() {
     const out = []; let cur = null;
@@ -879,13 +879,13 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
       ef.elements.nophoto.checked = false; note.textContent = 'Photo ready (' + newPhoto.kb + ' KB).';
     } catch (err) { ef.elements.photofile.value = ''; note.textContent = 'That file could not be read as a picture. Try a JPEG or PNG, or take the photo again.'; }
   });
-  // what still needs doing: items with no photo at all, then items showing a look-alike picture
-  const photoKind = k => k.p && k.p.none ? 'none' : k.p ? 'own' : photos?.lending?.[k.n] ? 'lending' : photos?.images?.[photos?.items?.[k.n]] ? 'alike' : 'none';
+  // what still needs doing: items with no photo at all
+  const hasPhoto = k => k.p ? !k.p.none : !!(photos?.lending?.[k.n] || photos?.images?.[photos?.items?.[k.n]]);
   function drawTodo() {
-    const none = kinds.filter(k => photoKind(k) === 'none'), alike = kinds.filter(k => photoKind(k) === 'alike');
-    $('edit-todo').hidden = !(none.length + alike.length);
-    $('edit-todo-title').textContent = (none.length ? none.length + (none.length === 1 ? ' item has' : ' items have') + ' no photo' : 'Every item has a photo') + (alike.length ? ', ' + alike.length + ' show a look-alike' : '');
-    $('edit-todo-list').innerHTML = none.concat(alike).map(k => '<li><button type="button" class="link-button" data-todo="' + esc(k.h) + '">' + esc(k.n) + '</button> <span class="tool-note">' + (photoKind(k) === 'none' ? 'no photo' : 'look-alike photo') + ' · ' + esc(k.w || '') + '</span></li>').join('');
+    const none = kinds.filter(k => !hasPhoto(k));
+    $('edit-todo').hidden = !none.length;
+    $('edit-todo-title').textContent = none.length + (none.length === 1 ? ' item has' : ' items have') + ' no photo yet';
+    $('edit-todo-list').innerHTML = none.map(k => '<li><button type="button" class="link-button" data-todo="' + esc(k.h) + '">' + esc(k.n) + '</button> <span class="tool-note">' + esc(k.w || '') + '</span></li>').join('');
   }
   $('edit-todo-list').addEventListener('click', e => { const b = e.target.closest('[data-todo]'); if (!b) return; const k = kinds.find(x => x.h === b.dataset.todo); if (k) { selectEditItem(k); $('edit-todo').open = false; $('edit-fields').scrollIntoView({ behavior: 'smooth', block: 'start' }); } });
   $('tab-edit').addEventListener('click', drawTodo); drawTodo();
