@@ -19,69 +19,69 @@ const TIPS={
   'Lighting/Projectors':['Set the projector square to the screen before using keystone correction; this preserves more of the image resolution.']
 };
 const INTRO={
-  "Audio/Accessories":"An add-on for a recording setup. Check it fits the gear you are using it with.",
-  "Audio/Cables":"An audio cable. Check the plug on each end matches your gear.",
-  "Audio/Cassette Players":"A portable cassette player, for listening to tapes or copying them to a computer.",
-  "Audio/Other":"A handheld recorder for capturing sound away from a computer. It records to a memory card.",
-  "Audio/Headphones":"Headphones for listening while you record or edit.",
-  "Audio/Instruments":"An electronic instrument. It needs power and something to listen through.",
-  "Audio/Interfaces":"A box that gets a microphone or instrument into your computer.",
-  "Audio/MIDI Controllers":"Keys, pads or knobs that control music software. It makes no sound on its own.",
-  "Audio/Microphones":"A microphone. Check what cable and power it needs.",
-  "Audio/Mixers":"A mixer for blending several sound sources into one output.",
-  "Audio/Speakers":"A speaker for playing sound to a room.",
-  "Cables & More/Audio Adapters":"An adapter between two sizes or kinds of audio plug.",
-  "Cables & More/Audio Cables":"An audio cable. Check the plug on each end and the length you need.",
-  "Cables & More/Adapters":"An adapter between two different plugs. Check both ends before you take it.",
-  "Cables & More/Batteries":"Rechargeable batteries. Check the size your device takes.",
-  "Cables & More/Ethernet Cables":"A network cable for a wired internet connection.",
-  "Cables & More/HDMI Adapters":"An HDMI adapter. Most only work in one direction, so check which end is the source.",
-  "Cables & More/Laser Pointers":"A laser pointer for presentations. Never point it at anyone's eyes.",
-  "Cables & More/MIDI Cables":"A five-pin MIDI cable for linking music gear. It carries notes, not sound.",
-  "Cables & More/Mini DisplayPort Adapters":"An adapter for a laptop with a Mini DisplayPort video output.",
-  "Cables & More/Mini DisplayPort Cables":"A video cable for a laptop with Mini DisplayPort.",
-  "Cables & More/RCA Cables":"An audio cable with red and white RCA plugs on one end and a headphone-size plug on the other.",
-  "Cables & More/SD Card Readers":"A card reader for copying photos or recordings from a memory card to a computer.",
-  "Cables & More/Thunderbolt Adapters":"An adapter between older and newer Thunderbolt plugs.",
-  "Cables & More/Thunderbolt Cables":"A Thunderbolt cable for fast drives, docks and displays.",
-  "Cables & More/USB Cables":"A USB cable. Check the plug shape on both ends.",
-  "Cables & More/USB Adapters":"A USB adapter for a computer or device with a different port.",
-  "Cables & More/USB Power Supplies":"A USB charger that plugs into the wall.",
-  "Cables & More/Wagons":"A folding wagon for moving gear. Keep the heavy things at the bottom.",
-  "Cables & More/SD Cards":"A memory card for cameras and recorders.",
-  "Computing/Accessories":"A computer accessory. Check it has the right plug for your laptop.",
-  "Computing/Cables":"A cable for connecting or extending something on a computer.",
-  "Computing/Peripherals":"Something you plug into a computer, like a keyboard, mouse or drive.",
-  "Computing/Other":"A tablet or small computer. Check it is charged and has the apps you need.",
-  "Lighting/Accessories":"An add-on for a light or projector. Check it fits the one you are using.",
-  "Lighting/Augmented Reality Systems":"An interactive display or tracking kit. Ask staff what is in it and what computer it needs.",
-  "Lighting/DMX Lighting Control":"A controller for DMX stage lights.",
-  "Photo & Video/Accessories":"A camera accessory. Check it fits your camera or tripod.",
-  "Photo & Video/DVD Players":"A DVD player for showing video on a TV or projector.",
-  "Photo & Video/Peripherals":"A control pad for stop-motion or camera software.",
-  "Photo & Video/Lenses":"A camera lens. Check its mount matches your camera before attaching it.",
-  "Photo & Video/Stands":"A stand for a camera, light or backdrop.",
-  "Photo & Video/Tripods":"A tripod for steady photos or video.",
-  "Shop & Tools/Hand Tools":"A hand tool for gripping, turning or cutting.",
-  "Shop & Tools/Accessories":"A charger for tool batteries. Check it matches the battery.",
-  "Shop & Tools/Hammers":"A hammer. Wear eye protection.",
-  "Shop & Tools/Heat Guns":"A hot-air tool for heat-shrink and bending plastic. It gets very hot, so work on a surface that can take it.",
-  "Shop & Tools/Impact Drivers":"A cordless driver for screws. Use impact-rated bits and a charged battery.",
-  "Shop & Tools/Levels":"A level and ruler for checking things are straight.",
-  "Shop & Tools/Rotary Tool Accessories":"An attachment for the rotary tool.",
-  "Shop & Tools/Measuring Tapes":"A 16-foot tape measure.",
-  "Shop & Tools/Power Supplies":"An adjustable power supply for testing circuits. Set the voltage before you connect anything.",
-  "Shop & Tools/Screwdrivers":"A screwdriver set. Pick the tip that fits the screw snugly.",
-  "Shop & Tools/Socket Sets":"A socket set for nuts and bolts.",
-  "Soft Tech/Accessories":"A sewing or fabric accessory.",
-  "Soft Tech/Steamers":"A steamer for getting wrinkles out of fabric.",
-  "Soft Tech/Cricut Accessories":"A tool or supply for the Cricut cutter. Do a test cut first.",
-  "Soft Tech/Sewing Accessories":"A sewing machine accessory. Check it fits the machine.",
-  "Virtual Reality/VR Accessories":"A tracker, sensor or controller for VR and interactive projects.",
-  "Virtual Reality/Other":"A VR kit with a headset and tracking parts. Check every part is there when you pick it up."
+  'Audio/Accessories':'An audio accessory for connecting, positioning, or controlling a recording setup. Match its connector or mounting size to the main device.',
+  'Audio/Cables':'An audio cable for connecting a source to a recorder, mixer, amplifier, or speaker. Check the plug on both ends and the signal type.',
+  'Audio/Cassette Players':'A portable cassette player for listening to or transferring analog tapes. Check the power source and output before borrowing.',
+  'Audio/Other':'A portable field recorder for capturing sound away from a computer. Check the card, power, inputs, and monitoring setup.',
+  'Audio/Headphones':'Headphones for monitoring audio while recording, editing, or listening. Check the plug size and try them at a low volume.',
+  'Audio/Instruments':'An electronic instrument or controller for making sound or sending music data. Check its power and audio or MIDI outputs.',
+  'Audio/Interfaces':'A device that brings microphones or instruments into a computer for recording. Check the host connection and input type.',
+  'Audio/MIDI Controllers':'A controller that sends MIDI messages to software or another instrument. It needs a sound source to be heard.',
+  'Audio/Microphones':'A microphone for capturing voice, instruments, or ambient sound. Check the connector and required power.',
+  'Audio/Mixers':'A mixer for combining and routing audio sources. Plan the inputs, outputs, and cables before setup.',
+  'Audio/Speakers':'A speaker for playing back audio. Check power, input connector, and mounting before use.',
+  'Cables & More/Audio Adapters':'An adapter between audio plug sizes or connector types. Check whether each side is an input or output and whether the signal is mono or stereo.',
+  'Cables & More/Audio Cables':'A cable for carrying an audio signal between devices. Check plug sizes, signal type, and length before borrowing.',
+  'Cables & More/Adapters':'An adapter between different device connectors. Check both ends and the direction of the signal or power.',
+  'Cables & More/Batteries':'Rechargeable cells for compatible equipment. Check the size, chemistry, charge state, and device requirements.',
+  'Cables & More/Ethernet Cables':'A network cable for connecting compatible Ethernet devices. Check length and the equipment at both ends.',
+  'Cables & More/HDMI Adapters':'An HDMI adapter or splitter for a display setup. Check input and output direction; identical plugs do not guarantee conversion.',
+  'Cables & More/Laser Pointers':'A handheld pointer for presentations. Keep the beam away from eyes and reflective surfaces.',
+  'Cables & More/MIDI Cables':'A five-pin MIDI cable for sending performance data between compatible music devices. It does not carry audio.',
+  'Cables & More/Mini DisplayPort Adapters':'An adapter for a Mini DisplayPort video output. Check display input and any direction or resolution limits.',
+  'Cables & More/Mini DisplayPort Cables':'A video cable for a device with Mini DisplayPort. Check the display input at the other end.',
+  'Cables & More/RCA Cables':'An analog audio cable with RCA and 1/8-inch connections. Check which plug goes to each device.',
+  'Cables & More/SD Card Readers':'A reader for moving photos or recordings from a compatible memory card to a computer.',
+  'Cables & More/Thunderbolt Adapters':'An adapter between Thunderbolt generations. Check the host, cable, device, and supported direction.',
+  'Cables & More/Thunderbolt Cables':'A Thunderbolt cable for compatible high-speed devices. Check connector generation and required length.',
+  'Cables & More/USB Cables':'A USB cable for connecting devices or power. Check both plug shapes and whether the cable supports the data or charging rate you need.',
+  'Cables & More/USB Adapters':'A USB adapter for connecting a computer or device with a different port. Check host compatibility and data direction.',
+  'Cables & More/USB Power Supplies':'A USB power source for compatible devices. Match its output rating and connector to the device label.',
+  'Cables & More/Wagons':'A collapsible wagon for moving equipment. Check its rated load and keep heavy items low.',
+  'Cables & More/SD Cards':'Removable storage for compatible cameras, recorders, or computers. Check required capacity and speed class.',
+  'Computing/Accessories':'A computer accessory for connecting peripherals or displays. Check the host port and any driver or power requirement.',
+  'Computing/Cables':'A cable for extending or connecting a computer peripheral. Check the USB connector and whether the device needs extra power.',
+  'Computing/Peripherals':'A computer peripheral for input, storage, or control. Check port and software compatibility.',
+  'Computing/Other':'A portable computing device. Check power, storage, apps, and any sign-in required for your project.',
+  'Lighting/Accessories':'A lighting or presentation accessory. Check that it fits the light, projector, or stand you plan to use.',
+  'Lighting/Augmented Reality Systems':'An interactive display or tracking system. Confirm the exact kit, computer compatibility, and clear setup area with staff.',
+  'Lighting/DMX Lighting Control':'A controller or interface for DMX lighting. Confirm fixture addresses and cable types before setup.',
+  'Photo & Video/Accessories':'A camera or video accessory for mounting, adapting, powering, or shaping a shot. Check the exact fit with your camera and support.',
+  'Photo & Video/DVD Players':'A disc player for showing video on a compatible display. Check the disc format and output connection.',
+  'Photo & Video/Peripherals':'A control pad for stop-motion or camera software. Check computer and application compatibility.',
+  'Photo & Video/Lenses':'An interchangeable camera lens. Confirm the lens mount and camera compatibility before attaching it.',
+  'Photo & Video/Stands':'A support for a camera, backdrop, or related equipment. Check its mount and load rating.',
+  'Photo & Video/Tripods':'A three-legged camera support for stable photos or video. Check the head, quick-release plate, and load rating.',
+  'Shop & Tools/Hand Tools':'A hand tool for gripping, turning, or cutting material. Choose the correct size and secure the workpiece.',
+  'Shop & Tools/Accessories':'A charger for compatible tool batteries. Match the battery model before connecting it.',
+  'Shop & Tools/Hammers':'A hammer for driving fasteners or shaping material. Use the right head for the work and wear eye protection.',
+  'Shop & Tools/Heat Guns':'A hot-air tool for heat-shrink, softening, or forming materials. Work on a heat-safe surface with appropriate ventilation.',
+  'Shop & Tools/Impact Drivers':'A powered driver for screws and fasteners. Use impact-rated bits and a compatible charged battery.',
+  'Shop & Tools/Levels':'A level and ruler for checking alignment and dimensions. Read the bubble at eye level.',
+  'Shop & Tools/Rotary Tool Accessories':'An attachment for a compatible rotary tool. Match the mandrel, speed rating, and material before use.',
+  'Shop & Tools/Measuring Tapes':'A retractable 16-foot tape for measuring parts, furniture, and room layouts. Record measurements with units and check them twice.',
+  'Shop & Tools/Power Supplies':'An adjustable power source for testing circuits. Set current limits and verify polarity before enabling the output.',
+  'Shop & Tools/Screwdrivers':'A screwdriver set for fasteners of different sizes. Choose a bit that fully fits the head to avoid stripping it.',
+  'Shop & Tools/Socket Sets':'A socket set for turning nuts and bolts. Match the socket to the fastener and seat it fully before applying force.',
+  'Soft Tech/Accessories':'A soft fabrication accessory. Check heat, water, or machine compatibility before using it on finished fabric.',
+  'Soft Tech/Steamers':'A garment or fabric steamer for relaxing wrinkles. Check the water and heat instructions for the exact model.',
+  'Soft Tech/Cricut Accessories':'A tool or consumable for a compatible Cricut cutter. Check the machine, material, and tool setting before a test cut.',
+  'Soft Tech/Sewing Accessories':'A sewing accessory for guiding fabric, forming stitches, or preparing a seam. Check fit with the machine and fabric.',
+  'Virtual Reality/VR Accessories':'An accessory for tracking, control, or sensing in an interactive setup. Confirm the required host, software, and cables.',
+  'Virtual Reality/Other':'A virtual reality kit with headset and tracking components. Confirm its exact version and every required part at checkout.'
 };
 function introFor(k){
-  const named={'USB C to A Adapter':'An adapter for plugging a USB-A device into a USB-C laptop.','Lighting Gel Kit':'Coloured sheets that change the colour of a light. Keep them off the hot parts of the lamp.'};
+  const named={'USB C to A Adapter':'An adapter for connecting a USB-A peripheral to a compatible USB-C host. Check data and power support before use.','Lighting Gel Kit':'Colored sheets for changing the look of a light. Keep them clear of hot surfaces and use suitable clamps.'};
   const how=howtoFor(k), lead=(how&&how.what)||named[k.n]||INTRO[k.c+'/'+k.t]||'Listed under '+k.t+' in the '+categoryName(k.c)+' collection.';
   const note=k.d?String(k.d).trim().replace(/\.$/,''):'';          // the short note staff wrote ("Mounts on a camera, 2 XLR inputs") becomes its own sentence
   return lead+(note?' '+note.charAt(0).toUpperCase()+note.slice(1)+'.':'');
@@ -350,15 +350,6 @@ function problemLink(k,live){
 }
 function kitsFor(k){const mine=KITS.filter(x=>x.parts.some(p=>p.pick.includes(k.n)));return mine.length?'<div class="side-block"><h2>Part of a kit</h2>'+mine.map(x=>'<a class="source-link" href="#kit-'+esc(x.id)+'">'+esc(x.name)+' \u2192</a>').join('')+'</div>':''}
 // Counts how often each guide is opened, so staff can see what students look for. Only the item's code is sent, to a free
-// public counter (abacus.jasoncameron.dev): no names, no cookies. Once per item per visit. Staff phones count too: staff borrow as well.
-function countOpen(k,fromConsole){
-  try{
-    if(!k.h||!/^https?:$/.test(location.protocol)||/^(localhost|127\.)/.test(location.hostname))return;
-    const seen='rl-seen-'+k.h; if(sessionStorage.getItem(seen))return; sessionStorage.setItem(seen,'1');
-    const hit=key=>fetch('https://abacus.jasoncameron.dev/hit/roomlocator-ideate/'+key,{mode:'cors',keepalive:true}).catch(()=>{});
-    hit('i-'+k.h); hit(fromConsole?'from-console':'from-site');
-  }catch(e){}
-}
 // the dog shows on an item page only where it is holding that very thing: the tape measure and the headphones
 function itemPose(k){
   if(k.n.startsWith('Measuring Tape'))return 'tape';
@@ -379,7 +370,6 @@ function itemView(k,fromConsole){
   ((k.tips?.length||TIPS[k.n]||TIPS[group])?'<section class="guide-section"><h2>Useful tips</h2>'+listItems(k.tips||TIPS[k.n]||TIPS[group])+'</section>':'')+((howto&&!manual.length&&!MODEL_CHOICES[k.n])?(makerSupport(k.n)?'<section class="guide-section"><h2>Maker support</h2>'+external('Open '+makerSupport(k.n)[0]+'\u2019s own support site',makerSupport(k.n)[1])+'<p class="note">Read the model on the item to find its exact manual there.</p></section>':''):manualHtml(k,manual))+'</div><aside class="side-stack"><details class="side-block side-fold"><summary>Borrowing rules and late fees</summary><p>At checkout, confirm the exact model, included parts, condition, and return date with staff. For powered devices, test startup before leaving when possible.</p><p>Visit IDeATe Lending in Hunt Library basement, room A29, across from the elevator. Bring your CMU ID. Check current lending hours and borrowing rules before visiting.</p><p>During the semester, the normal loan is three days with a 6 p.m. due time. Weekends count; university holidays may shift the due date.</p><p>Loans cannot be renewed. Hand the item to staff in A29; drop boxes and other libraries do not count. Late fees run from $1 to $25 a day depending on what the item costs, and borrowing is blocked once fines reach $25.</p>'+external('Official IDeATe Lending rules','https://ideate.cmu.edu/resources/lending/index.html')+external('Full circulation policy','https://ideate.cmu.edu/resources/lending/ideate-circulation-policy.html')+external('Browse CMU’s '+categoryName(k.c)+' collection',collectionUrl(k.c))+'</details>'+(related.length?'<div class="side-block"><h2>Often used with</h2>'+related.map(g=>'<a class="source-link" href="#t'+encodeURIComponent(g)+'">'+esc(g.split('/')[1])+'</a>').join('')+'<p>Compatibility and availability vary by model.</p></div>':'')+(fromConsole?'':reminderHtml(false))+kitsFor(k)+'<div class="side-block"><h2>Something wrong with it?</h2><p>Missing a part, broken, or this page is wrong? Tell the lending staff.</p><a class="source-link" href="'+esc(problemLink(k,live))+'">Report a problem by email</a></div></aside></div>';
   if (!location.search) app.querySelector('.back').href = '#';
   attachCalendar(k,fromConsole);
-  countOpen(k,fromConsole);
   {const pose=itemPose(k),first=document.querySelector('.guide-stack .guide-section');if(pose&&first)first.insertAdjacentHTML('afterbegin',pup(pose,'pup-item'))}
   const modelChoice=document.getElementById('model-choice');
   if(modelChoice)modelChoice.addEventListener('change',()=>{const result=document.getElementById('model-result'),selected=MODEL_CHOICES[k.n].options[Number(modelChoice.value)];result.innerHTML=modelChoice.value===''?'If none matches, ask staff for the model number before using a manual.':external('Open '+selected[0]+' maker guide',selected[1]);});

@@ -869,9 +869,6 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
       if (!saved) line('warn', 'Could not compare the live site with the last save.');
       else if ((saved.published || '') === (d.published || '')) line('ok', 'The live website is showing the latest save' + (d.published ? ' (' + new Date(d.published).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ')' : '') + '.');
       else { const mins = saved.published ? Math.round((Date.now() - new Date(saved.published)) / 60000) : 0; line(mins > 10 ? 'bad' : 'warn', mins > 10 ? 'A save made ' + mins + ' minutes ago is still not showing on the live website. GitHub may be having trouble publishing: check the repository\'s Actions tab.' : 'A save from the last few minutes is still on its way to the live website. Check again in a minute.'); } }
-    // 7. the counter for "What students open"
-    const count = await fetch('https://abacus.jasoncameron.dev/get/roomlocator-ideate/from-site').then(x => x.ok || x.status === 404).catch(() => false);
-    line(count ? 'ok' : 'warn', count ? 'The page-open counter answers.' : 'The page-open counter did not answer. Item pages still work; only "What students open" is affected.');
     // 8. what this page cannot see
     const sy = r && r.synced;
     line('note', 'This page cannot see the console itself. ' + (sy && sy.at ? 'The website last matched it ' + new Date(sy.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '. ' : '') + 'On the console, the "Send to website" spot on the map shows how many changes are waiting: 0 means the two match.');
@@ -1009,48 +1006,3 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   $('edit-count-code').addEventListener('click', () => { const k = editItem(); if (!k) { status.textContent = 'Pick the item from the list first.'; return; } const n = ef.elements.copies.valueAsNumber; if (!Number.isInteger(n) || n < 1 || n > 250) { status.textContent = 'Enter a whole count from 1 to 250.'; return; } showCode('RL:COUNT:' + k.h + ':' + n, 'Show this to the console', k.n + ': Lending now has ' + n + '.', 'This only changes the count on the console. Press Save to change the website.'); });
   window.__rlSync = { readPage, apply: async lines => { await apply(lines); return { data: outData, room: outRoom }; } };   // (for testing)
 }).catch(err => { console.error(err); status.textContent = 'Could not load the inventory. Open this page from the published site or a local web server.'; });
-
-// ---------- What students open: reads the public counters the student pages add to (one per item)
-try { localStorage.removeItem('rl-staff'); } catch (e) {}   // (an earlier version left staff phones out of the counts; staff borrow too, so they count now)
-(function () {
-  const go = document.getElementById('opens-load'); if (!go) return;
-  const say = t => { document.getElementById('opens-status').textContent = t; };
-  const API = 'https://abacus.jasoncameron.dev/get/roomlocator-ideate/';
-  const safe = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const read = async key => {            // a counter nobody has added to yet answers "not found", which means zero
-    for (let attempt = 0; attempt < 4; attempt++) {
-      const r = await fetch(API + key).catch(() => null);
-      if (r && r.status === 404) return 0;
-      if (r && r.ok) { const d = await r.json().catch(() => null); return d && Number(d.value) || 0; }
-      await new Promise(done => setTimeout(done, 4000));   // asked too fast, or offline: wait and try again
-    }
-    return null;
-  };
-  function show(kinds, counts, extra, done) {
-    const rows = kinds.map(k => [k, counts[k.h] || 0]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]);
-    const total = rows.reduce((n, x) => n + x[1], 0);
-    document.getElementById('opens-out').hidden = false;
-    document.getElementById('opens-total').textContent = total + (total === 1 ? ' guide opened' : ' guides opened') + ' in all' + (extra.site != null ? ': ' + extra.console + ' from a console code, ' + extra.site + ' from browsing the site.' : '.');
-    document.getElementById('opens-top').innerHTML = rows.slice(0, 25).map(x => '<li>' + safe(x[0].n) + ' <span class="tool-note">' + x[1] + (x[1] === 1 ? ' time' : ' times') + ', ' + safe(x[0].w) + '</span></li>').join('') || '<li>Nothing has been opened yet.</li>';
-    const cats = {}; rows.forEach(x => { cats[x[0].c] = (cats[x[0].c] || 0) + x[1]; });
-    document.getElementById('opens-cats').innerHTML = Object.entries(cats).sort((a, b) => b[1] - a[1]).map(x => '<li>' + safe(x[0]) + ': ' + x[1] + '</li>').join('');
-    document.getElementById('opens-zero').textContent = done ? (kinds.length - rows.length) + ' of ' + kinds.length + ' items have not been opened at all.' : '';
-  }
-  go.addEventListener('click', async () => {
-    go.disabled = true;
-    const data = await fetch('data.json?v=' + Date.now()).then(r => r.json()).catch(() => null);
-    if (!data) { say('Could not read the item list. Check the connection and try again.'); go.disabled = false; return; }
-    const kinds = data.kinds.filter(k => k.h), counts = {}, extra = {};
-    extra.console = await read('from-console'); extra.site = await read('from-site');
-    let failed = 0;
-    for (let i = 0; i < kinds.length; i++) {             // the counter allows 30 questions every 10 seconds, so this takes about 3 minutes
-      const v = await read('i-' + kinds[i].h);
-      if (v == null) failed++; else counts[kinds[i].h] = v;
-      if (i % 10 === 9 || i === kinds.length - 1) { say('Read ' + (i + 1) + ' of ' + kinds.length + '. This takes about 3 minutes.'); show(kinds, counts, extra, false); }
-      await new Promise(done => setTimeout(done, 400));
-    }
-    show(kinds, counts, extra, true);
-    say(failed ? failed + ' items could not be read. Press the button again later.' : 'Done. Read at ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + '.');
-    go.disabled = false;
-  });
-})();
