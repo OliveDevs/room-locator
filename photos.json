@@ -907,6 +907,30 @@
       "page": "https://commons.wikimedia.org/wiki/File:Dmx_repeater.jpg",
       "artist": "KeepOnTruckin",
       "license": "CC BY 2.5"
+    },
+    "exact:Rode DSLR Mic": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/60/Nikon_D7000_%2B_80200mm_Lens_%2B_Rode_Video_Microphone_-_front_angled.jpg/960px-Nikon_D7000_%2B_80200mm_Lens_%2B_Rode_Video_Microphone_-_front_angled.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Nikon_D7000_%2B_80200mm_Lens_%2B_Rode_Video_Microphone_-_front_angled.jpg",
+      "artist": "Jon Gosier",
+      "license": "CC BY 2.0"
+    },
+    "exact:10-18mm Ultra Wide-Angle Contemporary Lens (Sony E-mount)": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e7/Sigma_10-18mm_F2.8_DC_DN_-_Contemporary%2C_Sony_E.jpg/960px-Sigma_10-18mm_F2.8_DC_DN_-_Contemporary%2C_Sony_E.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Sigma_10-18mm_F2.8_DC_DN_-_Contemporary,_Sony_E.jpg",
+      "artist": "Henry Söderlund",
+      "license": "CC BY 2.0"
+    },
+    "exact:DJI RSC 2 Gimbal": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/80/DJI_Ronin_RSC2_Pro_1.jpg/960px-DJI_Ronin_RSC2_Pro_1.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:DJI_Ronin_RSC2_Pro_1.jpg",
+      "artist": "-stk",
+      "license": "CC BY-SA 4.0"
+    },
+    "exact:Panasonic Lumix Vario 12-35mm f/2.8 II Lens": {
+      "url": "https://live.staticflickr.com/2733/32979286511_9ac5987e11_b.jpg",
+      "page": "https://www.flickr.com/photos/62942199@N08/32979286511/",
+      "artist": "Takashi H",
+      "license": "CC BY-NC-SA 2.0"
     }
   },
   "items": {
@@ -1018,10 +1042,10 @@
     "Canon Rebel T7": "exact:Canon Rebel T7",
     "Nikon D3300 Camera": "exact:Nikon D3300 Camera",
     "DVD Player": "DVD player",
-    "DJI RSC 2 Gimbal": "camera-gimbal",
+    "DJI RSC 2 Gimbal": "exact:DJI RSC 2 Gimbal",
     "Feiyu G5 Gimbal Kit for GoPro Hero 5": "camera-gimbal",
     "Osmo Mobile 8 Phone Gimbal": "phone-gimbal",
-    "10-18mm Ultra Wide-Angle Contemporary Lens (Sony E-mount)": "camera lens",
+    "10-18mm Ultra Wide-Angle Contemporary Lens (Sony E-mount)": "exact:10-18mm Ultra Wide-Angle Contemporary Lens (Sony E-mount)",
     "100mm-400mm Telephoto Lens (Sony E-Mount)": "camera lens",
     "12mm f/2.0 wide-angle lens (Sony E-mount)": "camera lens",
     "4mm f/2.8 Circular Fisheye Lens (Sony E-mount)": "camera lens",
@@ -1033,7 +1057,7 @@
     "FE 50mm F1.8 Full-frame Standard Prime Lens": "camera lens",
     "Laowa Sony A 60mm f/2.8 Lens": "camera lens",
     "Micro-NIKKOR 55mm f/2.8 Lens": "camera lens",
-    "Panasonic Lumix Vario 12-35mm f/2.8 II Lens": "camera lens",
+    "Panasonic Lumix Vario 12-35mm f/2.8 II Lens": "exact:Panasonic Lumix Vario 12-35mm f/2.8 II Lens",
     "Rokinon 100mm f/2.8 Macro Lens": "camera lens",
     "Rokinon AF 18mm f/2.8 FE Lens": "camera lens",
     "Sony E 30mm f/3.5 Macro Lens": "camera lens",
@@ -1103,7 +1127,7 @@
     "DPA Core Microphone-L": "lavalier microphone",
     "DPA MIC - Reserve": "lavalier microphone",
     "Audio-Technica Condenser Shotgun Microphone": "shotgun microphone",
-    "Rode DSLR Mic": "shotgun microphone",
+    "Rode DSLR Mic": "exact:Rode DSLR Mic",
     "Rode VideoMic Pro+ Mountable Shotgun Microphone": "shotgun microphone",
     "Dual-Channel Wireless Microphone System": "wireless microphone system",
     "Studio Wireless Mic": "wireless microphone system",
@@ -1237,7 +1261,11 @@
     "Bose S1 Pro+ PA System",
     "Tascam DR-60DmkII Field Recorder",
     "EOS Rebel T3 Camera",
-    "FX3 Full-Frame Cinema Camera"
+    "FX3 Full-Frame Cinema Camera",
+    "Rode DSLR Mic",
+    "10-18mm Ultra Wide-Angle Contemporary Lens (Sony E-mount)",
+    "DJI RSC 2 Gimbal",
+    "Panasonic Lumix Vario 12-35mm f/2.8 II Lens"
   ],
   "lending": {
     "3.5mm to 2-Male RCA Adapter": {

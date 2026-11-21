@@ -293,8 +293,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     $('qr').innerHTML = qr.createSvgTag({ cellSize: 8, margin: 4, scalable: true });
     $('qr').classList.toggle('qr-big', !!s.big);
     $('code-title').textContent = s.big ? s.items.length + ' changes in one code' : c.title;
-    $('code-what').textContent = s.big ? 'One scan sends all of them. The console saves them in this order and shows how many it saved.' : c.what;
-    $('code-how-last').textContent = s.big ? 'The console lists how many it saved. Nothing else to press there.' : 'Check the screen and the lights, then press Select.';
+    $('code-what').textContent = s.big ? 'One scan sends them all.' : c.what;
+    $('code-how-last').textContent = s.big ? 'The console shows how many it saved.' : 'Check the screen, then press Select.';
     $('code-text').textContent = s.code; $('code-extra').textContent = s.big ? '' : c.extra || '';
     $('code-many').hidden = all.length < 2;
     $('code-count').textContent = 'Code ' + (madeAt + 1) + ' of ' + all.length;
@@ -313,7 +313,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     if (left) { status.textContent = 'Good. ' + left + (left === 1 ? ' more code' : ' more codes') + ' to show.'; return; }
     // nothing left to show the console: go straight on to the website, with this page's own camera
     afterSend = true; $('tab-sync').click(); $('sync-start').click();
-    status.textContent = 'All sent. Now press Select on the console and point this phone at the code it shows.';
+    status.textContent = 'All sent. Now press Select on the console and point this phone at its code.';
     $('staff-status').scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
   // ---- send the whole list in one go (console v5.15): each code becomes a numbered part, RL:B:<id>:<part>/<parts>:<code>,
@@ -337,7 +337,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     box.hidden = !made.length || !!playTimer;
     if (box.hidden) return;
     $('code-all-title').textContent = made.length + (made.length === 1 ? ' change on the list' : ' changes on the list');
-    $('code-all-what').textContent = all.length > 1 ? 'They do not all fit in one code. The ones in the code on screen are marked.' : made.length > 1 ? 'All of them are in the code on screen.' : '';
+    $('code-all-what').textContent = all.length > 1 ? 'Too many for one code. The ones in this code are in bold.' : '';
     $('code-all-go').hidden = !(now && now.big);
     $('code-all-list').innerHTML = made.map((c, i) => '<li data-code="' + esc(c.code) + '" class="' + (now.items.includes(c) ? 'in-code' : 'not-in-code') + '"><span><strong>' + esc(c.title) + '</strong> ' + esc(c.what) + (all.length > 1 && !now.items.includes(c) ? ' <em>(code ' + (all.findIndex(s => s.items.includes(c)) + 1) + ')</em>' : '') + '</span><button type="button" class="remove-code" data-remove-code="' + i + '" aria-label="' + esc('Remove ' + c.title) + '">Remove</button></li>').join('');
   }
@@ -349,7 +349,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     drawCode();
     const next = $('code-all-list').querySelectorAll('button');
     (next[Math.min(index, next.length - 1)] || $('tab-move')).focus();
-    status.textContent = made.length ? 'Removed. The code on screen now holds what is left.' : 'The list is empty.';
+    status.textContent = made.length ? 'Removed.' : 'The list is empty.';
   });
   $('code-add-more').addEventListener('click', () => {
     const tab = document.querySelector('.tool-tabs [aria-selected="true"]');
@@ -396,7 +396,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     let c = made.find(m => m.code === code);
     if (!c) { c = { code, title, what, extra }; made.push(c); }
     madeAt = canBatch(c) ? 0 : steps().findIndex(s => s.items.includes(c));   // codes are sent in order, so the first one is the one to show
-    status.textContent = made.length > 1 ? 'Added. ' + made.length + ' changes are on the list: add more, or show the code to the console.' : '';
+    status.textContent = made.length > 1 ? 'Added. ' + made.length + ' changes on the list.' : '';
     if (reveal) {
       drawCode();
       $('code-out').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -519,7 +519,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const problem = checkAdd(); if (problem) { status.textContent = problem; return; }
     const f = af.elements, name = f.name.value.trim(), t = types[Number(f.type.value)], s = Number(f.shelf.value || 0);
     showCode(addCode(), 'Add ' + name, CAT_ORDER[t[0]] + ' / ' + t[1] + ', ' + f.copies.value + (f.copies.value === '1' ? ' copy' : ' copies') + ', goes to ' + placeName(f.unit.value, s && unitBy[f.unit.value].shelves ? boardBelow(unitBy[f.unit.value], s) : 0) + '.',
-      'On the console: scan this, type the PIN, check the details, scan the new item’s barcode sticker (or skip), check the spot, then Select. Next, give it a photo and a description in the guide section of the form, or later under Edit an item.');
+      'On the console: scan this, type the PIN, scan the item’s barcode sticker (or skip), then press Select. Then add its photo and description in the form above.');
     document.querySelector('.add-extra').open = true;
   });
   let addPhoto = null;
@@ -543,8 +543,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     if (!(await publish({ 'data.json': out }, 'Add ' + name + ' (staff page)', e.target, blob))) return;
     addPhoto = null; f.photofile.value = ''; $('add-photo-note').textContent = '';
     kinds.push(item);                                              // so pressing twice cannot add it twice
-    showCode(addCode(), 'Add ' + name, 'Its guide page is saved. Now show this to the console so it knows the item too.', 'On the console: scan this, type the PIN, check the details, scan the new item’s barcode sticker (or skip), check the spot, then Select.');
-    status.textContent = 'Saved: ' + name + ' has a guide page in about a minute. Show the code below to the console.';
+    showCode(addCode(), 'Add ' + name, 'Guide page saved. Now show this to the console.', 'On the console: scan this, type the PIN, scan the item’s barcode sticker (or skip), then press Select.');
+    status.textContent = 'Saved: ' + name + ' is on the site in about a minute. Show the code below to the console.';
   });
 
   // ---- from the console: its change list (MOVES.TSV) as QR pages "RLSYNC|page|pages|total" + lines with | for tabs
@@ -612,7 +612,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
       stream = camera;
       video.srcObject = stream; video.hidden = false; await video.play();
       scanning = true; cameFromConsole = true; $('sync-start').hidden = true; $('sync-stop').hidden = false; if (!afterSend) status.textContent = ''; afterSend = false; tick();
-    } catch (e) { status.textContent = afterSend ? 'All sent. Now press Select on the console and point this phone\'s camera at the code it shows.' : 'The camera did not start. Allow camera access, or point the phone\'s own camera at the console.'; afterSend = false; }
+    } catch (e) { status.textContent = afterSend ? 'All sent. Now press Select on the console and scan its code with this phone\'s camera.' : 'The camera did not start. Allow camera access, or point the phone\'s own camera at the console.'; afterSend = false; }
   });
   $('sync-stop').addEventListener('click', stopCamera);
   $('sync-use-paste').addEventListener('click', () => {
@@ -628,7 +628,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   // empty list (after Start over on the console) puts the website back to the setup. What only the website knows about an
   // item (photo, manual link, description) is carried over.
   let baseline = null, autoTimer = 0, cameFromConsole = false;
-  $('sync-auto-cancel').addEventListener('click', () => { clearInterval(autoTimer); $('sync-auto').hidden = true; status.textContent = 'Not saved. Press Save these changes to the website when you are ready.'; });
+  $('sync-auto-cancel').addEventListener('click', () => { clearInterval(autoTimer); $('sync-auto').hidden = true; status.textContent = 'Not saved. Press Save when you are ready.'; });
   const loadBaseline = async () => baseline || (baseline = await Promise.all([fetch('backup/2026-11-16/data.json?x=' + Date.now()).then(x => x.json()), fetch('backup/2026-11-16/room.json?x=' + Date.now()).then(x => x.json())]));
   // ---- the answer back to the console (v5.46). The console only counts changes as "on the website" when it scans this.
   function showAck(code, title, what) {
@@ -637,7 +637,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     $('ack-title').textContent = title; $('ack-what').textContent = what; $('ack').hidden = false;
     $('ack').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
-  const ackGot = tag => showAck('RL:GOT:' + tag, 'Last step: show this to the console', 'Hold it about 10 cm from the console\'s scanner. The console then knows the website has these changes and stops asking for an update.');
+  const ackGot = tag => showAck('RL:GOT:' + tag, 'Last step: show this to the console', 'Hold this up to the console\'s scanner so it knows the website is updated.');
   $('ack-done').addEventListener('click', () => { $('ack').hidden = true; });
   let syncTag = null;
   async function apply(lines, from = 0, tag = null) {
@@ -659,8 +659,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
       while (have >= from && have <= tag && skip > 0 && at < lines.length) { skip -= enc.encode(lines[at].join('\t')).length + 2; at++; }
       if (have < from || have > tag || skip !== 0) {
         clearInterval(autoTimer); $('sync-auto').hidden = true; $('sync-result').hidden = true;
-        status.textContent = 'The website and the console have lost track of each other. Nothing was changed.';
-        showAck('RL:RESEND', 'Show this to the console', 'Hold it at the console\'s scanner and type the PIN. The console then shows a code with its whole list. Scan that one with this phone\'s camera.');
+        status.textContent = 'The website and the console have lost track of each other. Nothing changed.';
+        showAck('RL:RESEND', 'Show this to the console', 'Show this to the console and type the PIN. Then scan the code the console shows.');
         return;
       }
       lines = lines.slice(at);
@@ -734,11 +734,11 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   }
   const boardBelowIn = (u, n) => { while (n > 1 && u.boards && u.boards.length && !u.boards.includes(n)) n--; return n; };
   const download = (obj, name) => { const blob = new Blob([JSON.stringify(obj, null, 2) + '\n'], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
-  $('sync-publish').addEventListener('click', async e => { if (!outData) return; if (await publish({ 'data.json': outData, 'room.json': outRoom }, 'Website matched to the console (staff page)', e.target)) { $('sync-saved').hidden = false; try { sessionStorage.setItem('rl-done', syncTag !== null ? 'Saved: the website now matches the console. Students see the new shelves in about a minute. One last step below.' : 'Done: the website now matches the console. Students see the new shelves in about a minute. Nothing else to do.'); if (syncTag !== null) sessionStorage.setItem('rl-ack', String(syncTag)); } catch (err) { } setTimeout(() => location.reload(), 2500); } });
+  $('sync-publish').addEventListener('click', async e => { if (!outData) return; if (await publish({ 'data.json': outData, 'room.json': outRoom }, 'Website matched to the console (staff page)', e.target)) { $('sync-saved').hidden = false; try { sessionStorage.setItem('rl-done', syncTag !== null ? 'Saved. The site updates in about a minute. One last step below.' : 'Saved. The site updates in about a minute. Nothing else to do.'); if (syncTag !== null) sessionStorage.setItem('rl-ack', String(syncTag)); } catch (err) { } setTimeout(() => location.reload(), 2500); } });
   // after that reload, say plainly that it worked (the page used to come back looking as if nothing had happened)
-  try { const done = sessionStorage.getItem('rl-done'); if (done) { sessionStorage.removeItem('rl-done'); $('home-done').textContent = done; $('home-done').hidden = false; } const ack = sessionStorage.getItem('rl-ack'); if (ack !== null) { sessionStorage.removeItem('rl-ack'); if (ack === 'RESEND') showAck('RL:RESEND', 'Does the console still hold changes?', 'The website is back to the Nov 16 setup. If the console has changes you want kept, show it this code and type the PIN: it then shows a code with everything it has, and you scan that. To clear the console as well, use Start over on the console.'); else ackGot(ack); } } catch (err) { }
+  try { const done = sessionStorage.getItem('rl-done'); if (done) { sessionStorage.removeItem('rl-done'); $('home-done').textContent = done; $('home-done').hidden = false; } const ack = sessionStorage.getItem('rl-ack'); if (ack !== null) { sessionStorage.removeItem('rl-ack'); if (ack === 'RESEND') showAck('RL:RESEND', 'Does the console still hold changes?', 'The website is reset. To put the console\'s changes back on it, show the console this code and type the PIN, then scan the code it shows. To clear the console too, use Start over there.'); else ackGot(ack); } } catch (err) { }
   $('web-reset').addEventListener('click', async e => {
-    if (!confirm('Put the website back to the Nov 16 setup? Every change brought over from the console since then, and every edit made here, is taken off the website.')) return;
+    if (!confirm('Put the website back to the Nov 16 setup? This removes every change and edit made since then.')) return;
     const [d, r] = await Promise.all([fetch('backup/2026-11-16/data.json?x=' + Date.now()).then(x => x.json()), fetch('backup/2026-11-16/room.json?x=' + Date.now()).then(x => x.json())]);
     if (await publish({ 'data.json': d, 'room.json': r }, 'Website back to the Nov 16 setup (staff page)', e.target)) { try { sessionStorage.setItem('rl-ack', 'RESEND'); } catch (err) { } setTimeout(() => location.reload(), 1500); }
   });
@@ -904,7 +904,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     $('tab-sync').click(); cameFromConsole = true;
     const ok = readPage(location.href);
     history.replaceState(null, '', location.pathname);
-    if (ok && Object.keys(pages).length < pageCount) status.textContent = 'Got it. On the console press Down for the next page and point the camera at it.';
+    if (ok && Object.keys(pages).length < pageCount) status.textContent = 'Got it. Press Down on the console and scan the next page.';
   };
   const fromConsoleCode = () => unlockFromAddress().then(takeAddress);
   fromConsoleCode(); addEventListener('hashchange', fromConsoleCode);   // (hashchange: the camera reused a tab that already had this page open)
@@ -915,14 +915,14 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   const editResults = $('edit-search-results'), editMatches = $('edit-matches');
   let selectedEditItem = null, matchingEditItems = [];
   const editItem = () => selectedEditItem;
-  const showPreview = url => { preview.innerHTML = url ? '<img src="' + esc(url) + '" alt="" referrerpolicy="no-referrer"><span>This is the photo the page shows now.</span>' : '<span>This item has no photo yet.</span>'; };
+  const showPreview = url => { preview.innerHTML = url ? '<img src="' + esc(url) + '" alt="" referrerpolicy="no-referrer"><span>Current photo.</span>' : '<span>This item has no photo yet.</span>'; };
   // a photo straight from the phone: shrunk here, saved into photos/ in the same step as the item
   let newPhoto = null;
   ef.elements.photofile.addEventListener('change', async () => {
     const note = $('edit-photo-note'); newPhoto = null; if (!ef.elements.photofile.files[0]) return;
     try {
       newPhoto = await readPhoto(ef.elements.photofile.files[0]);
-      preview.innerHTML = '<img src="' + newPhoto.url + '" alt=""><span>New photo. It is not on the website until you press Save.</span>';
+      preview.innerHTML = '<img src="' + newPhoto.url + '" alt=""><span>New photo. Press Save to put it on the site.</span>';
       ef.elements.nophoto.checked = false; note.textContent = 'Photo ready (' + newPhoto.kb + ' KB).';
     } catch (err) { ef.elements.photofile.value = ''; note.textContent = 'That file could not be read as a picture. Try a JPEG or PNG, or take the photo again.'; }
   });
@@ -1006,7 +1006,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     if (copies !== k.x) { k.x = copies; showCode('RL:COUNT:' + k.h + ':' + copies, 'Show this to the console too', k.n + ': Lending now has ' + copies + '. The website is saved; this tells the console.', 'Without this the console keeps showing the old count.'); }
     else setTimeout(() => location.reload(), 1500);
   });
-  $('edit-count-code').addEventListener('click', () => { const k = editItem(); if (!k) { status.textContent = 'Pick the item from the list first.'; return; } const n = ef.elements.copies.valueAsNumber; if (!Number.isInteger(n) || n < 1 || n > 250) { status.textContent = 'Enter a whole count from 1 to 250.'; return; } showCode('RL:COUNT:' + k.h + ':' + n, 'Show this to the console', k.n + ': Lending now has ' + n + '.', 'This changes the count on the console only. Save to the website changes it there.'); });
+  $('edit-count-code').addEventListener('click', () => { const k = editItem(); if (!k) { status.textContent = 'Pick the item from the list first.'; return; } const n = ef.elements.copies.valueAsNumber; if (!Number.isInteger(n) || n < 1 || n > 250) { status.textContent = 'Enter a whole count from 1 to 250.'; return; } showCode('RL:COUNT:' + k.h + ':' + n, 'Show this to the console', k.n + ': Lending now has ' + n + '.', 'This only changes the count on the console. Press Save to change the website.'); });
   window.__rlSync = { readPage, apply: async lines => { await apply(lines); return { data: outData, room: outRoom }; } };   // (for testing)
 }).catch(err => { console.error(err); status.textContent = 'Could not load the inventory. Open this page from the published site or a local web server.'; });
 

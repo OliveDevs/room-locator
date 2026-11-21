@@ -18,7 +18,7 @@
 <section id="ack" class="ack" hidden aria-live="polite">
 <h2 id="ack-title">Last step: show this to the console</h2>
 <div id="ack-qr" class="qr"></div>
-<p id="ack-what">Hold it about 10 cm from the console's scanner. The console then knows the website has these changes and stops asking for an update.</p>
+<p id="ack-what">Hold this up to the console's scanner so it knows the website is updated.</p>
 <button type="button" id="ack-done" class="button-secondary">The console took it</button>
 </section>
 <p class="status-line"><span id="home-sync"></span> <span id="home-key"></span> <button type="button" id="home-key-set" class="link-button"></button></p>
@@ -64,7 +64,7 @@
 
 <section id="tool-many" class="tool" role="tabpanel" aria-labelledby="tab-many" hidden>
 <form id="many-form" class="staff-form">
-<p class="wide tool-note">Pick a shelf, choose the items that are moving, and add them to the list. Repeat for other shelves, then send the queued moves to the console.</p>
+<p class="wide tool-note">Pick a shelf, tick what's moving, and choose where it goes.</p>
 <label>From unit<select name="fromUnit" required></select></label>
 <label>Shelf<select name="fromShelf" required></select></label>
 <div class="wide many-list" id="many-list"></div>
@@ -75,7 +75,7 @@
 </section>
 
 <section id="tool-add" class="tool" role="tabpanel" aria-labelledby="tab-add" hidden>
-<p class="tool-note">Fill in the five boxes and make the code. The console asks for the PIN, then the item is live there straight away.</p>
+<p class="tool-note">Fill these in, then make the code for the console.</p>
 <form id="add-form" class="staff-form">
 <label class="wide">Item name<input name="name" required placeholder="Exactly as it appears in the inventory"><small id="name-room" class="field-help"></small></label>
 <label>Category<select name="category" required></select></label>
@@ -86,20 +86,20 @@
 <button type="submit" class="wide">Make the console code</button>
 
 <details class="wide add-extra">
-<summary>Also give it a guide page on this website <span class="add-extra-hint">(optional)</span></summary>
+<summary>Add its guide page <span class="add-extra-hint">(optional)</span></summary>
 <div class="add-extra-grid">
-<p class="wide tool-note">Leave anything blank that you do not know. The page still works without it.</p>
-<label class="wide">Short description<textarea name="description" rows="2" placeholder="What this item is useful for"></textarea></label>
-<label class="wide">What the borrower needs, one per line<textarea name="need" rows="3"></textarea></label>
-<label class="wide">First steps, one per line<textarea name="start" rows="3"></textarea></label>
-<label class="wide">Useful tips, one per line<textarea name="tips" rows="2"></textarea></label>
-<label class="wide">Link to the maker's manual, only if you checked the model matches<input name="manual" type="url" placeholder="https://..."></label>
-<label class="wide">Take or choose a photo<input name="photofile" type="file" accept="image/*"><small class="field-help">From this phone's camera or photo library. Only photos Lending took. <span id="add-photo-note" role="status"></span></small></label>
-<label class="wide">Or a photo URL<input name="photo" placeholder="https://... or photos/name.jpg"><small class="field-help">No photo is better than the wrong photo. Leave both blank if you are not sure.</small></label>
-<label>Photo credit or maker<input name="credit" placeholder="IDeATe Lending staff"></label>
-<label>Photo source or licence URL<input name="crediturl" type="url" placeholder="https://..."></label>
+<p class="wide tool-note">Skip anything you don't know.</p>
+<label class="wide">Short description<textarea name="description" rows="2" placeholder="What it is"></textarea></label>
+<label class="wide">What you need to use it (one per line)<textarea name="need" rows="3"></textarea></label>
+<label class="wide">First steps (one per line)<textarea name="start" rows="3"></textarea></label>
+<label class="wide">Tips (one per line)<textarea name="tips" rows="2"></textarea></label>
+<label class="wide">Manual link<input name="manual" type="url" placeholder="https://..."><small class="field-help">Make sure it's for this exact model.</small></label>
+<label class="wide">Take or choose a photo<input name="photofile" type="file" accept="image/*"><small class="field-help">Use a photo Lending took. <span id="add-photo-note" role="status"></span></small></label>
+<label class="wide">Or paste a photo link<input name="photo" placeholder="https://..."><small class="field-help">Not sure it's the right photo? Leave it out.</small></label>
+<label>Photo credit<input name="credit" placeholder="IDeATe Lending staff"></label>
+<label>Photo source link<input name="crediturl" type="url" placeholder="https://..."></label>
 <button type="button" id="add-publish" class="wide">Save its guide page to the website</button>
-<p class="wide tool-note">Not finished? Save what you have. The item shows up under Edit an item as needing a photo, and you can add the rest there any time.</p>
+<p class="wide tool-note">You can add the rest later under Edit an item.</p>
 </div>
 </details>
 </form>
@@ -107,8 +107,8 @@
 
 <section id="tool-edit" class="tool" role="tabpanel" aria-labelledby="tab-edit" hidden>
 <form id="edit-form" class="staff-form">
-<p class="wide tool-note">Change anything on an item's guide page: photo, description, what it is good for, the checklists, the manual link, the count. To change its shelf use Move an item.</p>
-<details class="wide edit-todo" id="edit-todo" hidden><summary id="edit-todo-title"></summary><p class="tool-note">Tap one to fix it.</p><ul class="edit-matches" id="edit-todo-list"></ul></details>
+<p class="wide tool-note">Change an item's photo, description, checklists, manual link or count. To change its shelf, use Move an item.</p>
+<details class="wide edit-todo" id="edit-todo" hidden><summary id="edit-todo-title"></summary><p class="tool-note">Tap one to add a photo.</p><ul class="edit-matches" id="edit-todo-list"></ul></details>
 <label class="wide">Find an item<input name="thing" type="search" placeholder="Type part of the item name" autocomplete="off" aria-describedby="edit-search-status"></label>
 <div class="wide" id="edit-search-results" hidden>
 <p class="tool-note" id="edit-search-status" role="status"></p>
@@ -117,21 +117,21 @@
 <div class="wide" id="edit-fields" hidden>
 <div class="edit-grid">
 <div class="wide edit-preview" id="edit-preview" tabindex="-1"></div>
-<label class="wide">Take or choose a photo<input name="photofile" type="file" accept="image/*"><small class="field-help">From this phone's camera or photo library. Only photos Lending took. <span id="edit-photo-note" role="status"></span></small></label>
-<label class="wide">Or a photo URL<input name="photo" placeholder="https://... or photos/name.jpg"><small class="field-help">Use a photo Lending took, or one you are allowed to use. Leave both blank to keep the photo it has now.</small></label>
+<label class="wide">Take or choose a photo<input name="photofile" type="file" accept="image/*"><small class="field-help">Use a photo Lending took. <span id="edit-photo-note" role="status"></span></small></label>
+<label class="wide">Or paste a photo link<input name="photo" placeholder="https://..."><small class="field-help">Leave both blank to keep the current photo.</small></label>
 <label>Photo credit<input name="credit" placeholder="IDeATe Lending staff"></label>
-<label>Photo source or licence URL<input name="crediturl" type="url" placeholder="https://..."></label>
-<label class="wide check"><input type="checkbox" name="nophoto"> The photo it shows is wrong: show "No photo yet" instead</label>
+<label>Photo source link<input name="crediturl" type="url" placeholder="https://..."></label>
+<label class="wide check"><input type="checkbox" name="nophoto"> Wrong photo: show none instead</label>
 <label>Manual link name<input name="manualname" placeholder="Owner's manual (PDF)"></label>
 <label>Manual link<input name="manual" type="url" placeholder="https://..."></label>
-<label class="wide">Short description<textarea name="description" rows="2" placeholder="What this item is"></textarea></label>
-<label class="wide">Good for<input name="good" placeholder="podcasts, interviews, recording outdoors"><small class="field-help">A few uses, separated by commas. Students can search for these words. Blank uses the standard line for its type.</small></label>
-<label class="wide">What the borrower needs, one per line<textarea name="need" rows="3"></textarea></label>
-<label class="wide">First steps, one per line<textarea name="start" rows="3"></textarea><small class="field-help">Fill in both lists to replace the standard guide for its type. Blank keeps the standard one.</small></label>
-<label class="wide">Useful tips, one per line<textarea name="tips" rows="3"></textarea></label>
+<label class="wide">Short description<textarea name="description" rows="2" placeholder="What it is"></textarea></label>
+<label class="wide">Good for<input name="good" placeholder="podcasts, interviews, recording outdoors"><small class="field-help">A few uses, separated by commas. Students can search these.</small></label>
+<label class="wide">What you need to use it (one per line)<textarea name="need" rows="3"></textarea></label>
+<label class="wide">First steps (one per line)<textarea name="start" rows="3"></textarea><small class="field-help">Leave both lists blank to keep the standard guide.</small></label>
+<label class="wide">Tips (one per line)<textarea name="tips" rows="3"></textarea></label>
 <label>How many Lending has<input name="copies" type="number" min="1" max="250" step="1" inputmode="numeric"></label>
 <button type="button" id="edit-publish" class="wide">Save to the website</button>
-<button type="button" id="edit-count-code" class="wide button-secondary">Only tell the console the new count</button>
+<button type="button" id="edit-count-code" class="wide button-secondary">Send just the count to the console</button>
 </div>
 </div>
 </form>
@@ -139,15 +139,15 @@
 
 <section id="tool-sync" class="tool" role="tabpanel" aria-labelledby="tab-sync" hidden>
 <div class="sync-box">
-<p class="tool-note">Open <strong>Send to website</strong> on the console. Scan each QR page with your phone camera or use the scanner below.</p>
+<p class="tool-note">On the console, open <strong>Send to website</strong>. Then scan its code here.</p>
 <div class="sync-camera"><video id="sync-video" playsinline muted hidden></video><canvas id="sync-canvas" hidden></canvas></div>
-<div class="sync-actions"><button type="button" id="sync-start">Scan the console's codes</button><button type="button" id="sync-stop" class="button-secondary" hidden>Stop the camera</button></div>
+<div class="sync-actions"><button type="button" id="sync-start">Scan the console's code</button><button type="button" id="sync-stop" class="button-secondary" hidden>Stop the camera</button></div>
 <p id="sync-pages" class="sync-pages"></p>
 
 <div id="sync-result" hidden><h2>What changes on the website</h2><ul id="sync-summary"></ul>
 <p id="sync-auto" class="tool-note" hidden><strong id="sync-auto-text"></strong> <button type="button" id="sync-auto-cancel" class="link-button">Cancel</button></p>
 <div class="sync-actions"><button type="button" id="sync-publish">Save these changes to the website</button></div>
-<p class="tool-note" id="sync-saved" hidden>Saved. Item pages and this staff page show the new shelves in about a minute.</p></div>
+<p class="tool-note" id="sync-saved" hidden>Saved. The site updates in about a minute.</p></div>
 
 </div>
 </section>
@@ -155,12 +155,12 @@
 <p id="staff-status" class="tool-status" role="status"></p>
 
 <section id="connect" class="connect" hidden>
-<h2>Let this device save to the website</h2>
+<h2>Sign in to save</h2>
 <p id="connect-why" class="tool-note"></p>
 <p id="connect-how"></p>
-<label id="connect-passrow">Staff passcode (not the console's PIN)<input id="connect-pass" type="password" autocomplete="off"></label>
+<label id="connect-passrow">Staff passcode (not the console PIN)<input id="connect-pass" type="password" autocomplete="off"></label>
 <div class="sync-actions"><button type="button" id="connect-unlock">Unlock saving</button><button type="button" id="connect-forget" class="button-secondary">Sign this device out</button></div>
-<details class="sync-paste"><summary>First-time setup, or the key stopped working: paste the site key</summary>
+<details class="sync-paste"><summary>Set up a new site key</summary>
 <ol>
 <li>Sign in to GitHub with an account that can edit the room-locator repository, then open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">New fine-grained token &#8599;</a></li>
 <li>Repository access: Only select repositories, then pick room-locator</li>
@@ -169,10 +169,10 @@
 </ol>
 <label>Site key<input id="connect-key" type="password" autocomplete="off" placeholder="github_pat_..."></label>
 <label>The date GitHub says it expires, if it has one<input id="connect-expires" type="date"></label>
-<label>Staff passcode, to keep it working for other devices (leave empty to skip)<input id="connect-newpass" type="password" autocomplete="off"></label>
+<label>Staff passcode (so other devices keep working)<input id="connect-newpass" type="password" autocomplete="off"></label>
 <div class="sync-actions"><button type="button" id="connect-save">Use this key on this device</button></div>
 </details>
-<p class="note">Signing in stays in this browser until you sign the device out.</p>
+<p class="note">You stay signed in on this device until you sign out.</p>
 </section>
 
 <section id="code-out" class="code-out" hidden aria-live="polite">
@@ -181,9 +181,9 @@
 <h2 id="code-title">Show this to the console</h2>
 <p id="code-what"></p>
 <ol id="code-how">
-<li>Hold your phone about 10 cm from the console's scanner, screen bright.</li>
-<li>Type the staff PIN on the console.</li>
-<li id="code-how-last">Check the screen and the lights, then press Select.</li>
+<li>Hold your phone about 10 cm from the scanner, brightness up.</li>
+<li>Type the PIN on the console.</li>
+<li id="code-how-last">Check the screen, then press Select.</li>
 </ol>
 <div id="code-many" class="code-many" hidden><button type="button" id="code-prev" class="button-secondary">Previous</button><span id="code-count"></span><button type="button" id="code-next" class="button-secondary">Next code</button></div>
 <button type="button" id="code-done">The console took it</button>
@@ -193,16 +193,16 @@
 <ul id="code-all-list" class="code-all-list"></ul>
 <button type="button" id="code-add-more" class="link-button">Add another change</button>
 <button type="button" id="code-clear" class="link-button">Empty the list</button>
-<button type="button" id="code-all-go" class="link-button" hidden>Console did not read it? Show them one at a time</button>
+<button type="button" id="code-all-go" class="link-button" hidden>Console can't read it? Send one at a time</button>
 </div>
 <div id="code-play" class="code-play" hidden>
 <p id="code-play-count" class="code-play-count"></p>
 <ol>
-<li>Hold the phone about 10 cm from the console's scanner, screen bright, and keep it there.</li>
-<li>Type the staff PIN on the console once. The codes keep going round by themselves.</li>
-<li>Watch the console count up. When it says all of them are in, press the button below.</li>
+<li>Hold your phone at the scanner and keep it there.</li>
+<li>Type the PIN once. The codes cycle on their own.</li>
+<li>When the console says they're all in, press the button below.</li>
 </ol>
-<button type="button" id="code-play-done">The console says all of them are in</button>
+<button type="button" id="code-play-done">The console has them all</button>
 <button type="button" id="code-play-stop" class="button-secondary">Stop</button>
 </div>
 <p class="note">Code text: <code id="code-text"></code></p>
@@ -212,7 +212,7 @@
 
 <div class="staff-folds">
 <details class="staff-fold" id="opens"><summary>What students open</summary>
-<p>How many times each item's guide has been opened on the website since counting started on Nov 17. One count per item per visit, from any phone or computer, staff included.</p>
+<p>How many times each item's page has been opened since Nov 17. Staff visits count too.</p>
 <p><button type="button" id="opens-load" class="button-secondary">Load the numbers</button> <span id="opens-status" class="tool-note"></span></p>
 <div id="opens-out" hidden>
 <p id="opens-total"></p>
@@ -222,7 +222,7 @@
 </div>
 </details>
 <details class="staff-fold" id="checks"><summary>Check everything</summary>
-<p class="tool-note">Looks at the website, the site key, the passcode and the console link, and says what is fine and what is not.</p>
+<p class="tool-note">Checks the website, the site key, the passcode and the console link.</p>
 <p><button type="button" id="health-go" class="button-secondary">Check everything</button></p>
 <ul id="health" class="health" aria-live="polite"></ul>
 <p><button type="button" id="health-renew" hidden>Renew the console's link</button></p>
@@ -240,34 +240,30 @@
 <details class="staff-fold" id="device" hidden><summary>Passcode and sign-out</summary>
 <div id="share">
 <h2>Staff passcode</h2>
-<p class="tool-note">Type a new one to set or change it. Anyone who types it on this page can save to the website. It is not the console's PIN. Longer is safer: a 4-digit one can be guessed.</p>
+<p class="tool-note">Anyone with this passcode can save to the website. It's separate from the console PIN. Use more than 4 digits.</p>
 <label>New passcode<input id="share-pass" type="password" autocomplete="off"></label>
 <label>Again<input id="share-pass2" type="password" autocomplete="off"></label>
 <div class="sync-actions"><button type="button" id="share-save">Save the passcode</button></div>
 <p id="share-why" class="tool-note"></p>
 <h2>Console link</h2>
-<p class="tool-note">Lets any phone that scans the console's Staff page code save with nothing to type. Only needed again if the console is replaced or its card is wiped.</p>
+<p class="tool-note">Lets a phone that scans the console's Staff page code save without typing anything. Redo it only if the console or its card is replaced.</p>
 <div class="sync-actions"><button type="button" id="link-console" class="button-secondary">Link the console again</button></div>
-<div id="link-code" hidden><div id="link-qr" class="qr"></div><p class="note">Last step, once: show this to the console's scanner (unlock the console with its staff PIN first). It is not shown again.</p></div>
+<div id="link-code" hidden><div id="link-qr" class="qr"></div><p class="note">Unlock the console with its PIN, then show it this code. You only see it once.</p></div>
 <h2>This device</h2>
-<p class="tool-note">Signing out means this phone or computer has to scan the console's Staff page code, or type the passcode, before it can save again.</p>
+<p class="tool-note">After signing out, this device needs the console's Staff page code or the passcode to save again.</p>
 <div class="sync-actions"><button type="button" id="device-signout" class="button-secondary">Sign this device out</button></div>
 </div>
 </details>
 <details class="staff-fold" id="help"><summary>Help</summary>
 <ul>
-<li>The PIN is checked on the console, never on this page. It starts as 1234. Change it on the console: press Down past the last picture on Home, Select, then go to the last spot on the map, "Change staff PIN".</li>
-<li>Shelf numbers count grooves from the bottom. If a board was taken out for something tall, the console puts things on the board below.</li>
-<li>This page reads the website's copy of the room. Moves made at the console since the last update are not shown here, so the console's own screen is the one to trust.</li>
-<li>A new item added with a code exists on the console right away. Its guide page appears on this site after "Sync website" brings it over and you press Save. Or save it straight away from "Add an item".</li>
-<li>How many Lending has: "Edit an item" saves the number to the website, then shows a code for the console so it knows too.</li>
-<li>Several changes at once: every code you make is kept in a list under the QR. Set them all up, then show them to the console with Next code. The PIN is typed once.</li>
-<li>"Sync website" always makes the website match the console exactly, including changes that were taken back there. With no changes on the console it puts the website back to the Nov 16 setup.</li>
-<li>A mistake on the console can be taken back there: Recent changes, then pick any change and press Select twice. Adding a new item cannot be undone one at a time, only with Start over.</li>
-<li>Start over (the last spot on the console's map, behind the PIN) takes back every change and every item added at the console. The matching button for the website is at the bottom of this Help list.</li>
+<li>The console PIN starts as 1234. To change it on the console: press Down past the last picture on Home, press Select, then choose Change staff PIN.</li>
+<li>Shelves are numbered from the bottom.</li>
+<li>This page shows the website's copy of the room. If it disagrees with the console, the console is right.</li>
+<li>Made a mistake? On the console, open Recent changes, pick the change and press Select twice. A newly added item can only be removed with Start over.</li>
+<li>Start over on the console clears every change and every item added there. To reset the website too, use the button below.</li>
 </ul>
-<details class="sync-paste"><summary>Start over: put the website back to the Nov 16 setup</summary><p class="tool-note">Use this together with "Start over" on the console (the last spot on its map), so the two match again. It takes off every change brought over from the console and every edit made on this page since Nov 16.</p><button type="button" id="web-reset" class="button-secondary">Put the website back to the Nov 16 setup</button></details>
-<details class="sync-paste"><summary>Sync without a camera (needs a laptop plugged into the console)</summary><label>The console's change list (type @MOVES in the Serial Monitor and copy what it prints)<textarea id="sync-paste" rows="5"></textarea></label><button type="button" id="sync-use-paste" class="button-secondary">Use the pasted list</button></details>
+<details class="sync-paste"><summary>Start over: put the website back to the Nov 16 setup</summary><p class="tool-note">Use this with Start over on the console so the two match. It removes every change and edit made since Nov 16.</p><button type="button" id="web-reset" class="button-secondary">Put the website back to the Nov 16 setup</button></details>
+<details class="sync-paste"><summary>Sync with a laptop instead of a camera</summary><label>Paste the console's change list (type @MOVES in the Serial Monitor)<textarea id="sync-paste" rows="5"></textarea></label><button type="button" id="sync-use-paste" class="button-secondary">Use the pasted list</button></details>
 <p><a href="data.json" download>Download a copy of the item list</a> · <a href="room.json" download>Download a copy of the room map</a></p>
 <p><a href="STAFF-GUIDE.md">Full maintenance instructions ↗</a></p>
 </details>
@@ -278,4 +274,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="room3d.js?v=20261116g"></script>
-<script src="staff.js?v=ack-2" defer></script></body></html>
+<script src="staff.js?v=plain-1" defer></script></body></html>

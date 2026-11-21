@@ -93,3 +93,5 @@
 .ack .qr { max-width: 300px; }
 .ack .qr svg { width: 100%; height: auto; display: block; }
 .ack p { max-width: 46ch; }
+
+.code-all-list li.in-code strong { font-weight: 700; }
