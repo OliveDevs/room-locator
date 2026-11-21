@@ -13,7 +13,7 @@
       "license": "CC BY-SA 4.0"
     },
     "headphones": {
-      "url": "https://upload.wikimedia.org/wikipedia/commons/6/63/Headphones_on_white_background.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Headphones_on_white_background.jpg?width=960",
       "page": "https://commons.wikimedia.org/wiki/File:Headphones_on_white_background.jpg",
       "artist": "Sprinno",
       "license": "CC0"
@@ -31,7 +31,7 @@
       "license": "CC BY-SA 2.5"
     },
     "XLR cable": {
-      "url": "https://upload.wikimedia.org/wikipedia/commons/0/04/XLR_cable_connectors.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "url": "https://commons.wikimedia.org/wiki/Special:FilePath/XLR_cable_connectors.jpg?width=960",
       "page": "https://commons.wikimedia.org/wiki/File:XLR_cable_connectors.jpg",
       "artist": "",
       "license": "CC BY-SA 3.0"
@@ -169,7 +169,7 @@
       "license": "CC BY-SA 4.0"
     },
     "sewing bobbin": {
-      "url": "https://upload.wikimedia.org/wikipedia/commons/2/29/Manual_sewing_machine_bobbins.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Manual_sewing_machine_bobbins.jpg?width=960",
       "page": "https://commons.wikimedia.org/wiki/File:Manual_sewing_machine_bobbins.jpg",
       "artist": "Lyndadelz",
       "license": "CC BY-SA 4.0"
@@ -265,7 +265,7 @@
       "license": "CC BY-SA 4.0"
     },
     "light-stand": {
-      "url": "https://upload.wikimedia.org/wikipedia/commons/b/b9/C-stand_extended_and_light_P1101.jpeg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "url": "https://commons.wikimedia.org/wiki/Special:FilePath/C-stand_extended_and_light_P1101.jpeg?width=960",
       "page": "https://commons.wikimedia.org/wiki/File:C-stand_extended_and_light_P1101.jpeg",
       "artist": "EncMstr",
       "license": "CC BY-SA 3.0"
@@ -367,7 +367,7 @@
       "license": "CC BY-SA 4.0"
     },
     "exact:Shure SM-58 Cardioid Dynamic Microphone": {
-      "url": "https://upload.wikimedia.org/wikipedia/commons/5/5c/Shure_SM58.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Shure_SM58.jpg?width=960",
       "page": "https://commons.wikimedia.org/wiki/File:Shure_SM58.jpg",
       "artist": "SM58&Beta58a.jpg: Iain Fergusson - Iainf 06:42, 24 June 2006 (UTC)\nderivative work: Binksternet (talk)",
       "license": "CC BY 2.5"
@@ -445,7 +445,7 @@
       "license": "CC BY-SA 4.0"
     },
     "16-foot tape measure": {
-      "url": "https://upload.wikimedia.org/wikipedia/commons/5/51/Power-Tape-Measure_13331-480x360_%284904403417%29.jpg",
+      "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Power-Tape-Measure_13331-480x360_%284904403417%29.jpg?width=960",
       "page": "https://commons.wikimedia.org/wiki/File:Power-Tape-Measure_13331-480x360_(4904403417).jpg",
       "artist": "Emilian Robert Vicol",
       "license": "CC BY 2.0"
@@ -895,14 +895,14 @@
       "license": "CC BY-SA 2.0"
     },
     "pa speaker tripod stand": {
-      "url": "https://upload.wikimedia.org/wikipedia/commons/9/9b/EONA_ADRaudio_at_barndance.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "url": "https://commons.wikimedia.org/wiki/Special:FilePath/EONA_ADRaudio_at_barndance.jpg?width=960",
       "thumb": "https://upload.wikimedia.org/wikipedia/commons/9/9b/EONA_ADRaudio_at_barndance.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
       "page": "https://commons.wikimedia.org/wiki/File:EONA_ADRaudio_at_barndance.jpg",
       "artist": "Binksternet",
       "license": "CC BY-SA 3.0"
     },
     "dmx opto splitter": {
-      "url": "https://upload.wikimedia.org/wikipedia/commons/5/5a/Dmx_repeater.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+      "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Dmx_repeater.jpg?width=960",
       "thumb": "https://upload.wikimedia.org/wikipedia/commons/5/5a/Dmx_repeater.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
       "page": "https://commons.wikimedia.org/wiki/File:Dmx_repeater.jpg",
       "artist": "KeepOnTruckin",
@@ -2969,6 +2969,405 @@
       "w": 250,
       "h": 80,
       "page": "https://resources.ideate.cmu.edu/lending-images/xtouch.png",
+      "source": "image-library"
+    },
+    "Behringer S16 Digital Stage Box": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/behringers16.png",
+      "w": 250,
+      "h": 58,
+      "page": "https://resources.ideate.cmu.edu/lending-images/behringers16.png",
+      "source": "image-library"
+    },
+    "Microphone Pop Filter": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/PopFilter.jpg",
+      "w": 86,
+      "h": 115,
+      "page": "https://resources.ideate.cmu.edu/lending-images/PopFilter.jpg",
+      "source": "image-library"
+    },
+    "USB C to C Cable (L)": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/UsbCcable.png",
+      "w": 319,
+      "h": 250,
+      "page": "https://resources.ideate.cmu.edu/lending-images/UsbCcable.png",
+      "source": "image-library"
+    },
+    "USB-C to Ethernet": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/UsbC2Ethernet.png",
+      "w": 300,
+      "h": 155,
+      "page": "https://resources.ideate.cmu.edu/lending-images/UsbC2Ethernet.png",
+      "source": "image-library"
+    },
+    "Audio Splitter": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/audioSplitter.png",
+      "w": 168,
+      "h": 168,
+      "page": "https://resources.ideate.cmu.edu/lending-images/audioSplitter.png",
+      "source": "image-library"
+    },
+    "USB A to 1/8\" Audio": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/UsbAudioAdapter.png",
+      "w": 339,
+      "h": 324,
+      "page": "https://resources.ideate.cmu.edu/lending-images/UsbAudioAdapter.png",
+      "source": "image-library"
+    },
+    "1/8\" to 1/4\" Adapter": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/AudioJack1-8to1-4.png",
+      "w": 250,
+      "h": 228,
+      "page": "https://resources.ideate.cmu.edu/lending-images/AudioJack1-8to1-4.png",
+      "source": "image-library"
+    },
+    "1/8\" to RCA": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/1-8inToRCACable.png",
+      "w": 250,
+      "h": 250,
+      "page": "https://resources.ideate.cmu.edu/lending-images/1-8inToRCACable.png",
+      "source": "image-library"
+    },
+    "XLR-1/4 Mono F-M": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/XLRfto1-4inM.png",
+      "w": 250,
+      "h": 250,
+      "page": "https://resources.ideate.cmu.edu/lending-images/XLRfto1-4inM.png",
+      "source": "image-library"
+    },
+    "XLR-1/4 Mono M-M": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/XLRmto1-4inM.png",
+      "w": 250,
+      "h": 250,
+      "page": "https://resources.ideate.cmu.edu/lending-images/XLRmto1-4inM.png",
+      "source": "image-library"
+    },
+    "8 x Rechargeable AA Batteries": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/aaBattery.png",
+      "w": 95,
+      "h": 282,
+      "page": "https://resources.ideate.cmu.edu/lending-images/aaBattery.png",
+      "source": "image-library"
+    },
+    "Open DMX USB Interface": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/opendmxusb.png",
+      "w": 222,
+      "h": 227,
+      "page": "https://resources.ideate.cmu.edu/lending-images/opendmxusb.png",
+      "source": "image-library"
+    },
+    "DVD Player": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/DVD_01b.png",
+      "w": 245,
+      "h": 327,
+      "page": "https://resources.ideate.cmu.edu/lending-images/DVD_01b.png",
+      "source": "image-library"
+    },
+    "Digital Caliper (0-150mm)": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/DigitalCaliper.jpg",
+      "w": 115,
+      "h": 113,
+      "page": "https://resources.ideate.cmu.edu/lending-images/DigitalCaliper.jpg",
+      "source": "image-library"
+    },
+    "Ethernet Cable": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/EthernetCable.png",
+      "w": 250,
+      "h": 250,
+      "page": "https://resources.ideate.cmu.edu/lending-images/EthernetCable.png",
+      "source": "image-library"
+    },
+    "Adjustable Wrench": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/AdjustableWrench.png",
+      "w": 250,
+      "h": 250,
+      "page": "https://resources.ideate.cmu.edu/lending-images/AdjustableWrench.png",
+      "source": "image-library"
+    },
+    "Needle Nose Pliers": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/NeedleNosePliers.png",
+      "w": 250,
+      "h": 250,
+      "page": "https://resources.ideate.cmu.edu/lending-images/NeedleNosePliers.png",
+      "source": "image-library"
+    },
+    "Diagonal Cutting Pliers": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/WireCutter.png",
+      "w": 250,
+      "h": 165,
+      "page": "https://resources.ideate.cmu.edu/lending-images/WireCutter.png",
+      "source": "image-library"
+    },
+    "SonyHeadphones EE": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/SonyHeadphonesMDR7506.png",
+      "w": 278,
+      "h": 300,
+      "page": "https://resources.ideate.cmu.edu/lending-images/SonyHeadphonesMDR7506.png",
+      "source": "image-library"
+    },
+    "AKAI MPKmini Keyboard III": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/AkaiMiniKeyboardMk3.PNG",
+      "w": 134,
+      "h": 83,
+      "page": "https://resources.ideate.cmu.edu/lending-images/AkaiMiniKeyboardMk3.PNG",
+      "source": "image-library"
+    },
+    "Drumbrute Drum Synthesizer": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/drumbrute.png",
+      "w": 258,
+      "h": 195,
+      "page": "https://resources.ideate.cmu.edu/lending-images/drumbrute.png",
+      "source": "image-library"
+    },
+    "MicroMoog Synthesizer": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/micromoog.jpg",
+      "w": 600,
+      "h": 386,
+      "page": "https://resources.ideate.cmu.edu/lending-images/micromoog.jpg",
+      "source": "image-library"
+    },
+    "Focusrite Scarlett": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/focusRiteScarlett6.jpg",
+      "w": 350,
+      "h": 147,
+      "page": "https://resources.ideate.cmu.edu/lending-images/focusRiteScarlett6.jpg",
+      "source": "image-library"
+    },
+    "Motu M2 Audio Interface": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/MotuM2.png",
+      "w": 250,
+      "h": 192,
+      "page": "https://resources.ideate.cmu.edu/lending-images/MotuM2.png",
+      "source": "image-library"
+    },
+    "ODE Interface": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/odeinterface.png",
+      "w": 122,
+      "h": 225,
+      "page": "https://resources.ideate.cmu.edu/lending-images/odeinterface.png",
+      "source": "image-library"
+    },
+    "U-PHORIA UMC202HD": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/uphoria_umc204hd.png",
+      "w": 409,
+      "h": 241,
+      "page": "https://resources.ideate.cmu.edu/lending-images/uphoria_umc204hd.png",
+      "source": "image-library"
+    },
+    "Steam Iron - Travel": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/travel_steam_iron.jpg",
+      "w": 115,
+      "h": 85,
+      "page": "https://resources.ideate.cmu.edu/lending-images/travel_steam_iron.jpg",
+      "source": "image-library"
+    },
+    "Alienware PC m15-R7": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/AlienwareC.png",
+      "w": 250,
+      "h": 175,
+      "page": "https://resources.ideate.cmu.edu/lending-images/AlienwareC.png",
+      "source": "image-library"
+    },
+    "Basic Laser Pointer": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/LaserPointer.png",
+      "w": 250,
+      "h": 208,
+      "page": "https://resources.ideate.cmu.edu/lending-images/LaserPointer.png",
+      "source": "image-library"
+    },
+    "Micro-NIKKOR 55mm f/2.8 Lens": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/Nikon_Micro-NIKKOR_Lens.png",
+      "w": 263,
+      "h": 300,
+      "page": "https://resources.ideate.cmu.edu/lending-images/Nikon_Micro-NIKKOR_Lens.png",
+      "source": "image-library"
+    },
+    "Magnetic Level and Ruler": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/level.png",
+      "w": 466,
+      "h": 94,
+      "page": "https://resources.ideate.cmu.edu/lending-images/level.png",
+      "source": "image-library"
+    },
+    "Ableton Push 2": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/push2.png",
+      "w": 225,
+      "h": 225,
+      "page": "https://resources.ideate.cmu.edu/lending-images/push2.png",
+      "source": "image-library"
+    },
+    "ROLI Seaboard RISE MIDI Controller": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/seaboard.png",
+      "w": 250,
+      "h": 68,
+      "page": "https://resources.ideate.cmu.edu/lending-images/seaboard.png",
+      "source": "image-library"
+    },
+    "Measuring Tape - 16'": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/TapeMeasure.png",
+      "w": 250,
+      "h": 213,
+      "page": "https://resources.ideate.cmu.edu/lending-images/TapeMeasure.png",
+      "source": "image-library"
+    },
+    "AKG P420 Microphone": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/akg_p420.jpg",
+      "w": 263,
+      "h": 386,
+      "page": "https://resources.ideate.cmu.edu/lending-images/akg_p420.jpg",
+      "source": "image-library"
+    },
+    "CAI B3 LAVALIER": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/B3lav.png",
+      "w": 331,
+      "h": 250,
+      "page": "https://resources.ideate.cmu.edu/lending-images/B3lav.png",
+      "source": "image-library"
+    },
+    "DPA MIC - Reserve": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/DPA-Mic.jpg",
+      "w": 780,
+      "h": 780,
+      "page": "https://resources.ideate.cmu.edu/lending-images/DPA-Mic.jpg",
+      "source": "image-library"
+    },
+    "Korg Microphone": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/korgMic.png",
+      "w": 508,
+      "h": 370,
+      "page": "https://resources.ideate.cmu.edu/lending-images/korgMic.png",
+      "source": "image-library"
+    },
+    "Shure SM-58 Cardioid Dynamic Microphone": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/ShureMicSM58.png",
+      "w": 563,
+      "h": 248,
+      "page": "https://resources.ideate.cmu.edu/lending-images/ShureMicSM58.png",
+      "source": "image-library"
+    },
+    "Audio Mixer ProFX16": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/mackieProFx16Mixer.png",
+      "w": 177,
+      "h": 128,
+      "page": "https://resources.ideate.cmu.edu/lending-images/mackieProFx16Mixer.png",
+      "source": "image-library"
+    },
+    "iPad Mini": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/ipad-mini-4.jpg",
+      "w": 2000,
+      "h": 1536,
+      "page": "https://resources.ideate.cmu.edu/lending-images/ipad-mini-4.jpg",
+      "source": "image-library"
+    },
+    "Bench Power Supply": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/benchPowerCsi5505s.png",
+      "w": 246,
+      "h": 204,
+      "page": "https://resources.ideate.cmu.edu/lending-images/benchPowerCsi5505s.png",
+      "source": "image-library"
+    },
+    "128GB SD Card": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/128gb.png",
+      "w": 225,
+      "h": 225,
+      "page": "https://resources.ideate.cmu.edu/lending-images/128gb.png",
+      "source": "image-library"
+    },
+    "Hemmer Foot": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/JanomeHemmerFoot.png",
+      "w": 72,
+      "h": 131,
+      "page": "https://resources.ideate.cmu.edu/lending-images/JanomeHemmerFoot.png",
+      "source": "image-library"
+    },
+    "Ironing Board": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/compact-ironing-board.jpg",
+      "w": 485,
+      "h": 261,
+      "page": "https://resources.ideate.cmu.edu/lending-images/compact-ironing-board.jpg",
+      "source": "image-library"
+    },
+    "Brother XL2600i Sewing Machine": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/brotherXL2600i.png",
+      "w": 273,
+      "h": 230,
+      "page": "https://resources.ideate.cmu.edu/lending-images/brotherXL2600i.png",
+      "source": "image-library"
+    },
+    "Singer HD Sewing Machine": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/Singer4452.png",
+      "w": 250,
+      "h": 199,
+      "page": "https://resources.ideate.cmu.edu/lending-images/Singer4452.png",
+      "source": "image-library"
+    },
+    "Singer Talent Sewing Machine": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/SingerTalent.png",
+      "w": 312,
+      "h": 275,
+      "page": "https://resources.ideate.cmu.edu/lending-images/SingerTalent.png",
+      "source": "image-library"
+    },
+    "Computer Speaker": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/computer_speakers.jpg",
+      "w": 115,
+      "h": 89,
+      "page": "https://resources.ideate.cmu.edu/lending-images/computer_speakers.jpg",
+      "source": "image-library"
+    },
+    "USB Speakers": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/USB-speakers.jpg",
+      "w": 115,
+      "h": 62,
+      "page": "https://resources.ideate.cmu.edu/lending-images/USB-speakers.jpg",
+      "source": "image-library"
+    },
+    "JBL 305P MkII Studio Monitors": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/jblspeakers.png",
+      "w": 209,
+      "h": 242,
+      "page": "https://resources.ideate.cmu.edu/lending-images/jblspeakers.png",
+      "source": "image-library"
+    },
+    "Light Stand-ML": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/lightstand.png",
+      "w": 225,
+      "h": 225,
+      "page": "https://resources.ideate.cmu.edu/lending-images/lightstand.png",
+      "source": "image-library"
+    },
+    "USB Power Supply": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/USBCharger.jpg",
+      "w": 6000,
+      "h": 4000,
+      "page": "https://resources.ideate.cmu.edu/lending-images/USBCharger.jpg",
+      "source": "image-library"
+    },
+    "Oculus Rift S": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/OculusRiftS.png",
+      "w": 250,
+      "h": 140,
+      "page": "https://resources.ideate.cmu.edu/lending-images/OculusRiftS.png",
+      "source": "image-library"
+    },
+    "Desktop Speakers": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/PC_Speakers1.jpg",
+      "w": 6000,
+      "h": 4000,
+      "page": "https://resources.ideate.cmu.edu/lending-images/PC_Speakers1.jpg",
+      "source": "image-library"
+    },
+    "Linesman Pliers": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/Pliers.png",
+      "w": 250,
+      "h": 132,
+      "page": "https://resources.ideate.cmu.edu/lending-images/Pliers.png",
+      "source": "image-library"
+    },
+    "GoPro Hero Session Camcorder": {
+      "url": "https://resources.ideate.cmu.edu/lending-images/GoProHero.png",
+      "w": 250,
+      "h": 250,
+      "page": "https://resources.ideate.cmu.edu/lending-images/GoProHero.png",
       "source": "image-library"
     }
   },
