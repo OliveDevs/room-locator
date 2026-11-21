@@ -109,7 +109,8 @@
 <div class="wide" id="edit-fields" hidden>
 <div class="edit-grid">
 <div class="wide edit-preview" id="edit-preview" tabindex="-1"></div>
-<label class="wide">New photo URL<input name="photo" placeholder="https://... or photos/name.jpg"><small class="field-help">Use a photo Lending took, or one you are allowed to use. Leave it blank to keep the photo it has now.</small></label>
+<label class="wide">Take or choose a photo<input name="photofile" type="file" accept="image/*"><small class="field-help">From this phone's camera or photo library. Only photos Lending took. <span id="edit-photo-note" role="status"></span></small></label>
+<label class="wide">Or a photo URL<input name="photo" placeholder="https://... or photos/name.jpg"><small class="field-help">Use a photo Lending took, or one you are allowed to use. Leave both blank to keep the photo it has now.</small></label>
 <label>Photo credit<input name="credit" placeholder="IDeATe Lending staff"></label>
 <label>Photo source or licence URL<input name="crediturl" type="url" placeholder="https://..."></label>
 <label class="wide check"><input type="checkbox" name="nophoto"> The photo it shows is wrong: show "No photo yet" instead</label>
@@ -263,4 +264,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="room3d.js?v=20261116g"></script>
-<script src="staff.js?v=staff-trim-1" defer></script></body></html>
+<script src="staff.js?v=staff-photo-1" defer></script></body></html>
