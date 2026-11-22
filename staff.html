@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><link rel="icon" href="favicon.ico?v=2" sizes="any"><link rel="icon" type="image/png" href="favicon.png?v=2"><link rel="apple-touch-icon" href="apple-touch-icon.png?v=2"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400..700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=tidy-1"><link rel="stylesheet" href="staff-layout.css?v=tidy-1"><link rel="stylesheet" href="dark.css?v=tidy-1"><script src="theme.js?v=1"></script></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a><a href="#log">Change history</a><a href="#manuals">Manuals</a></nav></div></header>
+  <link rel="stylesheet" href="styles.css?v=groups-1"><link rel="stylesheet" href="staff-layout.css?v=groups-1"><link rel="stylesheet" href="dark.css?v=groups-1"><script src="theme.js?v=1"></script></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a><a href="#log">Change history</a><a href="#manuals">Manuals</a></nav></div></header>
 <main class="staff-main">
 <h1>Staff tools</h1>
 
@@ -34,8 +34,7 @@
 <p class="tool-note" id="room3d-help"></p>
 <div id="room3d" class="room3d"></div>
 <p class="room3d-key"><span class="key key-now"></span>where it is now<span class="key key-pick"></span>where it goes</p>
-<label class="room3d-moved"><input type="checkbox" id="full-show"> <span class="key key-full"></span><span>Shade shelves by how full they are (paler holds fewer)</span></label>
-<label class="room3d-moved" id="moved-wrap" hidden><input type="checkbox" id="moved-show"> <span class="key key-moved"></span><span>Show the shelves the last sync changed<span id="moved-when"></span></span></label>
+<p class="tool-note" id="empty-shelves"></p>
 <div id="shelf-contents" class="shelf-contents" hidden></div>
 </details>
 
@@ -244,6 +243,12 @@
 </section>
 
 <div class="staff-folds">
+<details class="staff-group" id="g-records"><summary>Records</summary>
+<details class="staff-fold" id="notfound"><summary>Not seen in the last audit</summary>
+<p class="tool-note">Things listed on a unit that was audited at the console, that nobody scanned. Most are simply checked out, so this is a list to glance at, not a to-do list. They keep their shelf. Each one comes off by itself when it's scanned at the console, or when you say where it is.</p>
+<ul class="nf-list" id="nf-list"></ul>
+<div class="sync-actions manager-only" hidden><button type="button" id="nf-clear" class="button-secondary">Clear the whole list</button></div>
+</details>
 <details class="staff-fold" id="log"><summary>Change history</summary>
 <p class="tool-note">Every change saved on this page goes on the website straight away and waits here until the console has it. Make them anywhere, then show the console one code. After it takes them, sync the website and they move to the history.</p>
 <h2>Waiting for the console</h2>
@@ -252,32 +257,6 @@
 <h2>History</h2>
 <label class="log-find">Find in the history<input id="log-find" type="search" placeholder="An item, a unit or a name" autocomplete="off"></label>
 <div id="log-done"></div>
-</details>
-<details class="staff-fold" id="notfound"><summary>Not found in an audit</summary>
-<p class="tool-note">Things listed on a unit that was audited at the console, that were never scanned. They keep their shelf. Each one comes off this list by itself when it's scanned at the console, or when you say where it is.</p>
-<ul class="nf-list" id="nf-list"></ul>
-</details>
-<details class="staff-fold" id="manuals"><summary>Manuals</summary>
-<p class="tool-note">Everything the Room Locator does, for staff and for students. <span class="manual-version">Version 2</span></p>
-<ul class="manual-links">
-<li><a href="manuals/room-locator-staff-manual-v2.pdf" target="_blank" rel="noopener">Staff manual</a> <span class="tool-note">40 pages, to read on a screen</span></li>
-<li><a href="manuals/room-locator-guide-v2.pdf" target="_blank" rel="noopener">Guide for students</a> <span class="tool-note">16 pages, to read on a screen</span></li>
-</ul>
-<h2>Print the manuals</h2>
-<ul class="manual-links">
-<li><a href="manuals/room-locator-staff-manual-v2-print.pdf" download>Staff manual, ready to print</a> <span class="tool-note">10 sheets of paper</span></li>
-<li><a href="manuals/room-locator-guide-v2-print.pdf" download>Guide, ready to print</a> <span class="tool-note">4 sheets of paper</span></li>
-</ul>
-<p class="tool-note"><strong>Printer settings</strong>, on any printer:</p>
-<ul class="print-steps">
-<li>Letter paper</li>
-<li>Two-sided, flip on long edge (most printers do this by default)</li>
-<li>Actual size or 100%, not "Fit to page"</li>
-<li>Booklet mode off: the file is already in booklet order</li>
-<li>Colour or black and white, either works</li>
-</ul>
-<p class="tool-note">On a CMU campus printer (printing.andrew.cmu.edu) these are already the defaults, so upload the file and print. If the backs come out upside down on another printer, print again with flip on short edge.</p>
-<p class="tool-note"><strong>Then</strong> keep the sheets in the order they come out, fold the stack in half with the cover outside, and staple on the three small marks along the fold.</p>
 </details>
 <details class="staff-fold" id="editions"><summary>Earlier editions</summary>
 <p class="tool-note">The item list as it was on any day it changed, to look at: what Lending had, where it lived, and what has changed since. Nothing here changes the website.</p>
@@ -294,22 +273,8 @@
 <div class="sync-actions"><button type="button" id="inventory-get">Download the spreadsheet</button></div>
 <p id="inventory-why" class="tool-note"></p>
 </details>
-<details class="staff-fold" id="checks"><summary>Check everything</summary>
-<p class="tool-note">Checks the website, the site key, the passcode and the console link.</p>
-<p><button type="button" id="health-go" class="button-secondary">Check everything</button></p>
-<ul id="health" class="health" aria-live="polite"></ul>
-<p><button type="button" id="health-renew" hidden>Renew the console's link</button></p>
-<details id="health-steps" class="sync-paste" hidden><summary>How to put in a new site key</summary>
-<ol>
-<li>On a phone, scan the console's Staff page code (the last spots on its map, after the staff PIN). That way the console's link is renewed in the same step. A laptop works too, but then press Link the console afterwards.</li>
-<li>Sign in to GitHub with the account that owns the room-locator repository and open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">New fine-grained token &#8599;</a></li>
-<li>Repository access: Only select repositories, room-locator. Permissions: Contents, Read and write. Pick the longest expiration GitHub allows and note the date.</li>
-<li>Generate it, copy it, come back here and press the button below. Paste it with its date and the staff passcode.</li>
-<li>Press Check everything again. Every line should say OK.</li>
-</ol>
-<p><button type="button" id="health-paste" class="button-secondary">Paste the new key</button></p>
 </details>
-</details>
+<details class="staff-group" id="g-settings"><summary>Settings</summary>
 <details class="staff-fold manager-only" id="access" hidden><summary>Student staff access</summary>
 <p class="tool-note">Managers choose which tools student staff can use on the staff page. Untick one to hide it from them. Managers always see everything.</p>
 <div id="access-list" class="access-list"></div>
@@ -351,6 +316,46 @@
 <div class="sync-actions"><button type="button" id="device-signout" class="button-secondary">Sign this device out</button></div>
 </div>
 </details>
+<details class="staff-fold" id="checks"><summary>Check everything</summary>
+<p class="tool-note">Checks the website, the site key, the passcode and the console link.</p>
+<p><button type="button" id="health-go" class="button-secondary">Check everything</button></p>
+<ul id="health" class="health" aria-live="polite"></ul>
+<p><button type="button" id="health-renew" hidden>Renew the console's link</button></p>
+<details id="health-steps" class="sync-paste" hidden><summary>How to put in a new site key</summary>
+<ol>
+<li>On a phone, scan the console's Staff page code (the last spots on its map, after the staff PIN). That way the console's link is renewed in the same step. A laptop works too, but then press Link the console afterwards.</li>
+<li>Sign in to GitHub with the account that owns the room-locator repository and open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">New fine-grained token &#8599;</a></li>
+<li>Repository access: Only select repositories, room-locator. Permissions: Contents, Read and write. Pick the longest expiration GitHub allows and note the date.</li>
+<li>Generate it, copy it, come back here and press the button below. Paste it with its date and the staff passcode.</li>
+<li>Press Check everything again. Every line should say OK.</li>
+</ol>
+<p><button type="button" id="health-paste" class="button-secondary">Paste the new key</button></p>
+</details>
+</details>
+</details>
+<details class="staff-group" id="g-help"><summary>Manuals and help</summary>
+<details class="staff-fold" id="manuals"><summary>Manuals</summary>
+<p class="tool-note">Everything the Room Locator does, for staff and for students. <span class="manual-version">Version 2</span></p>
+<ul class="manual-links">
+<li><a href="manuals/room-locator-staff-manual-v2.pdf" target="_blank" rel="noopener">Staff manual</a> <span class="tool-note">40 pages, to read on a screen</span></li>
+<li><a href="manuals/room-locator-guide-v2.pdf" target="_blank" rel="noopener">Guide for students</a> <span class="tool-note">16 pages, to read on a screen</span></li>
+</ul>
+<h2>Print the manuals</h2>
+<ul class="manual-links">
+<li><a href="manuals/room-locator-staff-manual-v2-print.pdf" download>Staff manual, ready to print</a> <span class="tool-note">10 sheets of paper</span></li>
+<li><a href="manuals/room-locator-guide-v2-print.pdf" download>Guide, ready to print</a> <span class="tool-note">4 sheets of paper</span></li>
+</ul>
+<p class="tool-note"><strong>Printer settings</strong>, on any printer:</p>
+<ul class="print-steps">
+<li>Letter paper</li>
+<li>Two-sided, flip on long edge (most printers do this by default)</li>
+<li>Actual size or 100%, not "Fit to page"</li>
+<li>Booklet mode off: the file is already in booklet order</li>
+<li>Colour or black and white, either works</li>
+</ul>
+<p class="tool-note">On a CMU campus printer (printing.andrew.cmu.edu) these are already the defaults, so upload the file and print. If the backs come out upside down on another printer, print again with flip on short edge.</p>
+<p class="tool-note"><strong>Then</strong> keep the sheets in the order they come out, fold the stack in half with the cover outside, and staple on the three small marks along the fold.</p>
+</details>
 <details class="staff-fold" id="help"><summary>Help</summary>
 <ul>
 <li>The console PIN starts as 1234. To change it on the console: press Down past the last picture on Home, press Select, then choose Change staff PIN.</li>
@@ -366,6 +371,7 @@
 <p><a href="STAFF-GUIDE.md">Full maintenance instructions ↗</a></p>
 <details class="sync-paste danger-zone manager-only" hidden><summary>Only after Start over on the console</summary><p class="tool-note">This wipes the website back to its starting point (the Nov 16 setup, or the console's last tidy-up if it has made room since): every move, count, new item, photo and description added since then, and every change waiting for the console. It can't be undone. Only use it right after Start over on the console, so the two match.</p><label>Type START OVER to unlock it<input id="web-reset-word" autocomplete="off" spellcheck="false"></label><button type="button" id="web-reset" class="button-secondary" disabled>Put the website back to the Nov 16 setup</button></details>
 </details>
+</details>
 </div>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
@@ -373,4 +379,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="room3d.js?v=room-5"></script>
-<script src="staff.js?v=tidy-2" defer></script></body></html>
+<script src="staff.js?v=groups-1" defer></script></body></html>

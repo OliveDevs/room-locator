@@ -57,6 +57,8 @@ async function openLocked(all, pass, slot) {
 // when it signed in with the owner or manager passcode, or someone pasted the GitHub key on it.
 // (This is a lock on the page: everyone signed in uses the same GitHub key underneath.)
 const isManager = () => keep.get('rl-role') === 'manager';
+// the folds at the bottom sit in three groups (Records, Settings, Manuals and help): opening one opens its group too
+const openFold = el => { for (let d = el; d; d = d.parentElement && d.parentElement.closest('details')) d.open = true; };
 // a name or initials this device signs its changes with in Change history (optional, set under Passcode and sign-out)
 const byMe = () => keep.get('rl-name') ? { by: keep.get('rl-name').slice(0, 24) } : {};
 
@@ -217,7 +219,7 @@ $('connect-save').addEventListener('click', async () => {
   dispatchEvent(new Event('rl-key-changed'));
   if (afterKey) { const go = afterKey; afterKey = null; go(); }
   else if (firstLink) {                                            // first time on this site: go straight on to linking the console, the step that makes every phone automatic
-    $('device').hidden = false; $('device').open = true; $('link-console').click(); $('share').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('device').hidden = false; openFold($('device')); $('link-console').click(); $('share').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 });
 const keyReady = () => { $('connect').hidden = true; status.textContent = 'This device can now save to the website.'; dispatchEvent(new Event('rl-key-changed')); if (afterKey) { const go = afterKey; afterKey = null; go(); } };
@@ -253,9 +255,9 @@ const drawRole = () => {
 };
 addEventListener('rl-key-changed', drawRole); setTimeout(drawRole, 0);
 // the Manuals link at the top opens that section
-const showManuals = () => { const id = { '#manuals': 'manuals', '#log': 'log' }[location.hash]; if (id) { $(id).open = true; $(id).scrollIntoView({ block: 'start' }); } };   // (the header links to Change history and Manuals)
+const showManuals = () => { const id = { '#manuals': 'manuals', '#log': 'log' }[location.hash]; if (id) { openFold($(id)); $(id).scrollIntoView({ block: 'start' }); } };   // (the header links to Change history and Manuals)
 addEventListener('hashchange', showManuals); setTimeout(showManuals, 0);
-const showOwner = () => { if (location.hash === '#owner' && keep.get('rl-key') && isManager()) { $('owner-box').hidden = false; $('device').hidden = false; $('device').open = true; $('owner-box').scrollIntoView({ block: 'center' }); } };
+const showOwner = () => { if (location.hash === '#owner' && keep.get('rl-key') && isManager()) { $('owner-box').hidden = false; $('device').hidden = false; openFold($('device')); $('owner-box').scrollIntoView({ block: 'center' }); } };
 addEventListener('hashchange', showOwner); setTimeout(showOwner, 800);
 $('owner-save').addEventListener('click', async e => {
   const pass = $('owner-pass').value, again = $('owner-pass2').value;
@@ -855,6 +857,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     for (const f of lines.slice(start)) {
       const t = f[0].length === 1 ? f[0].toUpperCase() : 'I';
       if (t === 'I') { const k = byH[f[0].toLowerCase()]; if (k) { k.u = f[1]; k.s = Number(f[2]); delete k.nf; count.I++; } else notes.push('Not on the website yet: item ' + f[0]); }
+      else if (t === 'N' && f[1] === '*') { d.kinds.forEach(k => { delete k.nf; }); count.F++; }   // the whole not-seen list cleared
       else if (t === 'N') { const k = byH[(f[1] || '').toLowerCase()]; if (k) { if (f[2] === '1') { k.nf = 1; count.N++; } else { delete k.nf; count.F++; } } }   // an audit: not found (1), found again (0)
       else if (t === 'S') { d.kinds.forEach(k => { if (k.u === f[1] && inRange(k.s, f[2], f[3])) { k.u = f[4]; k.s = Number(f[5]); } }); count.S++; }
       else if (t === 'X') { d.kinds.forEach(k => { if (k.u === f[1] && inRange(k.s, f[2], f[3])) { k.u = f[4]; k.s = Number(f[5]); } else if (k.u === f[4] && inRange(k.s, f[5], f[6])) { k.u = f[1]; k.s = Number(f[2]); } }); count.X++; }
@@ -907,7 +910,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     if (!needsSave) list.push('The website already matches the console.');
     if (count.C) list.push(count.C + (count.C === 1 ? ' count changed' : ' counts changed'));
     if (count.R) list.push(count.R + (count.R === 1 ? ' item taken out of Lending' : ' items taken out of Lending'));
-    if (count.N) list.push(count.N + (count.N === 1 ? ' thing not found in an audit: it goes on the Not found list' : ' things not found in an audit: they go on the Not found list'));
+    if (count.N) list.push(count.N + (count.N === 1 ? ' thing not seen in an audit: it goes on the Not seen list' : ' things not seen in an audit: they go on the Not seen list'));
     if (count.F) list.push(count.F + (count.F === 1 ? ' thing found again' : ' things found again'));
     if (count.I) list.push(count.I + (count.I === 1 ? ' thing moved' : ' things moved'));
     if (count.S) list.push(count.S + (count.S === 1 ? ' whole shelf moved' : ' whole shelves moved'));
@@ -945,6 +948,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   function doEntry(d, r, e) {
     const f = e.code.split(':'), by = Object.fromEntries(d.kinds.map(k => [k.h, k])), ub = uBy(r);
     if (f[1] === 'MOVE') { const k = by[f[2]]; if (!k) return null; const [u, s] = f[3].split('-'), undo = { items: [[k.h, k.u, k.s]] }; if (k.nf) { undo.nf = [k.h]; delete k.nf; } k.u = u; k.s = Number(s); placeIn(r, k); return undo; }   // a move says where it is: off the not-found list
+    if (f[1] === 'FOUND' && f[2] === 'ALL') { const undo = { nf: d.kinds.filter(k => k.nf).map(k => k.h) }; d.kinds.forEach(k => { delete k.nf; }); return undo; }
     if (f[1] === 'FOUND') { const k = by[f[2]]; if (!k) return null; const undo = { nf: k.nf ? [k.h] : [] }; delete k.nf; return undo; }
     if (f[1] === 'COUNT') { const k = by[f[2]]; if (!k) return null; const undo = { count: [k.h, k.x] }; k.x = Number(f[3]); return undo; }
     if (f[1] === 'SHELF') {
@@ -982,6 +986,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     if (p) pend = p;
     syncMade(); madeAt = Math.max(0, madeAt); drawCode(); drawLog(); drawHomeStatus(); drawTodo(); if (typeof drawNotFound === 'function') drawNotFound();   // (the edit tab's no-photo list too: a new item belongs on it)
     if (view3d) { view3d.retint(); refresh3d(); }
+    if (typeof drawEmpty === 'function') drawEmpty();
   }
   async function saveChanges(list, button, opts = {}) {
     if (!keep.get('rl-key')) {
@@ -1051,6 +1056,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
       const [u, s] = f[3].split('-'), k = d.kinds.find(x => x.h === f[2]), same = (unit, n) => unit === u && boardOf(ub, u, Number(n)) === boardOf(ub, u, Number(s));
       return seen(l => l[0].length > 1 && l[0].toLowerCase() === f[2] && same(l[1], l[2])) || (!!k && same(k.u, k.s) && !later.some(x => x.code.includes(':' + f[2] + ':')));
     }
+    if (f[1] === 'FOUND' && f[2] === 'ALL') return seen(l => l[0] === 'N' && l[1] === '*' && l[2] === '0');
     if (f[1] === 'FOUND') { const k = d.kinds.find(x => x.h === f[2]); return seen(l => l[0] === 'N' && (l[1] || '').toLowerCase() === f[2] && l[2] === '0') || (!!k && !k.nf && !later.some(x => x.code === e.code)); }
     if (f[1] === 'COUNT') { const k = d.kinds.find(x => x.h === f[2]); return seen(l => l[0] === 'C' && (l[1] || '').toLowerCase() === f[2] && Number(l[2]) === Number(f[3])) || (!!k && k.x === Number(f[3]) && !later.some(x => x.code.startsWith('RL:COUNT:' + f[2] + ':'))); }
     if (f[1] === 'ADD') return !!e.item && (d.kinds.some(k => k.h === e.item.h) || seen(l => l[0] === 'A' && nameCode(l[3] || '') === e.item.h));
@@ -1142,9 +1148,9 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   });
   $('edition-find').addEventListener('input', drawEdition);
   $('edition-get').addEventListener('click', () => { if (!edition) return;
-    saveCsv(csvOf([['Item', 'Category', 'Type', 'How many', 'Unit', 'Shelf (1 = bottom)', 'Where it lived', 'Status']].concat(edition.items.slice().sort((a, b) => (a.x === 0) - (b.x === 0) || a.u.localeCompare(b.u) || a.s - b.s || a.n.localeCompare(b.n)).map(k => [k.n, k.c, k.t, k.x, (unitBy[k.u] || {}).name || k.u, k.s || '', k.w, k.x === 0 ? 'Taken out of Lending' : k.nf ? 'Not found in an audit' : 'In Lending']))), 'IDeATe Lending inventory as of ' + edition.id + '.csv'); });
+    saveCsv(csvOf([['Item', 'Category', 'Type', 'How many', 'Unit', 'Shelf (1 = bottom)', 'Where it lived', 'Status']].concat(edition.items.slice().sort((a, b) => (a.x === 0) - (b.x === 0) || a.u.localeCompare(b.u) || a.s - b.s || a.n.localeCompare(b.n)).map(k => [k.n, k.c, k.t, k.x, (unitBy[k.u] || {}).name || k.u, k.s || '', k.w, k.x === 0 ? 'Taken out of Lending' : k.nf ? 'Not seen in the last audit' : 'In Lending']))), 'IDeATe Lending inventory as of ' + edition.id + '.csv'); });
   const download = (obj, name) => { const blob = new Blob([JSON.stringify(obj, null, 2) + '\n'], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
-  $('sync-publish').addEventListener('click', async e => { if (!outData) return; if (await publish({ 'data.json': outData, 'room.json': outRoom, ...(outPend ? { 'pending.json': outPend } : {}), ...(outBase || {}) }, 'Website matched to the console (staff page)', e.target)) { $('sync-saved').hidden = false; try { if (outRoom.synced && outRoom.synced.changed && outRoom.synced.changed.length) sessionStorage.setItem('rl-moved', '1'); sessionStorage.setItem('rl-done', syncTag !== null ? 'Saved. The site updates in about a minute. One last step below.' : 'Saved. The site updates in about a minute. Nothing else to do.'); if (syncTag !== null) sessionStorage.setItem('rl-ack', String(syncTag)); } catch (err) { } setTimeout(() => location.reload(), 2500); } });
+  $('sync-publish').addEventListener('click', async e => { if (!outData) return; if (await publish({ 'data.json': outData, 'room.json': outRoom, ...(outPend ? { 'pending.json': outPend } : {}), ...(outBase || {}) }, 'Website matched to the console (staff page)', e.target)) { $('sync-saved').hidden = false; try { sessionStorage.setItem('rl-done', syncTag !== null ? 'Saved. The site updates in about a minute. One last step below.' : 'Saved. The site updates in about a minute. Nothing else to do.'); if (syncTag !== null) sessionStorage.setItem('rl-ack', String(syncTag)); } catch (err) { } setTimeout(() => location.reload(), 2500); } });
   // after that reload, say plainly that it worked (the page used to come back looking as if nothing had happened)
   try { const done = sessionStorage.getItem('rl-done'); if (done) { sessionStorage.removeItem('rl-done'); $('home-done').textContent = done; $('home-done').hidden = false; } const ack = sessionStorage.getItem('rl-ack'); if (ack !== null) { sessionStorage.removeItem('rl-ack'); if (ack === 'RESEND') showAck('RL:RESEND', 'Does the console still hold changes?', 'The website is reset. To put the console\'s changes back on it, show the console this code and type the PIN, then scan the code it shows. To clear the console too, use Start over there.'); else ackGot(ack); } } catch (err) { }
   $('web-reset-word').addEventListener('input', e => { $('web-reset').disabled = e.target.value.trim().toUpperCase() !== 'START OVER'; });
@@ -1171,7 +1177,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
       else { setPlace(sf.elements.toUnit, sf.elements.toShelf, u, n); shelfStep = 'from'; }
     }
     refresh3d(); showShelf(u, n);
-  }, { tint: true, tintOff: true });   // the shading by how full each shelf is starts off: a tick box turns it on
+  }, {});
   // what is on the shelf that was clicked, with a button to start moving any of it
   const contents = $('shelf-contents');
   function showShelf(u, n) {
@@ -1188,15 +1194,15 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     refresh3d();
     $('room3d-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
-  const lastChanged = (room.synced && Array.isArray(room.synced.changed) ? room.synced.changed : []).filter(x => unitBy[x[0]]);
-  $('full-show').addEventListener('change', e => { if (view3d) view3d.setTint(e.target.checked); });
-  // always there, so nobody wonders where it went: when the last sync moved nothing (or there was none yet) it says so
-  $('moved-wrap').hidden = false; $('moved-show').addEventListener('change', () => refresh3d());
-  if (lastChanged.length) $('moved-when').textContent = room.synced.at ? ' (' + when(room.synced.at) + ')' : '';
-  else { $('moved-show').disabled = true; $('moved-wrap').classList.add('is-off'); $('moved-when').textContent = room.synced && room.synced.at ? ': the last one (' + when(room.synced.at) + ') changed no shelves' : ': no sync yet'; }
+  // under the map: which shelves have nothing on them (room for something new)
+  function drawEmpty() {
+    const list = []; for (const u of lit) { const e = []; for (let n = 1; n <= u.shelves; n++) if (hasBoard(u, n) && !onShelf(u.code, n).length) e.push(n); if (e.length) list.push(u.name + ': ' + e.join(', ')); }
+    $('empty-shelves').textContent = list.length ? 'Empty shelves: ' + list.join(' \u00b7 ') + '.' : 'No shelf is empty.';
+  }
+  drawEmpty();
   function refresh3d() {
     if (!view3d) return;
-    const marks = lastChanged.length && $('moved-show').checked ? lastChanged.map(([unit, shelf]) => ({ unit, shelf, kind: 'moved' })) : [];
+    const marks = [];
     if (activeTab === 'move') {
       const k = pickedItem(); if (k && unitBy[k.u] && unitBy[k.u].shelves) marks.push({ unit: k.u, shelf: boardBelow(unitBy[k.u], k.s), kind: 'now' });
       marks.push({ unit: mf.elements.unit.value, shelf: Number(mf.elements.shelf.value), kind: 'pick' });
@@ -1242,7 +1248,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   const dayText = d => new Date(d + 'T12:00:00').toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
   const daysTo = d => Math.ceil((new Date(d + 'T23:59:59') - Date.now()) / 86400000);
   async function checkEverything() {
-    $('checks').open = true; health.innerHTML = ''; $('health-renew').hidden = true; $('health-steps').hidden = true; const go = $('health-go'); go.disabled = true; go.textContent = 'Checking...';
+    openFold($('checks')); health.innerHTML = ''; $('health-renew').hidden = true; $('health-steps').hidden = true; const go = $('health-go'); go.disabled = true; go.textContent = 'Checking...';
     const get = (path) => fetch(path + '?x=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null);
     // 1. the files every page reads
     const [d, r, p, h, k] = await Promise.all(['data.json', 'room.json', 'photos.json', 'howto.json', 'kits.json'].map(get));
@@ -1309,7 +1315,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   });
   $('health-paste').addEventListener('click', () => { askForKey('Paste the new key below, with its run-out date and the staff passcode.'); document.querySelector('#connect details').open = true; });
   // a quiet warning at the top when the key is close to running out, without anyone pressing anything
-  readLocked().then(all => { if (all && all.expires && daysTo(all.expires) <= 21) { $('home-expiry').hidden = false; $('home-expiry').onclick = () => { $('checks').open = true; $('checks').scrollIntoView({ behavior: 'smooth' }); }; $('home-expiry').textContent = daysTo(all.expires) < 0 ? 'The site key was due to run out on ' + dayText(all.expires) + '. Press Check everything.' : 'The site key runs out on ' + dayText(all.expires) + '. Press Check everything for how to renew it.'; } });
+  readLocked().then(all => { if (all && all.expires && daysTo(all.expires) <= 21) { $('home-expiry').hidden = false; $('home-expiry').onclick = () => { openFold($('checks')); $('checks').scrollIntoView({ behavior: 'smooth' }); }; $('home-expiry').textContent = daysTo(all.expires) < 0 ? 'The site key was due to run out on ' + dayText(all.expires) + '. Press Check everything.' : 'The site key runs out on ' + dayText(all.expires) + '. Press Check everything for how to renew it.'; } });
   const unlockFromAddress = async () => {
     const m = /(?:^#|&)k=([A-Za-z0-9]{8,20})(?:&|$)/.exec(location.hash); if (!m) return;
     const rest = location.hash.slice(1).split('&').filter(part => !part.startsWith('k=')).join('&');
@@ -1527,14 +1533,14 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   function drawNotFound() {
     const nf = kinds.filter(k => k.nf && !gone(k)).sort((a, b) => a.n.localeCompare(b.n));
     $('home-nf-line').hidden = !nf.length;
-    $('home-nf').textContent = nf.length + (nf.length === 1 ? ' thing was' : ' things were') + ' not found in an audit.';
+    $('home-nf').textContent = nf.length + (nf.length === 1 ? ' thing was' : ' things were') + ' not seen in the last audit (most are probably checked out).';
     $('notfound').hidden = !nf.length;
     $('nf-list').innerHTML = nf.map(k => '<li class="nf-row"><div><strong>' + esc(k.n) + '</strong><br><span class="tool-note">Listed on ' + esc(k.w || k.u) + '</span></div><div class="sync-actions nf-actions">'
       + '<button type="button" data-nf="here" data-h="' + esc(k.h) + '">It\u2019s there</button>'
       + (allowed('move') ? '<button type="button" class="button-secondary" data-nf="move" data-h="' + esc(k.h) + '">It\u2019s on another shelf</button>' : '')
       + (allowed('remove') ? '<button type="button" class="button-secondary" data-nf="gone" data-h="' + esc(k.h) + '">Gone for good</button>' : '') + '</div></li>').join('');
   }
-  $('home-nf-show').addEventListener('click', () => { $('notfound').open = true; $('notfound').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  $('home-nf-show').addEventListener('click', () => { openFold($('notfound')); $('notfound').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
   $('nf-list').addEventListener('click', async e => {
     const b = e.target.closest('[data-nf]'); if (!b) return; const k = kinds.find(x => x.h === b.dataset.h); if (!k) return;
     if (b.dataset.nf === 'here') { await saveChanges([{ code: 'RL:FOUND:' + k.h, title: 'Found: ' + k.n, what: 'It was on its shelf, ' + (k.w || k.u) + '.' }], b, { needKey: true }); drawNotFound(); return; }
@@ -1544,6 +1550,11 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
       await saveChanges([{ code: 'RL:COUNT:' + k.h + ':0', title: 'Take out of Lending: ' + k.n, what: 'Not found in an audit. Was ' + (k.x || 1) + ' at ' + (k.w || k.u) + '.' }], b, { needKey: true }); drawNotFound();
     }
   });
+  $('nf-clear').addEventListener('click', async e => {
+    if (!isManager()) return; const n = kinds.filter(k => k.nf && !gone(k)).length; if (!n) return;
+    if (!confirm('Clear all ' + n + ' from the list? They keep their shelves. Nothing is taken out of Lending.')) return;
+    await saveChanges([{ code: 'RL:FOUND:ALL', title: 'Cleared the not-seen list', what: n + (n === 1 ? ' thing' : ' things') + ' taken off the list.' }], e.target, { needKey: true }); drawNotFound();
+  });
   drawNotFound(); addEventListener('rl-key-changed', drawNotFound);
   // ---- the inventory as a spreadsheet (a .csv file: Excel, Numbers and Google Sheets all open it)
   $('inventory-get').addEventListener('click', () => {
@@ -1552,7 +1563,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const order = new Map(units.map((u, i) => [u.code, i]));
     const rows = kinds.slice().sort((a, b) => (gone(a) - gone(b)) || ((order.get(a.u) ?? 999) - (order.get(b.u) ?? 999)) || ((a.s || 0) - (b.s || 0)) || a.n.localeCompare(b.n)).map(k => {
       const u = unitBy[k.u], shelf = u && u.shelves && k.s ? boardBelow(u, k.s) : '';
-      return [k.n, k.c, k.t, gone(k) ? 0 : (k.x || 1), u ? u.name : k.u, shelf, u && u.shelves ? (shelf ? u.name + ', shelf ' + shelf : u.name) : (u ? u.name : k.u) + ' (ask at the desk)', gone(k) ? 'Taken out of Lending' : k.nf ? 'Not found in an audit' : 'In Lending', site + '#i' + k.h];
+      return [k.n, k.c, k.t, gone(k) ? 0 : (k.x || 1), u ? u.name : k.u, shelf, u && u.shelves ? (shelf ? u.name + ', shelf ' + shelf : u.name) : (u ? u.name : k.u) + ' (ask at the desk)', gone(k) ? 'Taken out of Lending' : k.nf ? 'Not seen in the last audit' : 'In Lending', site + '#i' + k.h];
     });
     const head = ['Item', 'Category', 'Type', 'How many', 'Unit', 'Shelf (1 = bottom)', 'Where it lives', 'Status', 'Item page'];
     const csv = '\ufeff' + [head, ...rows].map(r => r.map(cell).join(',')).join('\r\n') + '\r\n';

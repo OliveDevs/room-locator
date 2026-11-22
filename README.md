@@ -15,7 +15,6 @@ Each guide has what to gather, first steps, and a link to the maker's manual or 
 - `firmware/RoomLocatorV5/RoomLocatorV5.ino`: the Arduino Mega code for the console.
 - `diagrams/`: the block diagram and schematic (draw.io sources and PNG exports).
 - `docs-photos/`: photos used in the class documentation.
-- `sync_room.py`: refresh locations and boards from the current SD files.
 - `STAFF-GUIDE.md`: transfer, publishing, maintenance, and photo instructions.
 - `SHELF-MOVES.md`: the phone codes, the shelf rules, and the staff PIN.
 

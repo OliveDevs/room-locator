@@ -121,7 +121,6 @@
 // Shelf 1 is the BOTTOM shelf of a unit. The light for groove n is (first light + n - 1).
 //
 // Things you can type in the Serial Monitor (115200 baud, Newline), or that a scanner / the laptop can send:
-//   LOC:AUD-3     a shelf label: shows that shelf. With an item open it moves the item there
 //   CLEAR         back to the start
 //   !U !D !S !B   press Up, Down, Select or Back
 //   @             says hello (the laptop tools use this)
@@ -199,7 +198,12 @@ const uint32_t LIGHT_ITEM = 0x00FF00;          // where a thing is now, on the m
 const uint32_t CAT_LIGHT[8] PROGMEM = {0x0050FF, 0x00FF00, 0xFFB000, 0xFF0090, 0xFF0000, 0x7000FF, 0xFF3C00, 0x00E0A0};
 const char CAT_LIGHT_NAME[8][11] PROGMEM = {"blue", "green", "yellow", "pink", "red", "purple", "orange", "teal"};
 #define itemLight(cat) ((uint32_t)pgm_read_dword(&CAT_LIGHT[(cat) & 7]))   // (not a function: the Arduino builder puts its list of functions before the first one, and it must stay below the type definitions)
-const uint32_t LIGHT_SHELF = 0xFFFFFF;         // a scanned shelf label
+const uint32_t LIGHT_SHELF = 0xFFFFFF;         // the shelf being looked at or checked
+// Shelf labels (a sticker on a shelf that says LOC:AUD-3) were never put up in the room, so reading them is switched
+// off (v5.51). The console's own tests still switch it on, as a quick way to say "this shelf".
+#ifndef SHELF_LABELS
+#define SHELF_LABELS 0
+#endif
 const uint32_t LIGHT_NEW_SPOT = 0x0050FF;      // where a moved item will go
 const uint32_t LIGHT_SWEEP = 0x8000FF;         // the start-up check
 const uint32_t LIGHT_UNIT = 0x909090;          // a whole unit, picked on the map (soft white, but bright enough to see on a 2-light unit)
@@ -513,7 +517,7 @@ unsigned long lastSleepTap = 0;
 void drawIdeas(); void findIdeas(); void openIdea(); void drawResetWord(); void resetLetter(char c);   // (shelf ideas, v5.50)
 void drawCheck(); void checkScanned(char* t); void finishCheck();   // (shelf check, v5.51)
 byte tidyUp(); void finishTidy(); void loadTidy(); bool inNotFoundFile(const char* code); extern int tidyEpoch; extern long tidyBaseEnd;   // (tidy-up, v5.51)
-void startUnitAudit(byte u); void auditNextShelf(); void saveTheAudit(); void saveAudit(); bool foundAgain(unsigned long key); extern bool auditOpen, auditRun; extern byte auditUnit; extern uint16_t auditShelves[MAX_UNITS];   // (unit audit, v5.51)
+void startUnitAudit(byte u); void auditNextShelf(); void saveTheAudit(); void saveAudit(); bool foundAgain(unsigned long key); bool clearNotFound(); extern bool auditOpen, auditRun; extern byte auditUnit; extern uint16_t auditShelves[MAX_UNITS];   // (unit audit, v5.51)
 void drawStickers(); void stickerScanned(char* t); void saveSticker(); void openStickers(); bool copyFile(const char* from, const char* to, long upTo);   // (the sticker screen, v5.50)
 void draw(); void lightsOff(); bool drawQRText(int x, int y, const char* url); byte firstVisibleRow(); void blinkDot(byte slot, bool lit);   // (written further down)
 const int SLEEP_MID = 318, SLEEP_X = SLEEP_MID - SLEEP_W, SLEEP_Y = 150 - SLEEP_H;   // drawn double size, right of the website's code
@@ -1959,6 +1963,7 @@ bool batchApply(char* c, const __FlashStringHelper** why) {
     byte a[6] = {(byte)((key >> 16) & 255), (byte)((key >> 8) & 255), (byte)(key & 255), (byte)n, 0, 0};
     return quietSave('C', a, key, why);
   }
+  if (strcasecmp_P(c, PSTR("FOUND:ALL")) == 0) { if (!clearNotFound()) { *why = F("The SD card would not write."); return false; } return true; }
   if (strncasecmp_P(c, PSTR("FOUND:"), 6) == 0) {                 // the website's not-found list: it was there after all (v5.51)
     unsigned long key = strtoul(c + 6, NULL, 16);
     if (findNameCode(key) < 0) { *why = F("An item is not in this console's list."); return false; }
@@ -2098,6 +2103,13 @@ void runCode(char* c) {
     staffUntil = millis() + STAFF_MS;
     backDepth = 0; mode = HOME; justCounted = n ? 1 : 3; openItem(kind, false); return;
   }
+  if (strcasecmp_P(c, PSTR("FOUND:ALL")) == 0) {                   // a manager cleared the whole not-seen list on the website
+    if (!clearNotFound()) { codeProblem(F("The SD card would not write. Is it locked?")); return; }
+    staffUntil = millis() + STAFF_MS; if (!staffUntil) staffUntil = 1;
+    backDepth = 0; mode = HOME; homeMessage = true;
+    header("List cleared", NULL); textF(18, 90, F("Nothing is marked as not found any more."), WHITE, SMALL); textF(18, 114, F("Everything keeps its shelf."), DIM, SMALL);
+    doneBar(F("Saved.   Select = update the website")); offerSync = true; return;
+  }
   if (strncasecmp_P(c, PSTR("FOUND:"), 6) == 0) {
     unsigned long key = strtoul(c + 6, NULL, 16); long kind = findNameCode(key);
     if (kind < 0) { codeProblem(F("That item is not in this console's list.")); return; }
@@ -2165,7 +2177,7 @@ void kitCode(char* c) {
   draw();
 }
 void addScanned(char* t) {                       // a scan while a new item is being set up
-  if (strncasecmp_P(t, PSTR("LOC:"), 4) == 0) {
+  if (SHELF_LABELS && strncasecmp_P(t, PSTR("LOC:"), 4) == 0) {
     byte u, sh; if (!parsePlace(t + 4, &u, &sh)) return;
     addUnit = u; addShelf = unitCount[u] ? spaceLo(u, sh) : 0; addStep = 3; draw(); return;
   }
@@ -2316,11 +2328,12 @@ void loadAudit() {
   auditOpen = auditUnit != 255;                                    // (a file without its unit is from an older version: dropped)
   if (!auditOpen) { memset(auditSeen, 0, sizeof(auditSeen)); memset(auditShelves, 0, sizeof(auditShelves)); }
 }
+bool clearNotFound() { File m = cardOpen("MOVES.TSV", FILE_WRITE); if (!m) return false; m.write((const uint8_t*)"N\t*\t0\r\n", 7); m.close(); webDirty = true; return true; }   // one line: every mark before it is off
 // the latest not-found mark for this thing is "not found": write that it was found again. True when something was written
 bool foundAgain(unsigned long key) {
   char want[7]; snprintf_P(want, 7, PSTR("%02x%02x%02x"), (byte)((key >> 16) & 255), (byte)((key >> 8) & 255), (byte)(key & 255));
   File f = cardOpen("MOVES.TSV"); long pos = 0; char last = '0'; bool sawMark = false;
-  while (f && (pos = readLine(f, pos)) >= 0) if (field[0][0] == 'N' && !field[0][1] && strcasecmp(field[1], want) == 0) { last = field[2][0]; sawMark = true; }
+  while (f && (pos = readLine(f, pos)) >= 0) if (field[0][0] == 'N' && !field[0][1] && (field[1][0] == '*' || strcasecmp(field[1], want) == 0)) { last = field[2][0]; sawMark = true; }   // ("N * 0": the whole list was cleared)
   if (f) f.close();
   if (last == '0' && !sawMark && inNotFoundFile(want)) last = '1';   // kept from before the last tidy-up
   if (last != '1') return false;
@@ -2550,7 +2563,8 @@ void describeChange(long pos, char* top, byte topSize, char* under, byte underSi
     if (atoi(n) == 0) strcpy_P(under, PSTR("taken out of Lending")); else snprintf_P(under, underSize, PSTR("Lending now has %s"), n);
   }
   else if (t == 'N') {
-    bool lost = atoi(field[2]) != 0; long k = findNameCode(strtoul(field[1], NULL, 16));
+    bool lost = atoi(field[2]) != 0; long k = field[1][0] == '*' ? -2 : findNameCode(strtoul(field[1], NULL, 16));
+    if (k == -2) { strcpy_P(top, PSTR("Not-found list")); strcpy_P(under, PSTR("cleared from the website")); return; }
     if (k >= 0) { loadKind(k); copyText(top, field[K_NAME], topSize); } else strcpy_P(top, PSTR("A thing"));
     strcpy_P(under, lost ? PSTR("not found in the audit") : PSTR("found again"));
   }
@@ -2605,7 +2619,7 @@ long movedPos(File& brk, long pos) {
 // the not-found marks still open after the marks in MOVES.TSV: kept in NFOUND.TSV, one 6-letter code a line
 bool stillNotFound(const char* code, long after) {  // no later N line in MOVES.TSV for this code
   File m = cardOpen("MOVES.TSV"); long pos = after, next; bool later = false;
-  while (m && (next = readLine(m, pos)) >= 0 && !later) { if (field[0][0] == 'N' && !field[0][1] && strcasecmp(field[1], code) == 0) later = true; pos = next; }
+  while (m && (next = readLine(m, pos)) >= 0 && !later) { if (field[0][0] == 'N' && !field[0][1] && (field[1][0] == '*' || strcasecmp(field[1], code) == 0)) later = true; pos = next; }
   if (m) m.close(); return !later;
 }
 bool writeNotFound() {
@@ -2993,7 +3007,7 @@ void entered(char* textIn) {
     else { if (textIn != scanBuf) { copyText(scanBuf, textIn, BIG_CODE); scanLen = 0; scanDone = false; } pendingInScan = true; askPin(AFTER_CODE); }   // it waits in scanBuf
     return;
   }
-  if (strncasecmp_P(textIn, PSTR("LOC:"), 4) == 0 && strrchr(textIn, '-')) { scannedShelf(textIn); return; }
+  if (SHELF_LABELS && strncasecmp_P(textIn, PSTR("LOC:"), 4) == 0 && strrchr(textIn, '-')) { scannedShelf(textIn); return; }
   long kind = findCode(textIn);
   if (kind >= 0) { queryLen = 0; query[0] = '\0'; scannedKind(kind); return; }
   copyText(query, textIn, sizeof(query)); queryLen = 0; live = false; livePending = false;      // not a barcode: search for it

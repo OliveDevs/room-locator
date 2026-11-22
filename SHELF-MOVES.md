@@ -9,7 +9,7 @@ The website never changes the console directly. The staff page shows a QR code, 
 | `RL:MOVE:<code6>:<UNIT>-<shelf>` | Moves one item (every copy). `<code6>` is the item's page code (`h` in `data.json`) |
 | `RL:SHELF:<UNIT>-<shelf>:<UNIT>-<shelf>` | Moves everything on one shelf onto another. `:SWAP` on the end swaps the two |
 | `RL:COUNT:<code6>:<n>` | How many Lending has. 0 takes the item out of Lending; a later count puts it back |
-| `RL:FOUND:<code6>` | Takes an item off an audit's not-found list |
+| `RL:FOUND:<code6>` | Takes an item off the not-seen list. `RL:FOUND:ALL` clears the list |
 | `RL:ADD:<type>\|<UNIT>-<shelf>\|<copies>\|<name>` | Starts the new-item steps on the console |
 | `RL:Q:<id>:<how many>:<check>:<change>*<change>...` | Up to about twelve MOVE, SHELF, COUNT and FOUND changes in one code, with a checksum |
 | `RL:B:<id>:<part>/<parts>:<change>` | The same changes one at a time, for a scanner that cannot read the big code |
