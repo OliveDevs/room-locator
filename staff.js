@@ -42,7 +42,7 @@ async function lockKey(pass, slot) {
   const box = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await lockBytes(pass, salt), new TextEncoder().encode(keep.get('rl-key')));
   const all = (await readLocked()) || {}; const out = { note: 'The site key, locked. Made by the staff page.' };
   if (all.salt) out.pass = { salt: all.salt, iv: all.iv, box: all.box };          // (the first version of this file had one copy at the top)
-  for (const name of ['pass', 'console', 'owner', 'expires']) if (all[name]) out[name] = all[name];
+  for (const name of ['pass', 'console', 'owner', 'manager', 'expires']) if (all[name]) out[name] = all[name];
   out[slot] = { salt: b64(salt), iv: b64(iv), box: b64(box) };
   return out;
 }
@@ -52,13 +52,18 @@ async function openLocked(all, pass, slot) {
   const locked = slotOf(all, slot); if (!locked) return null;
   try { return new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(locked.iv) }, await lockBytes(pass, unb64(locked.salt)), unb64(locked.box))); } catch (e) { return null; }
 }
+// Two kinds of staff (Nov 21): managers (Lending's managers and the project's owner) and student staff. Both can move,
+// add and edit things. Only managers change passcodes, link the console or reset the website. A device is a manager's
+// when it signed in with the owner or manager passcode, or someone pasted the GitHub key on it.
+// (This is a lock on the page: everyone signed in uses the same GitHub key underneath.)
+const isManager = () => keep.get('rl-role') === 'manager';
 async function unlockKey(pass, slot = 'pass') {
   const all = await readLocked();
-  if (slot === 'pass' && slotOf(all, 'owner')) { const mine = await openLocked(all, pass, 'owner'); if (mine !== null) { keep.set('rl-key', mine); return ''; } }   // the project owner's own passcode works in the same box
+  if (slot === 'pass') for (const top of ['owner', 'manager']) if (slotOf(all, top)) { const mine = await openLocked(all, pass, top); if (mine !== null) { keep.set('rl-key', mine); keep.set('rl-role', 'manager'); return ''; } }   // a manager's passcode works in the same box
   if (!slotOf(all, slot)) return slot === 'pass' ? 'No passcode has been set up for this site yet. Paste the key instead, then set one up.' : 'This console is not linked to the website yet.';
   const plain = await openLocked(all, pass, slot);
   if (plain === null) return slot === 'pass' ? 'That passcode is not right.' : 'The console\'s website pass does not match the website any more. Link the console again.';
-  keep.set('rl-key', plain); return '';
+  keep.set('rl-key', plain); keep.set('rl-role', 'staff'); return '';
 }
 // After a passcode or the console's pass opened the locked copy: does GitHub still take the key inside? A key that has
 // run out (or was deleted on GitHub) is the one thing a passcode cannot fix, so the message says what to do.
@@ -138,7 +143,7 @@ $('connect-save').addEventListener('click', async () => {
   keep.set('rl-key', value); $('connect-why').textContent = 'Checking...';
   const problem = await checkKey().catch(() => 'Could not reach GitHub. Check the internet connection.');
   if (problem) { keep.set('rl-key', null); $('connect-why').textContent = problem; return; }
-  $('connect-key').value = ''; dispatchEvent(new Event('rl-key-changed'));
+  $('connect-key').value = ''; keep.set('rl-role', 'manager'); dispatchEvent(new Event('rl-key-changed'));
   // A new key makes the locked copies on the site stale (they hold the old key). Renew what this device can:
   // the passcode copy if the passcode was typed here too, the console's copy if this phone came from the console's code.
   const all = (await readLocked()) || {}, pass = $('connect-newpass').value, cpass = keep.get('rl-cpass'), expires = $('connect-expires').value, did = [], left = [];
@@ -152,7 +157,8 @@ $('connect-save').addEventListener('click', async () => {
     } else if (!slotOf(all, 'console')) firstLink = true;
     else if (slotOf(all, 'console')) left.push('The console\'s link still holds the OLD key: press "Link the console again" (under Passcode and sign-out) and show the new code to the console, or open this page from the console\'s Staff page code and paste the key there.');
     if (slotOf(all, 'owner')) left.push('Your own passcode still opens the OLD key: set it again under "Passcode and sign-out".');
-    if (/^\d{4}-\d\d-\d\d$/.test(expires)) { out = out || { note: 'The site key, locked. Made by the staff page.', ...Object.fromEntries(['pass', 'console', 'owner'].filter(n => slotOf(all, n)).map(n => [n, slotOf(all, n)])) }; out.expires = expires; }
+    if (slotOf(all, 'manager')) left.push('The manager passcode still opens the OLD key: set it again under "Passcode and sign-out".');
+    if (/^\d{4}-\d\d-\d\d$/.test(expires)) { out = out || { note: 'The site key, locked. Made by the staff page.', ...Object.fromEntries(['pass', 'console', 'owner', 'manager'].filter(n => slotOf(all, n)).map(n => [n, slotOf(all, n)])) }; out.expires = expires; }
     else if (out) delete out.expires;                              // a new key with no date given: the old date no longer applies
   } catch (e) { out = null; left.push('The locked copies could not be renewed on this browser.'); }
   $('connect-newpass').value = ''; $('connect').hidden = true;
@@ -175,26 +181,42 @@ $('connect-unlock').addEventListener('click', async () => {
 $('share-save').addEventListener('click', async e => {
   const pass = $('share-pass').value, again = $('share-pass2').value;
   if (!keep.get('rl-key')) { $('share-why').textContent = 'This device needs the key first.'; return; }
+  if (!isManager()) { $('share-why').textContent = 'Only a Lending manager can change the staff passcode.'; return; }
   // the locked key sits in the public repository, so a short passcode can be guessed by trying every one: at least 10 characters
   if (pass.length < 10) { $('share-why').textContent = 'Use at least 10 characters. A few words together works well, like "blue tripod on shelf four".'; return; }
   if (pass !== again) { $('share-why').textContent = 'The two do not match.'; return; }
   if (await publish({ 'key.json': await lockKey(pass, 'pass') }, 'Site key locked with the staff passcode (staff page)', e.target)) { $('share-pass').value = $('share-pass2').value = ''; $('share-why').textContent = 'Saved. In about a minute the new passcode works on any device, and the old one stops working. Devices already signed in stay signed in.'; }
 });
 // the owner passcode is only set from staff.html#owner, so the page shows staff a single passcode
+$('manager-save').addEventListener('click', async e => {
+  const pass = $('manager-pass').value, again = $('manager-pass2').value;
+  if (!keep.get('rl-key') || !isManager()) { $('manager-why').textContent = 'Only a Lending manager can set this.'; return; }
+  if (pass.length < 10) { $('manager-why').textContent = 'Use at least 10 characters.'; return; }
+  if (pass !== again) { $('manager-why').textContent = 'The two do not match.'; return; }
+  if (await publish({ 'key.json': await lockKey(pass, 'manager') }, 'Site key locked with the manager passcode (staff page)', e.target)) { $('manager-pass').value = $('manager-pass2').value = ''; $('manager-why').textContent = 'Saved. In about a minute this passcode signs a device in as a manager, from the same box as the staff passcode.'; }
+});
+// what this device may do: managers see the passcodes, the console link and the website reset; student staff do not
+const drawRole = () => {
+  const m = isManager(), signed = !!keep.get('rl-key');
+  document.querySelectorAll('.manager-only').forEach(el => { el.hidden = !m; });
+  $('role-note').textContent = !signed ? '' : m ? 'This device is signed in as a manager.' : 'This device is signed in as student staff. Changing passcodes, linking the console and resetting the website are for Lending managers.';
+};
+addEventListener('rl-key-changed', drawRole); setTimeout(drawRole, 0);
 // the Manuals link at the top opens that section
 const showManuals = () => { const id = { '#manuals': 'manuals', '#log': 'log' }[location.hash]; if (id) { $(id).open = true; $(id).scrollIntoView({ block: 'start' }); } };   // (the header links to Change history and Manuals)
 addEventListener('hashchange', showManuals); setTimeout(showManuals, 0);
-const showOwner = () => { if (location.hash === '#owner' && keep.get('rl-key')) { $('owner-box').hidden = false; $('device').hidden = false; $('device').open = true; $('owner-box').scrollIntoView({ block: 'center' }); } };
+const showOwner = () => { if (location.hash === '#owner' && keep.get('rl-key') && isManager()) { $('owner-box').hidden = false; $('device').hidden = false; $('device').open = true; $('owner-box').scrollIntoView({ block: 'center' }); } };
 addEventListener('hashchange', showOwner); setTimeout(showOwner, 800);
 $('owner-save').addEventListener('click', async e => {
   const pass = $('owner-pass').value, again = $('owner-pass2').value;
-  if (!keep.get('rl-key')) { $('owner-why').textContent = 'This device needs the key first.'; return; }
+  if (!keep.get('rl-key') || !isManager()) { $('owner-why').textContent = 'This device needs to be signed in by a manager first.'; return; }
   if (pass.length < 8) { $('owner-why').textContent = 'Use at least 8 characters.'; return; }
   if (pass !== again) { $('owner-why').textContent = 'The two do not match.'; return; }
   if (await publish({ 'key.json': await lockKey(pass, 'owner') }, 'Site key locked with the owner passcode (staff page)', e.target)) { $('owner-pass').value = $('owner-pass2').value = ''; $('owner-why').textContent = 'Saved. In about a minute this passcode works in the same box as the staff passcode, on any device. Changing the staff passcode does not change it.'; }
 });
 $('link-console').addEventListener('click', async e => {
   if (!keep.get('rl-key')) { $('share-why').textContent = 'This device needs the key first.'; return; }
+  if (!isManager()) { $('share-why').textContent = 'Only a Lending manager can link the console.'; return; }
   const letters = 'abcdefghjkmnpqrstuvwxyz23456789', pick = crypto.getRandomValues(new Uint8Array(20));
   const pass = [...pick].map(n => letters[n % letters.length]).join('');
   if (!(await publish({ 'key.json': await lockKey(pass, 'console') }, 'Site key locked with the console\'s website pass (staff page)', e.target))) return;
@@ -202,7 +224,7 @@ $('link-console').addEventListener('click', async e => {
   const qr = qrcode(0, 'M'); qr.addData('RL:WEB:' + pass); qr.make(); $('link-qr').innerHTML = qr.createSvgTag({ cellSize: 8, margin: 4, scalable: true });
   $('share-why').textContent = 'Saved. Now show this code to the console\'s scanner and type the staff PIN there.';
 });
-$('connect-forget').addEventListener('click', () => { keep.set('rl-key', null); $('connect').hidden = true; status.textContent = 'The key was removed from this device.'; dispatchEvent(new Event('rl-key-changed')); });
+$('connect-forget').addEventListener('click', () => { keep.set('rl-key', null); keep.set('rl-role', null); $('connect').hidden = true; status.textContent = 'The key was removed from this device.'; dispatchEvent(new Event('rl-key-changed')); });
 
 // The newest copy of a file: straight from the repository when it answers (the public pages lag about a minute behind
 // a save), otherwise the public copy.
@@ -937,7 +959,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   try { const done = sessionStorage.getItem('rl-done'); if (done) { sessionStorage.removeItem('rl-done'); $('home-done').textContent = done; $('home-done').hidden = false; } const ack = sessionStorage.getItem('rl-ack'); if (ack !== null) { sessionStorage.removeItem('rl-ack'); if (ack === 'RESEND') showAck('RL:RESEND', 'Does the console still hold changes?', 'The website is reset. To put the console\'s changes back on it, show the console this code and type the PIN, then scan the code it shows. To clear the console too, use Start over there.'); else ackGot(ack); } } catch (err) { }
   $('web-reset-word').addEventListener('input', e => { $('web-reset').disabled = e.target.value.trim().toUpperCase() !== 'START OVER'; });
   $('web-reset').addEventListener('click', async e => {
-    if ($('web-reset-word').value.trim().toUpperCase() !== 'START OVER') return;
+    if ($('web-reset-word').value.trim().toUpperCase() !== 'START OVER' || !isManager()) return;
     if (!confirm('Put the website back to the Nov 16 setup? This removes every change and edit made since then.')) return;
     const [d, r] = await Promise.all([fetch('backup/2026-11-16/data.json?x=' + Date.now()).then(x => x.json()), fetch('backup/2026-11-16/room.json?x=' + Date.now()).then(x => x.json())]);
     const p = await readPending().catch(() => cleanPend(null)), at = stamp();
@@ -1014,8 +1036,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     $('device').hidden = !keep.get('rl-key');
   };
   drawHomeStatus();
-  $('home-key-set').addEventListener('click', () => { if (keep.get('rl-key')) { keep.set('rl-key', null); drawHomeStatus(); } else askForKey('Type the staff passcode and this device can save.'); });
-  $('device-signout').addEventListener('click', () => { keep.set('rl-key', null); drawHomeStatus(); status.textContent = 'This device is signed out.'; });
+  $('home-key-set').addEventListener('click', () => { if (keep.get('rl-key')) { keep.set('rl-key', null); keep.set('rl-role', null); drawHomeStatus(); } else askForKey('Type the staff passcode and this device can save.'); });
+  $('device-signout').addEventListener('click', () => { keep.set('rl-key', null); keep.set('rl-role', null); drawRole(); drawHomeStatus(); status.textContent = 'This device is signed out.'; });
   addEventListener('rl-key-changed', drawHomeStatus);
   // ---- "Check everything": one button that looks at each link in the chain and says in plain words what is fine and
   // what is not. It only reads; the one thing it can change (renewing the locked copies of the key) has its own button.
@@ -1084,6 +1106,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   }
   $('health-go').addEventListener('click', () => checkEverything().catch(e => { line('bad', 'The check itself stopped: ' + e.message); $('health-go').disabled = false; $('health-go').textContent = 'Check again'; }));
   $('health-renew').addEventListener('click', async e => {
+    if (!isManager()) { status.textContent = 'Only a Lending manager can renew the console\'s link.'; return; }
     const cpass = keep.get('rl-cpass'); if (!cpass || !keep.get('rl-key')) return;
     if (await publish({ 'key.json': await lockKey(cpass, 'console') }, 'Console link renewed with the current site key (staff page)', e.target)) { status.textContent = 'The console\'s link was renewed. Phones that scan its codes can save again in about a minute.'; e.target.hidden = true; }
   });
