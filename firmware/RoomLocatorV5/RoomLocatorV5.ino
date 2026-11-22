@@ -204,7 +204,7 @@ MCUFRIEND_kbv tft;
 Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 // the screens (stored in a byte so the Arduino prototype maker is happy)
-enum { HOME, TYPES, KINDS, RESULTS, SHELF, ITEM, PUTAWAY, MAP, UNITVIEW, ACTIONS, MOVEOK, PIN, ADDNEW, RECENT, SYNC, RESETASK, STICKER };
+enum { HOME, TYPES, KINDS, RESULTS, SHELF, ITEM, PUTAWAY, MAP, UNITVIEW, ACTIONS, MOVEOK, PIN, ADDNEW, RECENT, SYNC, RESETASK, STICKER, IDEAS };
 byte mode = HOME;                               // which screen is showing
 const byte BACK_MAX = 10;
 byte backTo[BACK_MAX], backCursor[BACK_MAX], backStage[BACK_MAX], backView[BACK_MAX]; byte backDepth = 0;     // where Back returns to
@@ -274,6 +274,7 @@ bool homeMessage = false;                        // a message is on the screen i
 // a new item from the phone (RL:ADD), set up in 3 steps
 byte addStep = 1, addCat = 0, addUnit = 0, addShelf = 0, addCopies = 1;
 char addName[40], addType[28], addCode[40], addProblem[48];   // (the sticker screen uses addCode and addProblem too: the two never run at once)
+byte ideaU[5], ideaA[5], ideaB[5], ideaN[5], ideaKind[5], ideaCount = 0;   // shelf ideas: unit, the two shelves (or the shelf and the groove), things, 0 share / 1 split
 byte stickerAsk = 0, stickerDone = 0;              // the sticker screen: 0 the list, 1 add, 2 move from another item, 3 take off; what was just saved
 long stickerOther = -1;                          // the item a scanned sticker is on now
 long addedFrom = 0;                             // where the original KINDS.TSV ends: items added at the console come after this
@@ -496,6 +497,7 @@ const unsigned long SLEEP_MS = 300000UL;
 bool asleep = false; byte sleepStep = 0; unsigned long sleepAt = 0;
 byte sleepTaps = 0;
 unsigned long lastSleepTap = 0;
+void drawIdeas(); void findIdeas(); void openIdea();   // (shelf ideas, v5.50)
 void drawStickers(); void stickerScanned(char* t); void saveSticker(); void openStickers(); bool copyFile(const char* from, const char* to, long upTo);   // (the sticker screen, v5.50)
 void draw(); void lightsOff(); bool drawQRText(int x, int y, const char* url); byte firstVisibleRow(); void blinkDot(byte slot, bool lit);   // (written further down)
 const int SLEEP_MID = 318, SLEEP_X = SLEEP_MID - SLEEP_W, SLEEP_Y = 150 - SLEEP_H;   // drawn double size, right of the website's code
@@ -1040,7 +1042,7 @@ enum { A_OPEN, A_MOVEALL, A_REMOVE, A_TOGETHER, A_SWAP };        // the choices 
 // rows on the side view of a unit: n = board n, 100 + n = empty groove n, 0 = "swap this whole unit"
 const byte ROW_SWAP_UNIT = 0, ROW_GROOVE = 100;
 // the last three spots on the map are not units
-const byte ROW_RESET = 250, ROW_PHONE = 251, ROW_RECENT = 252, ROW_SYNC = 253, ROW_PIN = 254;
+const byte ROW_IDEAS = 249, ROW_RESET = 250, ROW_PHONE = 251, ROW_RECENT = 252, ROW_SYNC = 253, ROW_PIN = 254;   // (ROW_IDEAS: shelf ideas, v5.50)
 const char BACKUP_NAME[] PROGMEM = "Nov 16 setup";   // what "Start over" goes back to: the files the laptop last sent, with no changes
 const long ROW_UNDO = -1;                        // the first row of Recent changes
 long undoArmed = -2;                             // the change (its place in MOVES.TSV) that the next Select would take back. -2 = none
@@ -1057,7 +1059,7 @@ void loadMapUnits() {
   rowCount = 0;
   if (stage == ST_FROM) row[rowCount++] = ROW_PHONE;
   for (byte u = 0; u < unitTotal && rowCount < MAX_ROWS; u++) if (mapListed(u)) row[rowCount++] = u;
-  if (stage == ST_FROM && rowCount + 4 <= MAX_ROWS) { row[rowCount++] = ROW_RECENT; row[rowCount++] = ROW_SYNC; row[rowCount++] = ROW_PIN; row[rowCount++] = ROW_RESET; }
+  if (stage == ST_FROM && rowCount + 5 <= MAX_ROWS) { row[rowCount++] = ROW_IDEAS; row[rowCount++] = ROW_RECENT; row[rowCount++] = ROW_SYNC; row[rowCount++] = ROW_PIN; row[rowCount++] = ROW_RESET; }
 }
 void countThings(byte u) {                       // how many kinds sit on each shelf of unit u
   memset(thingCount, 0, sizeof(thingCount));
@@ -1077,13 +1079,14 @@ void loadActions() {
 }
 // the lights while choosing: green = what is being moved, blue = where the cursor is, orange = an empty groove
 void preview() {
+  if (mode == IDEAS) { strip.clear(); if (rowCount) { byte i = cursor; addSpace(ideaU[i], ideaA[i], LIGHT_ITEM); if (!ideaKind[i]) addSpace(ideaU[i], ideaB[i], LIGHT_NEW_SPOT); } strip.show(); return; }
   if (mode != MAP && mode != UNITVIEW && mode != ACTIONS) return;
   strip.clear();
   bool moving = stage == ST_TO;
   if (moving && moveWhat == W_SHELF) addSpace(fromUnit, fromLo, LIGHT_ITEM);
   if (moving && moveWhat == W_UNIT) addLights(unitFirst[fromUnit], unitCount[fromUnit], LIGHT_ITEM);
   if (moving && moveWhat == W_ITEM) { loadKind(currentKind); addPlace(field[K_UNIT], atoi(field[K_SHELF]), LIGHT_ITEM); }
-  if (mode == MAP && rowCount && row[cursor] < ROW_RESET) { byte u = row[cursor]; addLights(unitFirst[u], unitCount[u], moving ? LIGHT_NEW_SPOT : LIGHT_UNIT); }
+  if (mode == MAP && rowCount && row[cursor] < ROW_IDEAS) { byte u = row[cursor]; addLights(unitFirst[u], unitCount[u], moving ? LIGHT_NEW_SPOT : LIGHT_UNIT); }
   if (mode == UNITVIEW && rowCount) {
     byte r = row[cursor];
     if (r == ROW_SWAP_UNIT) addLights(unitFirst[viewUnit], unitCount[viewUnit], LIGHT_UNIT);
@@ -1101,6 +1104,7 @@ void reload() {                                 // rebuild the list for the scre
   else if (mode == PUTAWAY) rowCount = listCount;
   else if (mode == MAP) loadMapUnits();
   else if (mode == RECENT) loadRecent();
+  else if (mode == IDEAS) { findIdeas(); rowCount = ideaCount; }
   else if (mode == SYNC) syncPages = countSyncPages();
   else if (mode == UNITVIEW) { countThings(viewUnit); loadUnitRows(); }
   else if (mode == ACTIONS) { countThings(stage == ST_FROM ? fromUnit : moveToUnit); loadActions(); }
@@ -1364,7 +1368,7 @@ void drawMapBody(int was = -1) {                 // was = the row the cursor jus
   const uint16_t WOOD = RGB(205, 178, 130), OFF = RGB(80, 86, 100);
   int h = -1;                                                              // the unit shown green: where the thing being moved is now
   if (stage == ST_TO) { h = fromUnit; if (moveWhat == W_ITEM) { loadKind(currentKind); h = findUnit(field[K_UNIT]); } }
-  bool quick = was >= 0 && was < rowCount && row[was] < ROW_RESET && rowCount && row[cursor] < ROW_RESET;
+  bool quick = was >= 0 && was < rowCount && row[was] < ROW_IDEAS && rowCount && row[cursor] < ROW_IDEAS;
   for (byte u = 0; u < unitTotal; u++) {
     if (quick && u != row[was] && !(u > row[was] && boxesTouch(u, row[was]))) continue;
     if (!quick && u == 0) tft.fillRect(MAP_X, MAP_Y, 288, 216, RGB(36, 52, 98));   // the blue floor, 400 x 300 mm
@@ -1386,10 +1390,11 @@ void drawMapBody(int was = -1) {                 // was = the row the cursor jus
     textF(316, 196, F("Down or Select:"), WHITE, SMALL); textF(316, 220, F("change things"), DIM, SMALL);
     return;
   }
-  if (u >= ROW_RECENT || u == ROW_RESET) {                      // the last spots are not units: a card over the map says what Select does
+  if (u >= ROW_RECENT || u == ROW_RESET || u == ROW_IDEAS) {                      // the last spots are not units: a card over the map says what Select does
     tft.fillRect(MAP_X, MAP_Y, 288, 216, PANEL);
     const __FlashStringHelper *title, *l1, *l2, *l3;
-    if (u == ROW_RECENT) { title = F("Recent changes"); l1 = F("Every change made here,"); l2 = F("newest first."); l3 = F("Undo any of them here."); }
+    if (u == ROW_IDEAS) { title = F("Shelf ideas"); l1 = F("Shelves that could share"); l2 = F("a board, or need one back."); l3 = F("Nothing changes by itself."); }
+    else if (u == ROW_RECENT) { title = F("Recent changes"); l1 = F("Every change made here,"); l2 = F("newest first."); l3 = F("Undo any of them here."); }
     else if (u == ROW_RESET) { title = F("Start over"); l1 = F("Takes back every change"); l2 = F("and every item added here."); l3 = F("Back to the Nov 16 setup."); }
     else if (u == ROW_SYNC) { title = F("Send to website"); l1 = F("Shows the changes as QR"); l2 = F("codes. Scan them on the"); l3 = F("website's staff page."); }
     else { title = F("Change staff PIN"); l1 = F("Pick a new 4-digit PIN."); l2 = F("It is asked before every"); l3 = F("change to the room."); }
@@ -1400,7 +1405,7 @@ void drawMapBody(int was = -1) {                 // was = the row the cursor jus
       text(MAP_X + 16, MAP_Y + 176, buf, ACCENT, SMALL, 260);
     }
     textF(MAP_X + 16, MAP_Y + 86, l1, DIM, SMALL); textF(MAP_X + 16, MAP_Y + 110, l2, DIM, SMALL); textF(MAP_X + 16, MAP_Y + 134, l3, DIM, SMALL);
-    textF(316, 72, F("Select:"), WHITE, BOLD); textF(316, 96, u == ROW_RECENT ? F("see the list") : u == ROW_SYNC ? F("show the codes") : u == ROW_RESET ? F("asks for the PIN") : F("set a new PIN"), DIM, SMALL);
+    textF(316, 72, F("Select:"), WHITE, BOLD); textF(316, 96, u == ROW_IDEAS ? F("see the ideas") : u == ROW_RECENT ? F("see the list") : u == ROW_SYNC ? F("show the codes") : u == ROW_RESET ? F("asks for the PIN") : F("set a new PIN"), DIM, SMALL);
     return;
   }
   mapBox(u, ACCENT, WHITE);
@@ -1587,6 +1592,7 @@ void draw() {
   else if (mode == PIN) drawPin();
   else if (mode == ADDNEW) drawAddNew();
   else if (mode == STICKER) drawStickers();
+  else if (mode == IDEAS) drawIdeas();
   else if (mode == SYNC) drawSync();
   else drawList();
   if (queryLen) drawTyping();
@@ -1651,9 +1657,10 @@ void startOrganize() {
 }
 void pickedUnit(byte u) {                       // Select on the map
   if (u == ROW_PHONE) {
-    if (rowCount > 1 && row[1] < ROW_RESET) { cursor = 1; drawMapBody(); preview(); }
+    if (rowCount > 1 && row[1] < ROW_IDEAS) { cursor = 1; drawMapBody(); preview(); }
     return;
   }
+  if (u == ROW_IDEAS) { header("Shelf ideas", NULL); textF(18, 90, F("Looking at every shelf..."), WHITE, SMALL); findIdeas(); go(IDEAS); rowCount = ideaCount; draw(); preview(); return; }
   if (u == ROW_RECENT) { go(RECENT); loadRecent(); draw(); lightsOff(); return; }
   if (u == ROW_SYNC) { go(SYNC); syncPage = 0; syncPages = countSyncPages(); draw(); lightsOff(); return; }
   if (u == ROW_PIN) { askPin(AFTER_NEWPIN); return; }
@@ -2154,6 +2161,63 @@ void saveSticker() {
   draw();
 }
 
+// ---- shelf ideas (v5.50): staff mode, between the units and Recent changes. The console counts what is on every shelf
+// and suggests up to five changes: two neighbouring shelves that hold three things or fewer between them could share one
+// space (take the board between them out), and a tall shelf with eight things or more could get its board back. It never
+// changes anything itself: Select opens that unit, where the usual steps do it.
+void findIdeas() {
+  byte n[MAX_UNITS][17]; memset(n, 0, sizeof(n));               // things on each shelf, by the board they sit on
+  long pos = 0, next;
+  while ((next = readLine(kindsFile, pos)) >= 0) { int u = findUnit(field[K_UNIT]); if (u >= 0 && unitCount[u]) { byte lo = spaceLo(u, atoi(field[K_SHELF])); if (lo >= 1 && lo <= 16 && n[u][lo] < 255) n[u][lo]++; } pos = next; }
+  ideaCount = 0;
+  byte score[5];
+  for (byte u = 0; u < unitTotal; u++) {
+    if (unitCount[u] < 2 || unitCount[u] > 16) continue;
+    bool peg = strcasecmp_P(unitCode[u], PSTR("CBL")) == 0;        // the Cables pegboard (shelf 4) has no board to take out
+    for (byte lo = 1; lo <= unitCount[u]; ) {
+      byte hi = spaceHi(u, lo), up = hi + 1, kind = 255, a = lo, b = 0, things = 0, sc = 0;
+      if (hi > lo && n[u][lo] >= 8) { kind = 1; b = lo + (hi - lo + 1) / 2; things = n[u][lo]; sc = 0; }                              // crowded and tall: put a board back
+      else if (up <= unitCount[u] && !(peg && up >= 4)) { byte t = n[u][lo] + n[u][up]; if (t <= 3) { kind = 0; b = up; things = t; sc = t ? t : 4; } }   // two quiet neighbours: share
+      if (kind != 255) {
+        byte at = ideaCount < 5 ? ideaCount : 5;
+        while (at > 0 && score[at - 1] > sc) at--;
+        if (at < 5) {
+          for (byte j = (ideaCount < 5 ? ideaCount : 4); j > at; j--) { ideaU[j] = ideaU[j - 1]; ideaA[j] = ideaA[j - 1]; ideaB[j] = ideaB[j - 1]; ideaN[j] = ideaN[j - 1]; ideaKind[j] = ideaKind[j - 1]; score[j] = score[j - 1]; }
+          ideaU[at] = u; ideaA[at] = a; ideaB[at] = b; ideaN[at] = things; ideaKind[at] = kind; score[at] = sc;
+          if (ideaCount < 5) ideaCount++;
+        }
+      }
+      lo = hi + 1;
+    }
+  }
+}
+void drawIdeas() {
+  header("Shelf ideas", NULL);
+  if (!ideaCount) { textF(18, 90, F("Every shelf looks fine."), WHITE, BOLD); textF(18, 116, F("Nothing to change right now."), DIM, SMALL); footer(F("Back")); return; }
+  char buf[64];
+  for (byte i = 0; i < ideaCount; i++) {
+    int y = 46 + i * 49; bool on = i == cursor;
+    tft.fillRect(10, y, 460, 45, on ? PICKED : PANEL); if (on) tft.fillRect(10, y, 5, 45, ACCENT);
+    if (ideaKind[i]) snprintf_P(buf, sizeof(buf), PSTR("%s, shelf %d (tall)"), unitName[ideaU[i]], ideaA[i]);
+    else snprintf_P(buf, sizeof(buf), PSTR("%s, shelves %d and %d"), unitName[ideaU[i]], ideaA[i], ideaB[i]);
+    text(24, y + 19, buf, WHITE, BOLD, 440);
+    if (ideaKind[i]) snprintf_P(buf, sizeof(buf), PSTR("%d things crowded. Put board %d back?"), ideaN[i], ideaB[i]);
+    else if (ideaN[i] == 1) snprintf_P(buf, sizeof(buf), PSTR("1 thing on both. Take board %d out?"), ideaB[i]);
+    else if (ideaN[i]) snprintf_P(buf, sizeof(buf), PSTR("%d things on both. Take board %d out?"), ideaN[i], ideaB[i]);
+    else snprintf_P(buf, sizeof(buf), PSTR("Both empty. Take board %d out for something tall?"), ideaB[i]);
+    text(24, y + 38, buf, DIM, SMALL, 440);
+  }
+  footer(F("Select: open that unit to do it     Back"));
+}
+void openIdea() {                                // the unit's side view, on the board to take out or the groove to fill
+  byte i = cursor; if (i >= ideaCount) return;
+  stage = ST_FROM; moveWhat = W_ITEM;
+  openUnit(ideaU[i]);
+  byte want = ideaKind[i] ? ROW_GROOVE + ideaB[i] : ideaB[i];
+  for (byte r = 0; r < rowCount; r++) if (row[r] == want) cursor = r;
+  draw(); preview();
+}
+
 // ============================== Recent changes, Undo, and the website QR pages ==============================
 // every change is one line of MOVES.TSV (see the top). Recent changes lists them newest first; Undo takes the last line back.
 long lastLine(long* before) {                    // where the last line of MOVES.TSV starts (-1 = empty); *before = the one before it
@@ -2429,6 +2493,11 @@ void pressed(byte b) {                          // Up, Down, Select or Back, fro
     return;
   }   // Down: move it, Up: its stickers (staff PIN first)
   if (mode == MOVEOK) { if (b == B_SELECT) { if (atMoveTarget()) back(); else doMove(); } return; }
+  if (mode == IDEAS) {
+    if (!rowCount) return;
+    if (b == B_UP && cursor > 0) cursor--; else if (b == B_DOWN && cursor + 1 < rowCount) cursor++; else if (b == B_SELECT) { openIdea(); return; } else return;
+    draw(); preview(); return;
+  }
   if (rowCount == 0) return;
   if (b == B_UP || b == B_DOWN) { moveCursor(b); return; }
   if (mode == TYPES) { currentType = row[cursor]; go(KINDS); loadKinds(); draw(); }
@@ -2683,7 +2752,7 @@ void readLaptop() {                              // a line of text from the Seri
       Serial.print(F(" web=")); Serial.print(webPass[0] ? F("linked") : F("no"));
       Serial.print(F(" staff=")); Serial.print(staffOK() ? F("open") : F("locked"));
       Serial.print(F(" asleep=")); Serial.print(asleep ? 1 : 0);
-      if (mode == MAP && rowCount) Serial.print(row[cursor] == ROW_PHONE ? F(" map=staff-qr") : row[cursor] < ROW_RESET ? F(" map=unit") : F(" map=action"));
+      if (mode == MAP && rowCount) Serial.print(row[cursor] == ROW_PHONE ? F(" map=staff-qr") : row[cursor] < ROW_IDEAS ? F(" map=unit") : F(" map=action"));
       Serial.print(F(" screen=")); Serial.println(mode); continue;
     }
     if (buf[0] == '@') { Serial.print(F("@ROOMLOCATOR ")); Serial.println((const __FlashStringHelper*)VERSION); continue; }

@@ -122,3 +122,10 @@
 .staff-main label.room3d-moved { display: flex; flex-direction: row; font-weight: 400; }
 .danger-zone summary { color: #6d6e71; font-size: 14px; }
 #web-reset:disabled { opacity: .45; cursor: not-allowed; }
+.manual-links { list-style: none; padding: 0; margin: 8px 0 16px; }
+.manual-links li { padding: 7px 0; }
+.manual-links a { font-weight: 700; }
+.manual-version { font-size: 11px; color: #6d6e71; margin-left: 4px; }
+.print-steps { padding-left: 20px; margin: 6px 0 4px; font-size: 14px; line-height: 1.45; }
+.print-steps li { margin: 4px 0; }
+#manuals h2 { font-size: 17px; margin: 10px 0 0; }
