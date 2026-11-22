@@ -146,7 +146,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.49";
+const char VERSION[] PROGMEM = "5.50";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -174,18 +174,20 @@ const char STAFF_URL[] PROGMEM = "https://olivedevs.github.io/room-locator/staff
 const uint16_t BG = RGB(0, 0, 0), PANEL = RGB(40, 40, 42), PICKED = RGB(74, 74, 78), WHITE = 0xFFFF,
                DIM = RGB(176, 177, 180), ACCENT = RGB(253, 181, 21), BLACK = 0x0000, GREEN = RGB(0, 150, 71),
                CMU_RED = RGB(196, 18, 48);
-//                             Highlands Sky Blue  Green Thread       Gold Thread         Steel Gray
-const uint16_t CAT_COLOR[8] = {RGB(0, 123, 192),   RGB(0, 150, 71),   RGB(253, 181, 21),  RGB(224, 224, 224),
-//                             Scots Rose          Machinery Hall Tan  Iron Gray           Teal Thread
-                               RGB(239, 58, 71),   RGB(188, 180, 158), RGB(109, 110, 113), RGB(0, 143, 145)};
+// v5.50: every category has its own colour, and the screen shows the same colour its shelf lights in (before, Computing
+// and Tools both lit white and Soft Tech showed tan but lit orange)
+//                             blue                green              yellow              pink
+const uint16_t CAT_COLOR[8] = {RGB(0, 123, 192),   RGB(0, 150, 71),   RGB(253, 181, 21),  RGB(236, 64, 150),
+//                             red                 purple              orange              teal
+                               RGB(239, 58, 71),   RGB(140, 82, 230),  RGB(245, 110, 20),  RGB(0, 143, 145)};
 const char CAT_NAME[8][12] PROGMEM = {"Photo/Video", "Audio", "Lighting", "Computing", "VR", "Soft Tech", "Tools", "Cables"};
 
 // light colours (0xRRGGBB)
 const uint32_t LIGHT_ITEM = 0x00FF00;          // where a thing is now, on the move screens (old spot green, new spot blue)
 // On an item's own screen the shelf lights in its category's colour, the same colour as the category's picture on Home
 // and the box on the screen (v5.22). Bright, plain colours, because the lights cannot show soft ones.
-const uint32_t CAT_LIGHT[8] PROGMEM = {0x0050FF, 0x00FF00, 0xFFB000, 0xFFFFFF, 0xFF1030, 0xFF5000, 0xFFFFFF, 0x00E0A0};
-const char CAT_LIGHT_NAME[8][11] PROGMEM = {"blue", "green", "yellow", "white", "red", "orange", "white", "teal"};   // (a light cannot show grey or tan: the two greys light white, tan lights orange)
+const uint32_t CAT_LIGHT[8] PROGMEM = {0x0050FF, 0x00FF00, 0xFFB000, 0xFF0090, 0xFF0000, 0x7000FF, 0xFF3C00, 0x00E0A0};
+const char CAT_LIGHT_NAME[8][11] PROGMEM = {"blue", "green", "yellow", "pink", "red", "purple", "orange", "teal"};
 #define itemLight(cat) ((uint32_t)pgm_read_dword(&CAT_LIGHT[(cat) & 7]))   // (not a function: the Arduino builder puts its list of functions before the first one, and it must stay below the type definitions)
 const uint32_t LIGHT_SHELF = 0xFFFFFF;         // a scanned shelf label
 const uint32_t LIGHT_NEW_SPOT = 0x0050FF;      // where a moved item will go
@@ -202,7 +204,7 @@ MCUFRIEND_kbv tft;
 Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 // the screens (stored in a byte so the Arduino prototype maker is happy)
-enum { HOME, TYPES, KINDS, RESULTS, SHELF, ITEM, PUTAWAY, MAP, UNITVIEW, ACTIONS, MOVEOK, PIN, ADDNEW, RECENT, SYNC, RESETASK };
+enum { HOME, TYPES, KINDS, RESULTS, SHELF, ITEM, PUTAWAY, MAP, UNITVIEW, ACTIONS, MOVEOK, PIN, ADDNEW, RECENT, SYNC, RESETASK, STICKER };
 byte mode = HOME;                               // which screen is showing
 const byte BACK_MAX = 10;
 byte backTo[BACK_MAX], backCursor[BACK_MAX], backStage[BACK_MAX], backView[BACK_MAX]; byte backDepth = 0;     // where Back returns to
@@ -254,7 +256,7 @@ uint32_t staffHash = 0;                          // the staff PIN, scrambled (v5
 // in the file to come after the type definitions.)
 unsigned long staffUntil = 0;
 enum { P_ENTER, P_NEW1, P_NEW2 };               // typing the PIN / a new PIN / the new PIN again
-enum { AFTER_ORGANIZE, AFTER_MOVE, AFTER_CODE, AFTER_DOMOVE, AFTER_NEWPIN, AFTER_RESET, AFTER_UNDO, AFTER_NOTHING };   // what happens once the PIN is right
+enum { AFTER_ORGANIZE, AFTER_MOVE, AFTER_CODE, AFTER_DOMOVE, AFTER_NEWPIN, AFTER_RESET, AFTER_UNDO, AFTER_NOTHING, AFTER_STICKER };   // what happens once the PIN is right
 byte pinStep = P_ENTER, pinAfter = AFTER_NOTHING, pinLen = 0, pinDigit = 0;
 char pinIn[5], pinNew[5];
 bool pinWrong = false, pinMismatch = false;
@@ -271,7 +273,9 @@ bool offerSync = false;                          // the screen says "Select = up
 bool homeMessage = false;                        // a message is on the screen in place of Home: the next button just shows Home
 // a new item from the phone (RL:ADD), set up in 3 steps
 byte addStep = 1, addCat = 0, addUnit = 0, addShelf = 0, addCopies = 1;
-char addName[40], addType[28], addCode[40], addProblem[48];
+char addName[40], addType[28], addCode[40], addProblem[48];   // (the sticker screen uses addCode and addProblem too: the two never run at once)
+byte stickerAsk = 0, stickerDone = 0;              // the sticker screen: 0 the list, 1 add, 2 move from another item, 3 take off; what was just saved
+long stickerOther = -1;                          // the item a scanned sticker is on now
 long addedFrom = 0;                             // where the original KINDS.TSV ends: items added at the console come after this
 struct Change { char type; byte a[6]; };        // one line of MOVES.TSV kept in memory: type 'I' (a thing), 'S' or 'X' (see the top)
 Change changes[MAX_MOVES]; byte moveTotal = 0;
@@ -492,6 +496,7 @@ const unsigned long SLEEP_MS = 300000UL;
 bool asleep = false; byte sleepStep = 0; unsigned long sleepAt = 0;
 byte sleepTaps = 0;
 unsigned long lastSleepTap = 0;
+void drawStickers(); void stickerScanned(char* t); void saveSticker(); void openStickers(); bool copyFile(const char* from, const char* to, long upTo);   // (the sticker screen, v5.50)
 void draw(); void lightsOff(); bool drawQRText(int x, int y, const char* url); byte firstVisibleRow(); void blinkDot(byte slot, bool lit);   // (written further down)
 const int SLEEP_MID = 318, SLEEP_X = SLEEP_MID - SLEEP_W, SLEEP_Y = 150 - SLEEP_H;   // drawn double size, right of the website's code
 void drawSleepingLoki() {
@@ -1306,7 +1311,7 @@ void drawItem() {
   char buf[64];
   const int LEFT_W = 286;                                         // the left column; the QR takes the right
   tft.fillScreen(BG);
-  uint16_t onCat = cat == 6 ? WHITE : BLACK;                      // black words on the colour, white on Iron Gray
+  uint16_t onCat = cat == 5 ? WHITE : BLACK;                      // black words on the colour, white on purple
   tft.fillRect(0, 0, 480, 37, CAT_COLOR[cat]);                    // the banner is the colour the shelf lights in (v5.25)
   char catName[12]; strcpy_P(catName, CAT_NAME[cat]);
   snprintf_P(buf, sizeof(buf), PSTR("%s  -  %s"), catName, field[K_TYPE]);
@@ -1337,6 +1342,7 @@ void drawItem() {
   if (justCounted) { if (justCounted == 2) footer(F("It already says that. Nothing was changed.")); else doneBar(F("Count changed.   Select = update the website")); offerSync = justCounted == 1; justCounted = 0; }
   else if (justMoved) { justMoved = false; doneBar(F("Moved and saved.   Select = update the website")); offerSync = true; }
   else if (justAdded) { justAdded = false; footer(F("Added. It is saved on the card.")); }
+  else if (staffOK()) footer(itemWasScanned ? F("Down: move   Up: its stickers   Scan more: a list") : F("Down: move it     Up: its stickers"));
   else footer(itemWasScanned ? F("Down: move it     Scan more: a list") : F("Down: move it     Back"));
 }
 
@@ -1542,7 +1548,7 @@ void drawAddNew() {
     textF(14, 106, F("that is on the new item."), WHITE, BOLD);
     if (addProblem[0]) text(14, 160, addProblem, RGB(255, 110, 100), SMALL, 452);
     else if (addCode[0]) { tft.fillRect(14, 140, 452, 44, GREEN); snprintf_P(buf, sizeof(buf), PSTR("Got: %s"), addCode); text(26, 168, buf, BLACK, BOLD, 428); }
-    else textF(14, 160, F("No sticker yet? Select skips this step."), DIM, SMALL);
+    else { textF(14, 160, F("No sticker yet? Select skips this step."), DIM, SMALL); textF(14, 184, F("Add it later: open the item, then Up."), DIM, SMALL); }
     footer(F("Select = next      Back"));
   } else {
     placeText(buf, sizeof(buf), addUnit, addShelf);
@@ -1580,6 +1586,7 @@ void draw() {
   else if (mode == MAP) drawMap();
   else if (mode == PIN) drawPin();
   else if (mode == ADDNEW) drawAddNew();
+  else if (mode == STICKER) drawStickers();
   else if (mode == SYNC) drawSync();
   else drawList();
   if (queryLen) drawTyping();
@@ -1762,6 +1769,7 @@ void pinDone() {                                 // 4 digits are in
     popScreen();
     if (pinAfter == AFTER_ORGANIZE) startOrganize();
     else if (pinAfter == AFTER_MOVE) startMove();
+    else if (pinAfter == AFTER_STICKER) openStickers();
     else if (pinAfter == AFTER_CODE) { pendingInScan = false; scanInUse = true; runCode(scanBuf); scanInUse = false; }
     else if (pinAfter == AFTER_DOMOVE) doMove();
     else draw();
@@ -2083,6 +2091,69 @@ void saveNewItem() {                             // adds one line to the end of 
 }
 
 
+// ---- an item's stickers (v5.50): staff open an item, press Up, and scan. A new sticker goes on this item; one that is on
+// another item moves here (it asks first); one this item already has comes off (it asks first). Each copy of a thing can
+// have its own sticker, so a thing can have several. CODES.TSV is written again without the sticker, then gets it back.
+void openStickers() { stickerAsk = 0; stickerDone = 0; addCode[0] = '\0'; addProblem[0] = '\0'; go(STICKER); draw(); }
+void drawStickers() {
+  loadKind(currentKind);
+  header("Its stickers", NULL);
+  text(14, 66, field[K_NAME], WHITE, BOLD, 452);
+  char buf[64];
+  if (stickerAsk) {
+    tft.fillRect(14, 86, 452, 44, PANEL); text(26, 114, addCode, WHITE, BOLD, 428);
+    if (stickerAsk == 1) { textF(14, 162, F("Put this sticker on it?"), WHITE, BOLD); textF(14, 186, F("Scanning it will open this item."), DIM, SMALL); }
+    else if (stickerAsk == 2) { loadKind(stickerOther); textF(14, 162, F("This sticker is on another item now:"), WHITE, BOLD); text(14, 186, field[K_NAME], ACCENT, SMALL, 452); textF(14, 210, F("Move it to this one?"), WHITE, SMALL); }
+    else { textF(14, 162, F("Take this sticker off it?"), WHITE, BOLD); textF(14, 186, F("Scanning it will find nothing after that."), DIM, SMALL); }
+    footer(F("Select = yes      Back = no"));
+    return;
+  }
+  File f = cardOpen("CODES.TSV"); long pos = 0, next; int n = 0;
+  while (f && (next = readLine(f, pos)) >= 0) { if (atol(field[1]) == currentKind) { if (n < 4) text(14, 102 + n * 22, field[0], DIM, SMALL, 452); n++; } pos = next; }
+  if (f) f.close();
+  int y = 102 + (n < 4 ? n : 4) * 22;
+  if (n > 4) { snprintf_P(buf, sizeof(buf), PSTR("and %d more"), n - 4); text(14, y, buf, DIM, SMALL); y += 22; }
+  if (!n) { textF(14, y, F("No stickers yet."), DIM, SMALL); y += 22; }
+  y += 18;
+  if (addProblem[0]) { text(14, y, addProblem, RGB(255, 110, 100), SMALL, 452); y += 30; }
+  textF(14, y, F("Scan a sticker to put it on this item."), WHITE, BOLD);
+  textF(14, y + 26, F("Scan one it has already to take it off."), DIM, SMALL);
+  if (stickerDone) doneBar(stickerDone == 1 ? F("Sticker added. Saved on the card.") : stickerDone == 2 ? F("Sticker moved here. Saved on the card.") : F("Sticker taken off. Saved on the card."));
+  else footer(F("Back = done"));
+  stickerDone = 0;
+}
+void stickerScanned(char* t) {
+  stickerDone = 0; addProblem[0] = '\0';
+  if (strncasecmp_P(t, PSTR("RL:"), 3) == 0 || strncasecmp_P(t, PSTR("LOC:"), 4) == 0 || strchr(t, '\t')) { strcpy_P(addProblem, PSTR("That is a console code, not a sticker.")); stickerAsk = 0; draw(); return; }
+  if (strlen(t) >= sizeof(addCode)) { strcpy_P(addProblem, PSTR("That code is too long for a sticker.")); stickerAsk = 0; draw(); return; }
+  copyText(addCode, t, sizeof(addCode));
+  stickerOther = findCode(addCode);
+  stickerAsk = stickerOther < 0 ? 1 : stickerOther == currentKind ? 3 : 2;
+  draw();
+}
+void saveSticker() {
+  if (!staffOK()) { askPin(AFTER_STICKER); return; }
+  File c = cardOpen("CODES.TSV"); cardRemove("CUT.TMP"); File o = cardOpen("CUT.TMP", FILE_WRITE);
+  long pos = 0, next, kept = 0; byte last = '\n'; bool ok = o;
+  while (ok && c && (next = readLine(c, pos)) >= 0) {             // every sticker but this one, as it was
+    if (strcasecmp(field[0], addCode) != 0) { c.seek(pos); for (long i = pos; i < next; i++) { last = c.read(); o.write(last); kept++; } }
+    pos = next;
+  }
+  if (c) c.close();
+  if (ok && stickerAsk != 3) {                                     // then this one, on this item
+    if (last != '\n') { o.write((byte)'\n'); kept++; }
+    char buf[56]; snprintf_P(buf, sizeof(buf), PSTR("%s\t%ld\n"), addCode, currentKind);
+    for (char* q = buf; *q; q++) { o.write((byte)*q); kept++; }
+  }
+  if (o) o.close();
+  ok = ok && copyFile("CUT.TMP", "CODES.TSV", kept);
+  cardRemove("CUT.TMP");
+  if (!ok) { header("Could not save", NULL); textF(18, 90, F("The SD card would not write. Is it locked?"), WHITE, SMALL); footer(F("Back")); return; }
+  staffUntil = millis() + STAFF_MS;
+  stickerDone = stickerAsk; stickerAsk = 0; addCode[0] = '\0';
+  draw();
+}
+
 // ============================== Recent changes, Undo, and the website QR pages ==============================
 // every change is one line of MOVES.TSV (see the top). Recent changes lists them newest first; Undo takes the last line back.
 long lastLine(long* before) {                    // where the last line of MOVES.TSV starts (-1 = empty); *before = the one before it
@@ -2315,6 +2386,11 @@ void pressed(byte b) {                          // Up, Down, Select or Back, fro
   }
   sleepTaps = 0;
   if (mode == ADDNEW && b == B_BACK && addStep > 1) { addStep--; addProblem[0] = '\0'; draw(); return; }
+  if (mode == STICKER) {                                           // Select says yes to what the screen asks; Back says no, then leaves
+    if (b == B_BACK && (stickerAsk || addProblem[0])) { stickerAsk = 0; addProblem[0] = '\0'; draw(); return; }
+    if (b == B_SELECT && stickerAsk) { saveSticker(); return; }
+    if (b != B_BACK) return;
+  }
   if (mode == PIN && b == B_BACK && pinLen > 0) { pinLen--; pinDigit = 0; drawPinStep(); return; }
   if (b == B_BACK) { back(); return; }
   if (mode == PIN) {
@@ -2349,8 +2425,9 @@ void pressed(byte b) {                          // Up, Down, Select or Back, fro
     if (b == B_SELECT && offerSync && staffOK()) { offerSync = false; go(SYNC); syncPage = 0; syncPages = countSyncPages(); draw(); lightsOff(); return; }   // straight to the code that updates the website
     offerSync = false;
     if (b == B_DOWN) { if (staffOK()) startMove(); else askPin(AFTER_MOVE); }
+    if (b == B_UP) { if (staffOK()) openStickers(); else askPin(AFTER_STICKER); }
     return;
-  }   // Down: move it (staff PIN first)
+  }   // Down: move it, Up: its stickers (staff PIN first)
   if (mode == MOVEOK) { if (b == B_SELECT) { if (atMoveTarget()) back(); else doMove(); } return; }
   if (rowCount == 0) return;
   if (b == B_UP || b == B_DOWN) { moveCursor(b); return; }
@@ -2402,6 +2479,7 @@ void entered(char* textIn) {
   if (strcasecmp_P(textIn, PSTR("CLEAR")) == 0) { clearPutAway(); homeCursor = 0; goHome(); return; }
   if (mode == PIN) return;                                                      // scans wait while the PIN is typed
   if (mode == ADDNEW) { addScanned(textIn); return; }
+  if (mode == STICKER) { stickerScanned(textIn); return; }
   if (strncasecmp_P(textIn, PSTR("RL:KIT:"), 7) == 0) { kitCode(textIn + 7); return; }      // a kit from the website: lights only, no PIN
   if (strncasecmp_P(textIn, PSTR("RL:"), 3) == 0) {                            // a code made on the website's staff page
     queryLen = 0; query[0] = '\0'; live = false; livePending = false;   // a staff code ends any search that was being typed
@@ -2432,7 +2510,7 @@ void typed(byte c) {                            // one key from the keyboard
   wakeUp(false);
   if (c == 0x7F) c = 0x08;                                       // some keyboards send DEL (0x7F) for the delete key: treat it as backspace
   if (c == 0x1B) { pressed(B_BACK); return; }                    // Esc works like the Back button
-  if (mode == ADDNEW) { if (c == 0x0D || c == 0x0A) pressed(B_SELECT); else if (c == 0x08) pressed(B_BACK); return; }
+  if (mode == ADDNEW || mode == STICKER) { if (c == 0x0D || c == 0x0A) pressed(B_SELECT); else if (c == 0x08) pressed(B_BACK); return; }
   if (mode == PIN) {                                             // the keyboard types the PIN
     if (c >= '0' && c <= '9') pinKey(c);
     else if (c == 0x08) pressed(B_BACK);

@@ -1,0 +1,45 @@
+
+/* dark mode: follows the device unless someone picks with the button in the header (data-theme on <html>) */
+:root[data-theme=dark]{--paper:#131416;--white:#1c1e21;--soft:#25282c;--line:#3b3e44;--ink:#ecebe8;--muted:#a5a8ad;--red:#ff6b7d;color-scheme:dark}
+:root[data-theme=dark] body{background:var(--paper);color:var(--ink)}
+:root[data-theme=dark] body:not(.in-cat) .site-header{background:#a6192e}
+:root[data-theme=dark] body:not(.in-cat) .site-header .brand,:root[data-theme=dark] body:not(.in-cat) .site-header .header-nav a{color:#fff}
+:root[data-theme=dark] .site-footer{background:#0b0b0c}
+:root[data-theme=dark] input,:root[data-theme=dark] select,:root[data-theme=dark] textarea,:root[data-theme=dark] .search-tools input,:root[data-theme=dark] .reminder-row input,:root[data-theme=dark] .staff-form input,:root[data-theme=dark] .staff-form select,:root[data-theme=dark] .staff-form textarea{background:var(--white);color:var(--ink);border-color:var(--line)}
+:root[data-theme=dark] .search-tools input{border-color:var(--ink)}
+:root[data-theme=dark] .item-card,:root[data-theme=dark] .guide-section,:root[data-theme=dark] .empty-state,:root[data-theme=dark] .room-detail,:root[data-theme=dark] .staff-next,:root[data-theme=dark] .code-out,:root[data-theme=dark] #sync-result,:root[data-theme=dark] .room3d-card,:root[data-theme=dark] .connect,:root[data-theme=dark] .my-loans,:root[data-theme=dark] .lost-link,:root[data-theme=dark] .thanks-note{background:var(--white);color:var(--ink)}
+:root[data-theme=dark] .item-photo{background:transparent}
+:root[data-theme=dark] .item-photo img,:root[data-theme=dark] .item-photo-own img,:root[data-theme=dark] .card-thumb,:root[data-theme=dark] .card-photo .card-thumb{background:#f4f3ef!important;mix-blend-mode:normal!important;border-radius:6px}
+:root[data-theme=dark] .qr,:root[data-theme=dark] .kit-qr,:root[data-theme=dark] #qr,:root[data-theme=dark] #ack-qr,:root[data-theme=dark] #link-qr{background:#fff}
+:root[data-theme=dark] .room3d-tip{background:var(--white);color:var(--ink)}
+:root[data-theme=dark] .button-secondary,:root[data-theme=dark] .side-block .button-secondary,:root[data-theme=dark] .sync-actions .button-secondary,:root[data-theme=dark] #sync-use-paste,:root[data-theme=dark] .staff-form .button-secondary,:root[data-theme=dark] .reminder-row .button-secondary,:root[data-theme=dark] .home-status .button-secondary,:root[data-theme=dark] .code-many .button-secondary,:root[data-theme=dark] .my-loans button,:root[data-theme=dark] .shelf-contents button,:root[data-theme=dark] .search-mode button{background:transparent!important;color:var(--ink)!important;border-color:var(--ink)!important}
+:root[data-theme=dark] .side-block button:not(.button-secondary),:root[data-theme=dark] .sync-actions button:not(.button-secondary),:root[data-theme=dark] .staff-form button:not(.button-secondary),:root[data-theme=dark] .reminder-buttons button:not(.button-secondary),:root[data-theme=dark] .reminder-row button:not(.button-secondary),:root[data-theme=dark] .kit-code-go,:root[data-theme=dark] .code-many button:not(.link-button):not(.button-secondary),:root[data-theme=dark] #code-done,:root[data-theme=dark] .search-mode button[aria-pressed=true],:root[data-theme=dark] .search-mode button[aria-pressed="true"]{background:var(--ink)!important;color:#131416!important;border-color:var(--ink)!important}
+:root[data-theme=dark] .side-block{background:var(--soft)}
+:root[data-theme=dark] .room-unit{border-color:var(--paper)}
+:root[data-theme=dark] .saved-tag{background:#1f3a29;color:#9be0b4}.saved-tag.sent{background:#1d2b47;color:#a9c3f5}
+:root[data-theme=dark] .home-done{color:#000}
+:root[data-theme=dark] .where-3d-go{color:var(--ink)}
+:root[data-theme=dark] .theme-toggle{color:#fff}
+@media(prefers-color-scheme:dark){
+:root:not([data-theme=light]){--paper:#131416;--white:#1c1e21;--soft:#25282c;--line:#3b3e44;--ink:#ecebe8;--muted:#a5a8ad;--red:#ff6b7d;color-scheme:dark}
+:root:not([data-theme=light]) body{background:var(--paper);color:var(--ink)}
+:root:not([data-theme=light]) body:not(.in-cat) .site-header{background:#a6192e}
+:root:not([data-theme=light]) body:not(.in-cat) .site-header .brand,:root:not([data-theme=light]) body:not(.in-cat) .site-header .header-nav a{color:#fff}
+:root:not([data-theme=light]) .site-footer{background:#0b0b0c}
+:root:not([data-theme=light]) input,:root:not([data-theme=light]) select,:root:not([data-theme=light]) textarea,:root:not([data-theme=light]) .search-tools input,:root:not([data-theme=light]) .reminder-row input,:root:not([data-theme=light]) .staff-form input,:root:not([data-theme=light]) .staff-form select,:root:not([data-theme=light]) .staff-form textarea{background:var(--white);color:var(--ink);border-color:var(--line)}
+:root:not([data-theme=light]) .search-tools input{border-color:var(--ink)}
+:root:not([data-theme=light]) .item-card,:root:not([data-theme=light]) .guide-section,:root:not([data-theme=light]) .empty-state,:root:not([data-theme=light]) .room-detail,:root:not([data-theme=light]) .staff-next,:root:not([data-theme=light]) .code-out,:root:not([data-theme=light]) #sync-result,:root:not([data-theme=light]) .room3d-card,:root:not([data-theme=light]) .connect,:root:not([data-theme=light]) .my-loans,:root:not([data-theme=light]) .lost-link,:root:not([data-theme=light]) .thanks-note{background:var(--white);color:var(--ink)}
+:root:not([data-theme=light]) .item-photo{background:transparent}
+:root:not([data-theme=light]) .item-photo img,:root:not([data-theme=light]) .item-photo-own img,:root:not([data-theme=light]) .card-thumb,:root:not([data-theme=light]) .card-photo .card-thumb{background:#f4f3ef!important;mix-blend-mode:normal!important;border-radius:6px}
+:root:not([data-theme=light]) .qr,:root:not([data-theme=light]) .kit-qr,:root:not([data-theme=light]) #qr,:root:not([data-theme=light]) #ack-qr,:root:not([data-theme=light]) #link-qr{background:#fff}
+:root:not([data-theme=light]) .room3d-tip{background:var(--white);color:var(--ink)}
+:root:not([data-theme=light]) .button-secondary,:root:not([data-theme=light]) .side-block .button-secondary,:root:not([data-theme=light]) .sync-actions .button-secondary,:root:not([data-theme=light]) #sync-use-paste,:root:not([data-theme=light]) .staff-form .button-secondary,:root:not([data-theme=light]) .reminder-row .button-secondary,:root:not([data-theme=light]) .home-status .button-secondary,:root:not([data-theme=light]) .code-many .button-secondary,:root:not([data-theme=light]) .my-loans button,:root:not([data-theme=light]) .shelf-contents button,:root:not([data-theme=light]) .search-mode button{background:transparent!important;color:var(--ink)!important;border-color:var(--ink)!important}
+:root:not([data-theme=light]) .side-block button:not(.button-secondary),:root:not([data-theme=light]) .sync-actions button:not(.button-secondary),:root:not([data-theme=light]) .staff-form button:not(.button-secondary),:root:not([data-theme=light]) .reminder-buttons button:not(.button-secondary),:root:not([data-theme=light]) .reminder-row button:not(.button-secondary),:root:not([data-theme=light]) .kit-code-go,:root:not([data-theme=light]) .code-many button:not(.link-button):not(.button-secondary),:root:not([data-theme=light]) #code-done,:root:not([data-theme=light]) .search-mode button[aria-pressed=true],:root:not([data-theme=light]) .search-mode button[aria-pressed="true"]{background:var(--ink)!important;color:#131416!important;border-color:var(--ink)!important}
+:root:not([data-theme=light]) .side-block{background:var(--soft)}
+:root:not([data-theme=light]) .room-unit{border-color:var(--paper)}
+:root:not([data-theme=light]) .saved-tag{background:#1f3a29;color:#9be0b4}.saved-tag.sent{background:#1d2b47;color:#a9c3f5}
+:root:not([data-theme=light]) .home-done{color:#000}
+:root:not([data-theme=light]) .where-3d-go{color:var(--ink)}
+:root:not([data-theme=light]) .theme-toggle{color:#fff}
+}
+.theme-toggle{display:inline-flex;align-items:center;gap:6px;background:none;border:1px solid rgba(255,255,255,.55);border-radius:999px;color:inherit;font:inherit;font-size:13px;font-weight:650;padding:4px 11px;cursor:pointer;white-space:nowrap}.theme-toggle:hover{border-color:#fff}.theme-toggle svg{width:14px;height:14px}

@@ -1,7 +1,8 @@
 // A small 3D copy of the Room Locator model. Click a shelf to pick it.
 // Room3D.init(holder, room, countOnShelf, onPick, opts) -> { mark(list), retint(), resize() }
 //   list = [{unit, shelf, kind: 'pick' | 'from' | 'now' | 'moved'}]
-//   opts: spin, fill, tint (paler boards hold fewer things), focus (a unit code to turn towards), colors, idleTip
+//   opts: spin, fill, tint (paler boards hold fewer things), focus (a unit code to turn towards), colors, idleTip,
+//         unitColors ({code: 0xRRGGBB}: each unit in its own colour)
 window.Room3D = {
   init(holder, room, countOnShelf, onPick, opts) {
     opts = opts || {};
@@ -42,7 +43,8 @@ window.Room3D = {
       const peg = u.code === 'CBL' && u.shelves >= 4;
       for (let n = 1; n <= u.shelves; n++) {
         const board = !u.boards || !u.boards.length || u.boards.includes(n) || n === 1;
-        const mat = new THREE.MeshLambertMaterial({ color: n % 2 ? COLOR.wood : COLOR.woodDark, transparent: !board, opacity: board ? 1 : 0.35 });
+        const own = opts.unitColors && opts.unitColors[u.code];
+        const mat = new THREE.MeshLambertMaterial({ color: own ? new THREE.Color(own).multiplyScalar(n % 2 ? 1 : 0.9).getHex() : n % 2 ? COLOR.wood : COLOR.woodDark, transparent: !board, opacity: board ? 1 : 0.35 });
         let m;
         if (peg && n === 4) { m = new THREE.Mesh(new THREE.BoxGeometry(w - 1, STEP * 2, 1.6), mat); m.position.set(cx, 3 * STEP + STEP, cz + d / 2 - 0.8); }   // the pegboard, standing at the back
         else { m = new THREE.Mesh(new THREE.BoxGeometry(w - 1, BOARD, d - 1), mat); m.position.set(cx, base + (n - 1) * STEP + BOARD / 2, cz); }
@@ -50,7 +52,7 @@ window.Room3D = {
         scene.add(m); shelves.push(m);
       }
       const height = peg ? 3 * STEP : u.shelves * STEP;
-      const top = new THREE.Mesh(new THREE.BoxGeometry(w, 1.2, d), new THREE.MeshLambertMaterial({ color: COLOR.woodDark }));
+      const top = new THREE.Mesh(new THREE.BoxGeometry(w, 1.2, d), new THREE.MeshLambertMaterial({ color: opts.unitColors && opts.unitColors[u.code] ? new THREE.Color(opts.unitColors[u.code]).multiplyScalar(0.8).getHex() : COLOR.woodDark }));
       top.position.set(cx, base + height - 0.6, cz); scene.add(top);
       label(u.code === 'UND' ? 'Under the Desk' : u.name, cx, base + (peg ? 5 * STEP : height) + (u.code === 'UND' ? -2 : 9), cz + (u.code === 'UND' ? -d / 2 - 4 : 0));
     });
@@ -115,6 +117,7 @@ window.Room3D = {
 
     const size = () => { const w = holder.clientWidth, h = opts.fill ? window.innerHeight : Math.round(Math.min(460, Math.max(260, w * 0.5))); renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); };
     size(); window.addEventListener('resize', size);
+    if (camera.aspect < 1.3) camera.position.sub(controls.target).multiplyScalar(1.4 - camera.aspect * 0.15).add(controls.target);   // a phone held upright: stand back so the whole room fits
     (function loop() { requestAnimationFrame(loop); if (holder.offsetParent !== null) { controls.update(); renderer.render(scene, camera); } })();
 
     const retint = () => { if (opts.tint) shelves.forEach(m => { if (m.userData.board) m.userData.base = tintFor(m.userData.unit, m.userData.shelf); }); paint(); };

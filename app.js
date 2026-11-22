@@ -95,8 +95,8 @@ const GOOD_TYPE = {"Audio/Cables": "connecting a microphone or instrument to a m
 const goodFor = k => k.g || GOOD_NAME[k.n] || GOOD_TYPE[k.c+'/'+k.t] || '';
 // The eight colours of the console's Home screen. A thing's shelf lights in its category's colour on the console,
 // so the same colour marks it here: on its card, on its page and on the category tiles.
-const CAT_COLOR = {'Photo & Video':'#007bc0','Audio':'#009647','Lighting':'#fdb515','Computing':'#e0e0e0','Virtual Reality':'#ef3a47','Soft Tech':'#bcb49e','Shop & Tools':'#6d6e71','Cables & More':'#008f91'};   // CMU's tartan and campus colours, the same ones the console uses
-const CAT_INK = {'Shop & Tools':'#fff'};          // text on the colour: black, except on Iron Gray
+const CAT_COLOR = {'Photo & Video':'#007bc0','Audio':'#009647','Lighting':'#fdb515','Computing':'#ec4096','Virtual Reality':'#ef3a47','Soft Tech':'#8c52e6','Shop & Tools':'#f56e14','Cables & More':'#008f91'};   // the same eight the console uses (v5.50): each category its own colour
+const CAT_INK = {'Soft Tech':'#fff'};          // text on the colour: black, except on purple
 const CAT_ORDER = ['Photo & Video','Audio','Lighting','Computing','Virtual Reality','Soft Tech','Shop & Tools','Cables & More'];
 const CAT_SHORT = {'Photo & Video':'Photo and video','Virtual Reality':'VR','Shop & Tools':'Tools','Cables & More':'Cables','Soft Tech':'Soft tech'};
 const catColor = c => CAT_COLOR[c] || '#e0e0e0';
@@ -110,6 +110,7 @@ const localDateTime = date => {
 const calendarStamp = date => date.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
 // one line of a calendar file: commas, semicolons and line breaks escaped, long lines folded at 73 letters (the .ics rules)
 const icsLine = (name,value) => { const text=name+':'+String(value).replace(/\\/g,'\\\\').replace(/([,;])/g,'\\$1').replace(/\r?\n/g,'\\n'); const parts=[]; for(let i=0;i<text.length;i+=73)parts.push((i?' ':'')+text.slice(i,i+73)); return parts.join('\r\n'); };
+const mailBody=t=>encodeURIComponent(t.replace(/\r?\n/g,'\r\n'));   // CRLF line breaks: some mail apps squash plain ones
 function calendarFile(k,due){
   const end=new Date(due.getTime()+30*60*1000), title='Return '+k.n+' to IDeATe Lending';
   const alarm=(when,words)=>['BEGIN:VALARM','ACTION:DISPLAY',icsLine('DESCRIPTION',words),'TRIGGER:'+when,'END:VALARM'];
@@ -131,7 +132,7 @@ function attachCalendar(k,fromConsole){
   };
   const extend=document.getElementById('extend-link');
   const setExtend=()=>{if(!extend)return;const due=new Date(input.value),when=input.value&&!Number.isNaN(due.getTime())?due.toLocaleString([], {weekday:'long',month:'long',day:'numeric',hour:'numeric',minute:'2-digit'}):'[date and time from my checkout email]';
-    extend.href='mailto:help@ideate.cmu.edu?subject='+encodeURIComponent('Extension request: '+k.n+(input.value&&!Number.isNaN(due.getTime())?', due '+due.toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'}):''))+'&body='+encodeURIComponent('Hi IDeATe Lending,\n\nI have the '+k.n+' checked out, and it is due '+when+'. I won\'t be able to bring it back by then, so I would like to ask for an extension.\n\nReason: \n\nI can return it by: \n\nAndrew ID: \n\nI know loans are not normally renewed, so thank you for considering it. If the answer is no, just let me know and I will bring it back to A29 as soon as I can.\n\nBest,\n[Your name]\n')};
+    extend.href='mailto:help@ideate.cmu.edu?subject='+encodeURIComponent('Extension request: '+k.n+(input.value&&!Number.isNaN(due.getTime())?', due '+due.toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'}):''))+'&body='+mailBody('Hi IDeATe Lending,\n\nI have the '+k.n+' checked out, and it is due '+when+'. I won\'t be able to bring it back by then, so I would like to ask for an extension.\n\nReason: \n\nI can return it by: \n\nAndrew ID: \n\nI know loans are not normally renewed, so thank you for considering it. If the answer is no, just let me know and I will bring it back to A29 as soon as I can.\n\nBest,\n[Your name]\n')};
   input.addEventListener('change',setExtend);
   estimate.addEventListener('click',()=>{fillEstimate();setExtend()});
   fillEstimate();   // every reminder starts on the usual loan; the line under it says to change it if the checkout email differs
@@ -368,7 +369,7 @@ const loadScript=src=>new Promise((ok,no)=>{const t=document.createElement('scri
 async function load3d(){
   if(!window.THREE)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
   if(!THREE.OrbitControls)await loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js');
-  if(!window.Room3D)await loadScript('room3d.js?v=tint-2');
+  if(!window.Room3D)await loadScript('room3d.js?v=room-1');
 }
 function attach3d(root){
   root.querySelectorAll('.where-3d-go').forEach(b=>b.addEventListener('click',async()=>{
@@ -393,7 +394,7 @@ function howtoHtml(h){
 // an email to IDeATe's contact address with the item already filled in
 function problemLink(k,live){
   const where=live?live.text:k.w;
-  return 'mailto:help@ideate.cmu.edu?subject='+encodeURIComponent('Problem with '+k.n)+'&body='+encodeURIComponent('Hi IDeATe Lending,\n\nSomething is wrong with the '+k.n+' ('+where+').\n\nWhat is wrong: \nWhen I noticed: \n\nIts page: '+location.origin+location.pathname+(k.url||'?i='+(k.h||''))+'\n\nThank you!\n\nBest,\n[Your name]\n');
+  return 'mailto:help@ideate.cmu.edu?subject='+encodeURIComponent('Problem with '+k.n)+'&body='+mailBody('Hi IDeATe Lending,\n\nSomething is wrong with the '+k.n+' ('+where+').\n\nWhat is wrong: \nWhen I noticed: \n\nIts page: '+location.origin+location.pathname+(k.url||'?i='+(k.h||''))+'\n\nThank you!\n\nBest,\n[Your name]\n');
 }
 function kitsFor(k){const mine=KITS.filter(x=>x.parts.some(p=>p.pick.includes(k.n)));return mine.length?'<div class="side-block"><h2>Part of a kit</h2>'+mine.map(x=>'<a class="source-link" href="#kit-'+esc(x.id)+'">'+esc(x.name)+' \u2192</a>').join('')+'</div>':''}
 // the dog shows on an item page only where it is holding that very thing: the tape measure and the headphones
@@ -511,25 +512,39 @@ function roomView(){
   const nameOf=u=>u.code==='UND'?'Under the Desk + Doodads':u.name;
   const pos=r=>'left:'+(r[0]/2)+'%;top:'+(r[1]/1.5)+'%;width:'+Math.max(4,(r[2]-r[0])/2)+'%;height:'+Math.max(4,(r[3]-r[1])/1.5)+'%';
   const elsewhere=ROOM.units.filter(u=>!u.rect&&itemsIn(u.code).length);
-  app.innerHTML='<a class="back" href="./">← All items</a>'+pup('map','pup-room')+'<h1>Explore the lending room</h1><p class="intro">Tap a unit to see what is on each shelf. '+esc(ROOM.synced&&ROOM.synced.at?'Shelves as the console in Lending had them on '+new Date(ROOM.synced.at).toLocaleDateString([], {month:'long',day:'numeric'})+'.':'Shelves as of the Nov 16 setup.')+' It shows where things live, not whether they are checked out.</p>'+
-    '<div class="room-layout"><div class="room-map2" aria-label="Top view of the lending room">'+
+  app.innerHTML='<a class="back" href="./">← All items</a>'+pup('map','pup-room')+'<h1>Explore the lending room</h1><p class="intro">Drag to turn the room. Tap a shelf to see what is on it. '+esc(ROOM.synced&&ROOM.synced.at?'Shelves as the console in Lending had them on '+new Date(ROOM.synced.at).toLocaleDateString([], {month:'long',day:'numeric'})+'.':'Shelves as of the Nov 16 setup.')+' It shows where things live, not whether they are checked out.</p>'+
+    '<div class="room-layout"><div class="room-3d-wrap"><div id="room-3d" class="room3d room-3d-public" hidden></div><p class="room-3d-status" id="room-3d-status">Loading the 3D room...</p><button type="button" class="where-3d-go" id="room-flat" hidden>Show the flat map instead</button><div class="room-map2" id="room-map2" hidden aria-label="Top view of the lending room">'+
     DESK_RECTS.map(r=>'<span class="room-desk" style="'+pos(r)+'"></span>').join('')+'<span class="room-tag room-tag-desk">Front desk</span><span class="room-door" style="top:'+(119/1.5)+'%;height:'+(30/1.5)+'%"></span><span class="room-tag room-tag-door">Way in</span>'+
     placed.map(u=>{const c=colourOf(u),small=(u.rect[2]-u.rect[0])<12,tall=(u.rect[3]-u.rect[1])/1.5>(u.rect[2]-u.rect[0])/2*1.4;
       return '<button type="button" class="room-block'+(small?' small':'')+(tall?' tall':'')+'" data-unit="'+esc(u.code)+'" style="'+pos(u.rect)+';--cat:'+catColor(c)+';--cat-ink:'+(CAT_INK[c]||'#000')+'"><span>'+esc(nameOf(u))+'</span></button>'}).join('')+
-    '</div><div id="room-detail" class="room-detail"><h2>Choose a unit</h2><p>Tap a unit on the map to see its shelves and what is on each. Colours match the shelf lights on the console.</p></div></div>'+
+    '</div></div><div id="room-detail" class="room-detail"><h2>Choose a shelf</h2><p>Tap a shelf in the room to see what is on it and the rest of its unit. Each unit has its own colour.</p></div></div>'+
     (elsewhere.length?'<p class="room-note"><strong>Kept outside this room:</strong> '+elsewhere.map(u=>esc(u.name)+' ('+itemsIn(u.code).length+')').join(', ')+'. Ask at the desk for these.</p>':'')+
     '<p class="room-note">Shelves are numbered from the bottom: shelf 1 is the lowest. In Lending, the console lights the exact shelf when you look an item up.</p>';
   const shelvesOf=unit=>{const m=new Map();(unit.boards&&unit.boards.length?unit.boards:[1]).forEach(b=>m.set(b,[]));itemsIn(unit.code).forEach(k=>{const b=boardFor(unit,k.s);if(!m.has(b))m.set(b,[]);m.get(b).push(k)});return [...m.entries()].sort((x,y)=>y[0]-x[0])};
   const unitHtml=(unit,title)=>{const sh=shelvesOf(unit),full=sh.filter(s=>s[1].length),empty=sh.filter(s=>!s[1].length).map(s=>s[0]);
     return (title?'<h3 class="room-sub">'+esc(title)+'</h3>':'')+full.map(([s,items])=>'<div class="room-shelf"><h3>Shelf '+s+' <small>'+items.length+(items.length===1?' thing':' things')+'</small></h3>'+items.map(k=>'<a href="#i'+k.h+'">'+esc(k.n)+'</a>').join('')+'</div>').join('')+(empty.length?'<p class="room-empty">Nothing listed on shelf '+empty.sort((x,y)=>y-x).join(', ')+'.</p>':'')};
-  app.querySelectorAll('.room-block').forEach(button=>button.addEventListener('click',()=>{
-    const unit=ROOM.units.find(u=>u.code===button.dataset.unit),detail=document.getElementById('room-detail');
-    app.querySelectorAll('.room-block').forEach(b=>b.classList.toggle('selected',b===button));
+  const showUnit=(code,shelf)=>{
+    const unit=ROOM.units.find(u=>u.code===(code==='DOO'?'UND':code)),detail=document.getElementById('room-detail');if(!unit)return;
+    app.querySelectorAll('.room-block').forEach(b=>b.classList.toggle('selected',b.dataset.unit===unit.code));
     const doo=unit.code==='UND'?ROOM.units.find(u=>u.code==='DOO'):null;
     detail.innerHTML='<h2>'+esc(nameOf(unit))+'</h2>'+(doo?unitHtml(doo,'Doodads, on top')+unitHtml(unit,'Under the Desk'):unitHtml(unit,''));
+    const hits=shelf?[...detail.querySelectorAll('.room-shelf h3')].filter(h=>h.textContent.startsWith('Shelf '+shelf+' ')):[],pick=code==='UND'?hits[hits.length-1]:hits[0];
+    if(pick)pick.closest('.room-shelf').classList.add('picked');
     if(matchMedia('(max-width:780px)').matches)detail.scrollIntoView({behavior:'smooth',block:'start'});
-  }));
+  };
+  app.querySelectorAll('.room-block').forEach(button=>button.addEventListener('click',()=>showUnit(button.dataset.unit)));
+  // the 3D room, each unit in its own colour. If it cannot load (old phone, no WebGL), the flat map is there instead
+  const flat=()=>{document.getElementById('room-3d').hidden=true;document.getElementById('room-3d-status').hidden=true;document.getElementById('room-flat').hidden=true;document.getElementById('room-map2').hidden=false};
+  document.getElementById('room-flat').addEventListener('click',flat);
+  load3d().then(()=>{
+    const box=document.getElementById('room-3d');if(!box)return;box.hidden=false;
+    const view=Room3D.init(box,ROOM,(code,shelf)=>itemsIn(code).filter(k=>boardFor(ROOM.units.find(x=>x.code===code)||{},k.s)===shelf).length,(code,shelf)=>{view&&view.mark([{unit:code,shelf,kind:'pick'}]);showUnit(code,shelf)},{unitColors:UNIT_COLORS,idleTip:'Drag to turn the room. Tap a shelf to see what is on it.'});
+    if(!view){flat();return}
+    document.getElementById('room-3d-status').hidden=true;document.getElementById('room-flat').hidden=false;
+  }).catch(flat);
 }
+// a colour for each unit in the 3D room, far apart from its neighbours'
+const UNIT_COLORS={TRN:0xe9a36b,CBL:0x6fb3d9,UND:0xe7c35c,DOO:0xb48be0,TRI:0x7cc88a,PV:0xe68aa6,LP:0x8fa0e8,AUDW:0x5cc2b0,AUD:0xf0a95c,CMP:0x9b8ae6,VR:0xe57373,ST1:0x75c9e0,ST2:0xd9b26a,SHOP:0x8fcf7a,DSK:0xc9a0dc};
 // Kits: everything for one kind of project, each piece with its shelf. The first choice in each row is shown large; the others are alternatives.
 // ---------- My loans: what this phone was reminded about, until someone presses Returned. Kept in this browser only.
 function loans(){try{const v=JSON.parse(localStorage.getItem('rl-loans')||'[]');return Array.isArray(v)?v.filter(x=>x&&typeof x.h==='string'&&typeof x.n==='string'&&Number.isFinite(x.due)):[]}catch(e){return []}}

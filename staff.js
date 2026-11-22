@@ -840,7 +840,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   function takeIn(d, p) {                     // the website was just saved: use the saved copy on this page too
     kinds.splice(0, kinds.length, ...d.kinds); data.published = d.published;
     if (p) pend = p;
-    syncMade(); madeAt = Math.max(0, madeAt); drawCode(); drawLog(); drawHomeStatus();
+    syncMade(); madeAt = Math.max(0, madeAt); drawCode(); drawLog(); drawHomeStatus(); drawTodo();   // (the edit tab's no-photo list too: a new item belongs on it)
     if (view3d) { view3d.retint(); refresh3d(); }
   }
   async function saveChanges(list, button, opts = {}) {
@@ -1282,7 +1282,6 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const ok = await saveChanges(list, e.target, { needKey: true, blobs: usePhoto, message: 'Edit ' + k.n + ' (staff page)', edit: fd => { const i = fd.kinds.findIndex(x => x.h === k.h); if (i >= 0) { const was = fd.kinds[i]; fd.kinds[i] = { ...mine, u: was.u, s: was.s, w: was.w, in: was.in, x: was.x }; } } });
     if (ok && !list.length) setTimeout(() => location.reload(), 1500);
   });
-  $('edit-count-code').addEventListener('click', () => { const k = editItem(); if (!k) { status.textContent = 'Pick the item from the list first.'; return; } const n = ef.elements.copies.valueAsNumber; if (!Number.isInteger(n) || n < 1 || n > 250) { status.textContent = 'Enter a whole count from 1 to 250.'; return; } showCode('RL:COUNT:' + k.h + ':' + n, 'Show this to the console', k.n + ': Lending now has ' + n + '.', 'This only changes the count on the console. Press Save to change the website.'); });
   $('home-wait-show').addEventListener('click', () => { if (!made.length) return; madeAt = 0; drawCode(); $('code-out').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
   syncMade(); drawLog(); drawHomeStatus(); if (made.length) { madeAt = 0; drawCode(); }
   window.__rlSync = { readPage, apply: async lines => { await apply(lines); return { data: outData, room: outRoom }; } };   // (for testing)
