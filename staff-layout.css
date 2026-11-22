@@ -136,3 +136,7 @@
 .log-list .log-by { color: #6d6e71; font-size: 13px; white-space: nowrap; }
 .edit-gone { background: #fdecea; color: #5a1a12; padding: 10px 12px; border-radius: 6px; }
 .room3d-moved.is-off { opacity: .6; }
+.log-find { display: block; margin: 0 0 10px; max-width: 420px; }
+.log-day { margin: 0 0 6px; }
+.log-day > summary { cursor: pointer; font-weight: 650; padding: 6px 0; }
+.log-day .log-list { margin-top: 4px; }

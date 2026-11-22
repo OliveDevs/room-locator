@@ -207,7 +207,7 @@ MCUFRIEND_kbv tft;
 Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 // the screens (stored in a byte so the Arduino prototype maker is happy)
-enum { HOME, TYPES, KINDS, RESULTS, SHELF, ITEM, PUTAWAY, MAP, UNITVIEW, ACTIONS, MOVEOK, PIN, ADDNEW, RECENT, SYNC, RESETASK, STICKER, IDEAS, RESETWORD };
+enum { HOME, TYPES, KINDS, RESULTS, SHELF, ITEM, PUTAWAY, MAP, UNITVIEW, ACTIONS, MOVEOK, PIN, ADDNEW, RECENT, SYNC, RESETASK, STICKER, IDEAS, RESETWORD, CHECK };
 byte mode = HOME;                               // which screen is showing
 const byte BACK_MAX = 10;
 byte backTo[BACK_MAX], backCursor[BACK_MAX], backStage[BACK_MAX], backView[BACK_MAX]; byte backDepth = 0;     // where Back returns to
@@ -502,6 +502,7 @@ bool asleep = false; byte sleepStep = 0; unsigned long sleepAt = 0;
 byte sleepTaps = 0;
 unsigned long lastSleepTap = 0;
 void drawIdeas(); void findIdeas(); void openIdea(); void drawResetWord(); void resetLetter(char c);   // (shelf ideas, v5.50)
+void drawCheck(); void checkScanned(char* t); void finishCheck();   // (shelf check, v5.51)
 void drawStickers(); void stickerScanned(char* t); void saveSticker(); void openStickers(); bool copyFile(const char* from, const char* to, long upTo);   // (the sticker screen, v5.50)
 void draw(); void lightsOff(); bool drawQRText(int x, int y, const char* url); byte firstVisibleRow(); void blinkDot(byte slot, bool lit);   // (written further down)
 const int SLEEP_MID = 318, SLEEP_X = SLEEP_MID - SLEEP_W, SLEEP_Y = 150 - SLEEP_H;   // drawn double size, right of the website's code
@@ -540,10 +541,39 @@ void sleepTick() {
   if (millis() - sleepAt < 900 || somethingWaiting()) return;
   sleepAt = millis(); sleepStep++; drawSleepZs();
 }
+// ---- hello (v5.51): while the dog wakes up, a band of colour runs along the room's shelves, from the left of the map
+// to the right and back, each unit in one of the category colours. Anything pressed or scanned stops it at once.
+void addLights(int first, byte span, uint32_t color);            // (further down)
+const bool HELLO_LIGHTS = true;
+const unsigned int HELLO_MS = 2800;
+bool helloOn = false; unsigned long helloAt = 0, helloFrom = 0, helloLast = 0;
+void startHello() { if (!HELLO_LIGHTS) return; helloOn = true; helloAt = millis(); helloFrom = lastActivity; helloLast = 0; }
+void stopHello(bool clearLights) { if (!helloOn) return; helloOn = false; if (clearLights) lightsOff(); }
+void helloTick() {
+  if (!helloOn) return;
+  if (lastActivity != helloFrom || mode != HOME || homeMessage) { stopHello(mode != ITEM && mode != PUTAWAY && mode != SHELF); return; }   // someone wants the console
+  unsigned long t = millis() - helloAt;
+  if (t >= HELLO_MS) { stopHello(true); return; }
+  if (millis() - helloLast < 40 || Serial1.available()) return;  // (never talk to the strip in the middle of a scan)
+  helloLast = millis();
+  int lo = 1000, hi = 0;                                          // the map's left and right ends, by each unit's middle
+  for (byte u = 0; u < unitTotal; u++) if (unitCount[u] && unitMap[u][0] != 255) { int c = (unitMap[u][0] + unitMap[u][2]) / 2; if (c < lo) lo = c; if (c > hi) hi = c; }
+  if (hi <= lo) { stopHello(true); return; }
+  unsigned long half = HELLO_MS / 2, k = t < half ? t : HELLO_MS - t;   // there and back
+  int at = lo - (hi - lo) / 6 + (long)(hi - lo + (hi - lo) / 3) * k / half, band = (hi - lo) / 4;
+  strip.clear();
+  for (byte u = 0; u < unitTotal; u++) {
+    if (!unitCount[u] || unitMap[u][0] == 255) continue;
+    int c = (unitMap[u][0] + unitMap[u][2]) / 2;
+    if (c >= at - band && c <= at + band) addLights(unitFirst[u], unitCount[u], itemLight(u));
+  }
+  strip.show();
+}
 void holdWakePose(unsigned int ms) {
   unsigned long started = millis();
   while (millis() - started < ms && !somethingWaiting()) {
     pollKeyboard();
+    helloTick();
     delay(5);
   }
 }
@@ -551,6 +581,7 @@ void wakeUp(bool stretch) {
   if (!asleep) return;
   asleep = false;
   if (stretch) {
+    startHello();
     tft.fillRect(SLEEP_X - 18, SLEEP_Y - 72, 480 - (SLEEP_X - 18), SLEEP_H * 2 + 104, BG);
     for (byte i = 0; i < WAKE_N && !somethingWaiting(); i++) { drawDog(SLEEP_MID - WAKE_W, 246 - WAKE_H * 2, (const uint8_t*)pgm_read_ptr(&WAKE[i]), WAKE_W, WAKE_H, 2); holdWakePose(i == WAKE_N - 1 ? 700 : 450); }
     if (!somethingWaiting()) tft.fillRect(SLEEP_MID - WAKE_W, 246 - WAKE_H * 2, WAKE_W * 2, WAKE_H * 2, BG);   // awake: a wave hello before Home comes back (v5.24)
@@ -1044,7 +1075,7 @@ void loadResults() {
   }
 }
 // ---- the move and shelf screens
-enum { A_OPEN, A_MOVEALL, A_REMOVE, A_TOGETHER, A_SWAP };        // the choices on the ACTIONS screen
+enum { A_OPEN, A_MOVEALL, A_REMOVE, A_TOGETHER, A_SWAP, A_CHECK };   // the choices on the ACTIONS screen (A_CHECK: shelf check, v5.51)
 // rows on the side view of a unit: n = board n, 100 + n = empty groove n, 0 = "swap this whole unit"
 const byte ROW_SWAP_UNIT = 0, ROW_GROOVE = 100;
 // the last three spots on the map are not units
@@ -1080,6 +1111,7 @@ void loadUnitRows() {                            // the unit from the side, top 
 void loadActions() {
   rowCount = 0;
   if (stage == ST_TO) { row[rowCount++] = A_TOGETHER; row[rowCount++] = A_SWAP; return; }
+  row[rowCount++] = A_CHECK;                                     // first: the quickest way to set what is on a shelf
   if (thingCount[fromLo]) { row[rowCount++] = A_OPEN; row[rowCount++] = A_MOVEALL; }
   if (fromLo > 1) row[rowCount++] = A_REMOVE;
 }
@@ -1203,7 +1235,8 @@ void drawRows(int onlyA = -1, int onlyB = -1) {   // with two row numbers: just 
       drawRow(s, i == cursor, top, under, -1);
     } else if (mode == ACTIONS) {
       byte a = row[i];
-      if (a == A_OPEN) { strcpy_P(top, PSTR("See what is on it")); strcpy_P(under, PSTR("open one thing to move just that")); }
+      if (a == A_CHECK) { strcpy_P(top, PSTR("Check this shelf")); strcpy_P(under, PSTR("scan what is on it to update the list")); }
+      else if (a == A_OPEN) { strcpy_P(top, PSTR("See what is on it")); strcpy_P(under, PSTR("open one thing to move just that")); }
       else if (a == A_MOVEALL) { strcpy_P(top, PSTR("Move everything on it")); snprintf_P(under, sizeof(under), PSTR("%d things go to another shelf together"), thingCount[fromLo]); }
       else if (a == A_REMOVE) { strcpy_P(top, PSTR("Take this shelf board out")); snprintf_P(under, sizeof(under), PSTR("for something tall: it joins shelf %d below"), spaceLo(fromUnit, fromLo - 1)); }
       else if (a == A_TOGETHER) { snprintf_P(top, sizeof(top), PSTR("Put them together on shelf %d"), moveToShelf); strcpy_P(under, PSTR("both groups share that shelf")); }
@@ -1609,6 +1642,7 @@ void draw() {
   else if (mode == STICKER) drawStickers();
   else if (mode == IDEAS) drawIdeas();
   else if (mode == RESETWORD) drawResetWord();
+  else if (mode == CHECK) drawCheck();
   else if (mode == SYNC) drawSync();
   else drawList();
   if (queryLen) drawTyping();
@@ -1704,7 +1738,9 @@ void pickedRow(byte r) {                         // Select on the side view
   if (moveWhat == W_SHELF && !toNewBoard && !atMoveTarget() && thingCount[moveToShelf]) { go(ACTIONS); loadActions(); draw(); preview(); return; }   // somebody lives there: together or swap?
   go(MOVEOK); draw();
 }
+void startCheck();                               // (shelf check, below)
 void pickedAction(byte a) {
+  if (a == A_CHECK) { startCheck(); return; }
   if (a == A_OPEN) { strcpy(shelfUnit, unitCode[fromUnit]); shelfNumber = fromLo; go(SHELF); loadShelf(); draw(); lightsOff(); addSpace(fromUnit, fromLo, LIGHT_SHELF); strip.show(); return; }
   if (a == A_MOVEALL) { moveWhat = W_SHELF; stage = ST_TO; openMap(fromUnit); return; }
   if (a == A_REMOVE) { moveWhat = W_DELBOARD; go(MOVEOK); draw(); return; }
@@ -2177,6 +2213,82 @@ void saveSticker() {
   draw();
 }
 
+// ---- shelf check (v5.51): staff open a shelf, choose "Check this shelf" and scan everything sitting on it, once each.
+// A thing that was listed somewhere else moves here (a move on Recent changes, like any other). A thing already listed
+// here is ticked off. What is listed here but never scanned stays put: it may be checked out, or on another shelf, and
+// the end screen says how many. A shelf whose board was taken out is one space, so its things are checked together.
+byte checkU = 0, checkLo = 0, checkN = 0, checkMoved = 0, checkHere = 0; bool checkBad = false;
+byte checkSeen[48][3];                           // the things scanned so far (their 6-letter codes): each counts once
+char checkMsg[46] = "";
+bool checkWasSeen(unsigned long k) { for (byte i = 0; i < checkN; i++) if (checkSeen[i][0] == ((k >> 16) & 255) && checkSeen[i][1] == ((k >> 8) & 255) && checkSeen[i][2] == (k & 255)) return true; return false; }
+bool checkBelongs() {                            // the kind in `line` is listed on the shelf being checked, and is still in Lending
+  int u = findUnit(field[K_UNIT]);
+  return u == checkU && unitCount[u] && spaceLo(u, atoi(field[K_SHELF])) == checkLo && atoi(field[K_COPIES]) != 0;
+}
+void startCheck() {
+  checkU = fromUnit; checkLo = fromLo; checkN = checkMoved = checkHere = 0; checkBad = false; checkMsg[0] = '\0';
+  go(CHECK); draw();
+}
+void checkLights() { strip.clear(); addSpace(checkU, checkLo, LIGHT_SHELF); strip.show(); }
+// the things listed on this shelf that were not scanned: how many, and the first `show` names drawn from y down
+byte checkMissing(byte show, int y) {
+  byte n = 0; long pos = 0, next;
+  while ((next = readLine(kindsFile, pos)) >= 0) {
+    if (checkBelongs() && !checkWasSeen(nameCode(field[K_NAME]))) { if (n < show) text(30, y + n * 22, field[K_NAME], WHITE, SMALL, 436); if (n < 255) n++; }
+    pos = next;
+  }
+  return n;
+}
+void drawCheck() {
+  char buf[60];
+  header("Shelf check", NULL);
+  snprintf_P(buf, sizeof(buf), PSTR("%s, shelf %d"), unitName[checkU], checkLo); text(18, 76, buf, WHITE, TITLE, 450);
+  snprintf_P(buf, sizeof(buf), PSTR("%d scanned: %d already here, %d moved here"), checkN, checkHere, checkMoved); text(18, 104, buf, checkMoved ? GREEN : DIM, SMALL, 450);
+  if (checkMsg[0]) text(18, 136, checkMsg, checkBad ? ACCENT : WHITE, BOLD, 450);
+  else textF(18, 136, F("Scan each thing on the shelf, once."), WHITE, BOLD);
+  textF(18, 170, F("Listed here, not scanned yet"), DIM, SMALL);
+  byte left = checkMissing(4, 194);
+  if (!left) textF(30, 194, F("Nothing: every listed thing was scanned"), GREEN, SMALL);
+  else if (left > 4) { snprintf_P(buf, sizeof(buf), PSTR("and %d more"), left - 4); text(30, 194 + 4 * 22, buf, DIM, SMALL); }
+  footer(F("Scan what is on the shelf.   Back = done"));
+  checkLights();
+}
+void checkScanned(char* t) {
+  staffUntil = millis() + STAFF_MS; if (!staffUntil) staffUntil = 1;              // still working: staff mode stays open
+  checkBad = true;
+  long kind = (strncasecmp_P(t, PSTR("RL:"), 3) == 0 || strncasecmp_P(t, PSTR("LOC:"), 4) == 0) ? -1 : findCode(t);
+  if (kind < 0) { strcpy_P(checkMsg, PSTR("That is not a sticker this console knows")); draw(); return; }
+  loadKind(kind);
+  unsigned long key = nameCode(field[K_NAME]); char name[28]; copyText(name, field[K_NAME], sizeof(name));
+  if (checkWasSeen(key)) { snprintf_P(checkMsg, sizeof(checkMsg), PSTR("%s: scanned already"), name); draw(); return; }
+  if (atoi(field[K_COPIES]) == 0) { snprintf_P(checkMsg, sizeof(checkMsg), PSTR("%s: taken out of Lending"), name); draw(); return; }
+  if (checkN >= 48) { strcpy_P(checkMsg, PSTR("48 things is the most for one check")); draw(); return; }
+  if (checkBelongs()) { checkHere++; snprintf_P(checkMsg, sizeof(checkMsg), PSTR("%s: already here"), name); }
+  else {
+    byte a[6] = {(byte)((key >> 16) & 255), (byte)((key >> 8) & 255), (byte)(key & 255), checkU, checkLo, 0};
+    const __FlashStringHelper* why = NULL;
+    if (!quietSave('I', a, key, &why)) { strncpy_P(checkMsg, (const char*)why, sizeof(checkMsg) - 1); checkMsg[sizeof(checkMsg) - 1] = '\0'; draw(); return; }
+    checkMoved++; snprintf_P(checkMsg, sizeof(checkMsg), PSTR("%s: moved here"), name);
+  }
+  checkSeen[checkN][0] = (key >> 16) & 255; checkSeen[checkN][1] = (key >> 8) & 255; checkSeen[checkN][2] = key & 255; checkN++;
+  checkBad = false; draw();
+}
+void finishCheck() {
+  char buf[60];
+  byte moved = checkMoved, here = checkHere;
+  backDepth = 0; mode = HOME; homeMessage = true; offerSync = false; lightsOff();
+  header("Shelf check done", NULL);
+  snprintf_P(buf, sizeof(buf), PSTR("%s, shelf %d"), unitName[checkU], checkLo); text(18, 84, buf, WHITE, TITLE, 450);
+  snprintf_P(buf, sizeof(buf), PSTR("%d moved here, %d already here"), moved, here); text(18, 122, buf, moved ? GREEN : WHITE, SMALL, 450);
+  tft.fillRect(0, 150, 480, 140, BG);
+  byte left = checkMissing(0, 0);
+  if (left) {
+    snprintf_P(buf, sizeof(buf), PSTR("%d listed here were not scanned."), left); text(18, 156, buf, WHITE, SMALL, 450);
+    textF(18, 180, F("They may be checked out. Their shelf stays the same."), DIM, SMALL);
+  }
+  if (moved) { textF(18, 218, F("Review the moves under Recent changes."), WHITE, SMALL); doneBar(F("Saved.   Select = update the website")); offerSync = true; }
+  else footer(F("Any button = Home"));
+}
 // ---- shelf ideas (v5.50): staff mode, between the units and Recent changes. The console counts what is on every shelf
 // and suggests up to five changes: two neighbouring shelves that hold three things or fewer between them could share one
 // space (take the board between them out), and a tall shelf with eight things or more could get its board back. It never
@@ -2499,6 +2611,7 @@ void pressed(byte b) {                          // Up, Down, Select or Back, fro
     if (b == B_UP) resetPick = (resetPick + 1) % 26; else if (b == B_DOWN) resetPick = (resetPick + 25) % 26; else { resetLetter('A' + resetPick); return; }
     draw(); return;
   }
+  if (mode == CHECK) { if (b == B_BACK) finishCheck(); return; }      // Back ends the check; nothing else to pick
   if (b == B_BACK) { back(); return; }
   if (mode == PIN) {
     if (b == B_UP) pinDigit = (pinDigit + 1) % 10;
@@ -2592,6 +2705,7 @@ void entered(char* textIn) {
   if (mode == PIN) return;                                                      // scans wait while the PIN is typed
   if (mode == ADDNEW) { addScanned(textIn); return; }
   if (mode == STICKER) { stickerScanned(textIn); return; }
+  if (mode == CHECK) { checkScanned(textIn); return; }
   if (strncasecmp_P(textIn, PSTR("RL:KIT:"), 7) == 0) { kitCode(textIn + 7); return; }      // a kit from the website: lights only, no PIN
   if (strncasecmp_P(textIn, PSTR("RL:"), 3) == 0) {                            // a code made on the website's staff page
     queryLen = 0; query[0] = '\0'; live = false; livePending = false;   // a staff code ends any search that was being typed
@@ -2855,7 +2969,7 @@ void loop() {
     if (which == 1) { loadKind(currentKind); drawQR(312, 82); if (dogFree) { dogStep = 1; dogX = 2; dogLeft = false; dogTrips = 255; dogAt = millis(); } }   // the QR is up: the dog comes in (v5.19: for any item, however it was opened)
     else if (rowCount && row[cursor] == ROW_PHONE) drawStaffQR();
   }
-  dogTick(); sleepTick(); showTick();
+  dogTick(); sleepTick(); showTick(); helloTick();
   if (!asleep && mode == HOME && !homeMessage && !backDepth && !queryLen && !live && millis() - lastActivity > SLEEP_MS) drawSleep();
   if (livePending && millis() - liveAt > 250 && !Serial1.available()) { livePending = false; if (queryLen >= 2) liveSearch(); }
   if (staffUntil && millis() - lastActivity > IDLE_MS) staffUntil = 0;          // nobody touched it for 2 minutes: changes lock again

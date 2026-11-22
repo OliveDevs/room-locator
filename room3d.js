@@ -1,6 +1,6 @@
 // A small 3D copy of the Room Locator model. Click a shelf to pick it.
 // Room3D.init(holder, room, countOnShelf, onPick, opts) -> { mark(list), retint(), resize() }
-//   list = [{unit, shelf, kind: 'pick' | 'from' | 'now' | 'moved'}]
+//   list = [{unit, shelf, kind: 'pick' | 'from' | 'now' | 'moved'}]   opts.blink: marked shelves flash
 //   opts: spin, fill, tint (paler boards hold fewer things), focus (a unit code to turn towards), colors, idleTip,
 //         unitColors ({code: 0xRRGGBB}: each unit in its own colour)
 window.Room3D = {
@@ -91,9 +91,11 @@ window.Room3D = {
     }
 
     const marks = new Map();
+    // opts.blink: the marked shelf flashes, like the lit dot on the flat map (not for people who turned motion down)
+    const blinks = !!opts.blink && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); let blinkOff = false;
     const paint = () => shelves.forEach(m => {
       const k = marks.get(m.userData.unit + '-' + m.userData.shelf);
-      m.material.color.setHex(m === hovered ? COLOR.hover : k ? COLOR[k] : m.userData.base);
+      m.material.color.setHex(m === hovered ? COLOR.hover : k && !(blinks && blinkOff) ? COLOR[k] : m.userData.base);
     });
     let hovered = null;
     const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
@@ -122,7 +124,9 @@ window.Room3D = {
     const size = () => { const w = holder.clientWidth, h = opts.fill ? window.innerHeight : Math.round(Math.min(460, Math.max(260, w * 0.5))); if (!w) return; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();
       if (!touched) camera.position.copy(controls.target).add(baseOff.clone().multiplyScalar(camera.aspect < 1.8 ? 1 + (1.8 - camera.aspect) * 0.9 : 1)); };
     size(); window.addEventListener('resize', size);
-    (function loop() { requestAnimationFrame(loop); if (holder.offsetParent !== null) { controls.update(); renderer.render(scene, camera); } })();
+    (function loop() { requestAnimationFrame(loop); if (holder.offsetParent !== null) {
+      if (blinks && marks.size) { const off = performance.now() % 1000 >= 600; if (off !== blinkOff) { blinkOff = off; paint(); } }
+      controls.update(); renderer.render(scene, camera); } })();
 
     const retint = () => { shelves.forEach(m => { m.userData.base = m.userData.board && tintOn ? tintFor(m.userData.unit, m.userData.shelf) : m.userData.plain; }); paint(); };
     return { retint, setTint(on) { tintOn = !!on; retint(); }, mark(list) { marks.clear(); (list || []).forEach(x => x && x.unit && x.shelf && marks.set(x.unit + '-' + x.shelf, x.kind || 'pick')); paint(); }, resize: size };

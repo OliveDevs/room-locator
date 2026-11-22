@@ -369,7 +369,7 @@ const loadScript=src=>new Promise((ok,no)=>{const t=document.createElement('scri
 async function load3d(){
   if(!window.THREE)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
   if(!THREE.OrbitControls)await loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js');
-  if(!window.Room3D)await loadScript('room3d.js?v=room-4');
+  if(!window.Room3D)await loadScript('room3d.js?v=room-5');
 }
 function attach3d(root){
   root.querySelectorAll('.where-3d-go').forEach(b=>b.addEventListener('click',async()=>{
@@ -380,7 +380,7 @@ function attach3d(root){
         const view=Room3D.init(box,ROOM,(code,shelf)=>K.filter(k=>k.u===code&&k.in&&boardFor((ROOM.units.find(x=>x.code===code)||{}),k.s)===shelf).length,null,{far:1.1,colors:Object.fromEntries(KIT_HEX.map((h,i)=>['k'+i,h])),idleTip:'Drag to turn the room. Each piece\'s shelf is lit in its colour.'});
         if(view){view.mark(list);box.dataset.ready='1'}else{box.hidden=true;b.remove();return}}
       if(!box.dataset.ready){const u=b.dataset.u,n=Number(b.dataset.s);
-        const view=Room3D.init(box,ROOM,(code,shelf)=>K.filter(k=>k.u===code&&k.in&&boardFor((ROOM.units.find(x=>x.code===code)||{}),k.s)===shelf).length,null,{focus:u,idleTip:'Drag to turn the room. The lit shelf is where it lives.'});
+        const view=Room3D.init(box,ROOM,(code,shelf)=>K.filter(k=>k.u===code&&k.in&&boardFor((ROOM.units.find(x=>x.code===code)||{}),k.s)===shelf).length,null,{focus:u,blink:true,idleTip:'Drag to turn the room. The flashing shelf is where it lives.'});
         if(view){view.mark([{unit:u,shelf:n,kind:'pick'}]);box.dataset.ready='1'}else{box.hidden=true;b.remove();return}}
       b.textContent='Hide the 3D room'}
     catch(e){b.textContent='The 3D room could not load. Try again';box.hidden=true}

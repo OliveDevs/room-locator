@@ -250,7 +250,7 @@ async function latest(name, isIt) {
   const res = await fetch(name + '?x=' + Date.now()); return res.ok ? res.json() : null;
 }
 // pending.json: changes saved to the website first that the console has not taken in yet, and a history of every change
-const cleanPend = p => ({ note: 'Changes saved to the website first, waiting for the console, and the history of changes. Written by the staff page.', waiting: Array.isArray(p && p.waiting) ? p.waiting.filter(e => e && e.id && typeof e.code === 'string') : [], history: Array.isArray(p && p.history) ? p.history.filter(Boolean).slice(0, 200) : [], ...(p && p.published ? { published: p.published } : {}) });
+const cleanPend = p => ({ note: 'Changes saved to the website first, waiting for the console, and the history of changes. Written by the staff page.', waiting: Array.isArray(p && p.waiting) ? p.waiting.filter(e => e && e.id && typeof e.code === 'string') : [], history: Array.isArray(p && p.history) ? p.history.filter(Boolean).slice(0, 400) : [], ...(p && p.published ? { published: p.published } : {}) });
 const readPending = async () => cleanPend(await latest('pending.json', g => g && Array.isArray(g.waiting)).catch(() => null));
 
 Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room.json?v=' + Date.now()).then(r => r.json()), fetch('pending.json?v=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null)]).then(([data, room, pendIn]) => {
@@ -994,8 +994,28 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   $('log-show').hidden = !made.length;
     $('log-waiting').innerHTML = w.length ? w.map(e => '<li><span class="log-when">' + esc(when(e.at)) + '</span><strong>' + esc(e.title) + '</strong> ' + esc(e.what || '') + ' <span class="saved-tag' + (e.sent ? ' sent' : '') + '">' + (e.sent ? 'Shown to the console, waiting for its sync' : 'On the website, waiting for the console') + '</span></li>').join('') : '<li>Nothing is waiting. The website and the console have the same changes.</li>';
     const h = pend.history;
-    $('log-done').innerHTML = h.length ? h.slice(0, 80).map(x => '<li><span class="log-when">' + esc(when(x.at)) + '</span><strong>' + esc(x.title) + '</strong> ' + esc(x.what || '') + (x.by ? ' <span class="log-by">by ' + esc(x.by) + '</span>' : '') + (x.did === 'sync' ? '' : ' <em>' + esc(DID[x.did] || x.did || '') + '</em>') + '</li>').join('') : '<li>No changes yet.</li>';
+    // The last 3 days show as they are. Older ones fold away: one fold for "3+ days ago" (this past month), then a fold
+    // for each earlier month this year, then one for each earlier year. Every line keeps its own date. Typing in the box
+    // shows every match, from any time.
+    const find = ($('log-find').value || '').trim().toLowerCase(), row = x => '<li><span class="log-when">' + esc(when(x.at)) + '</span><strong>' + esc(x.title) + '</strong> ' + esc(x.what || '') + (x.by ? ' <span class="log-by">by ' + esc(x.by) + '</span>' : '') + (x.did === 'sync' ? '' : ' <em>' + esc(DID[x.did] || x.did || '') + '</em>') + '</li>';
+    const list = find ? h.filter(x => [x.title, x.what, x.by, DID[x.did]].join(' ').toLowerCase().includes(find)) : h;
+    if (!h.length) { $('log-done').innerHTML = '<p class="tool-note">No changes yet.</p>'; return; }
+    if (!list.length) { $('log-done').innerHTML = '<p class="tool-note">Nothing in the history matches that.</p>'; return; }
+    if (find) { $('log-done').innerHTML = '<ul class="log-list">' + list.map(row).join('') + '</ul>'; return; }
+    const now = new Date(), day0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime(), groups = [];
+    const groupOf = x => { const d = new Date(x.at), t = d.getTime();
+      if (t >= day0 - 2 * 864e5) return ['recent', ''];                                      // today and the 2 days before
+      if (t >= day0 - 30 * 864e5) return ['month', '3+ days ago'];
+      if (d.getFullYear() === now.getFullYear()) return ['m' + d.getMonth(), d.toLocaleDateString([], { month: 'long' })];
+      return ['y' + d.getFullYear(), String(d.getFullYear())]; };
+    for (const x of list) { const [key, label] = groupOf(x); if (!groups.length || groups[groups.length - 1].key !== key) groups.push({ key, label, items: [] }); groups[groups.length - 1].items.push(x); }
+    const open = new Set([...$('log-done').querySelectorAll('details[open]')].map(x => x.dataset.group));
+    $('log-done').innerHTML = groups.map(g => g.key === 'recent' ? '<ul class="log-list">' + g.items.map(row).join('') + '</ul>'
+      : '<details class="log-day" data-group="' + esc(g.key) + '"' + (open.has(g.key) ? ' open' : '') + '><summary>' + esc(g.label) + ' <span class="tool-note">' + g.items.length + (g.items.length === 1 ? ' change' : ' changes') + '</span></summary><ul class="log-list">' + g.items.map(row).join('') + '</ul></details>').join('')
+      + (groups[0].key !== 'recent' ? '' : '');
+    if (groups[0].key !== 'recent') $('log-done').insertAdjacentHTML('afterbegin', '<p class="tool-note">Nothing in the last 3 days.</p>');
   }
+  $('log-find').addEventListener('input', () => drawLog());
   const download = (obj, name) => { const blob = new Blob([JSON.stringify(obj, null, 2) + '\n'], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
   $('sync-publish').addEventListener('click', async e => { if (!outData) return; if (await publish({ 'data.json': outData, 'room.json': outRoom, ...(outPend ? { 'pending.json': outPend } : {}) }, 'Website matched to the console (staff page)', e.target)) { $('sync-saved').hidden = false; try { if (outRoom.synced && outRoom.synced.changed && outRoom.synced.changed.length) sessionStorage.setItem('rl-moved', '1'); sessionStorage.setItem('rl-done', syncTag !== null ? 'Saved. The site updates in about a minute. One last step below.' : 'Saved. The site updates in about a minute. Nothing else to do.'); if (syncTag !== null) sessionStorage.setItem('rl-ack', String(syncTag)); } catch (err) { } setTimeout(() => location.reload(), 2500); } });
   // after that reload, say plainly that it worked (the page used to come back looking as if nothing had happened)
@@ -1373,6 +1393,22 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const n = ef.elements.copies.valueAsNumber; if (!Number.isInteger(n) || n < 1 || n > 250) { status.textContent = 'Enter how many Lending has, from 1 to 250.'; ef.elements.copies.focus(); return; }
     const ok = await saveChanges([{ code: 'RL:COUNT:' + k.h + ':' + n, title: 'Back in Lending: ' + k.n, what: n + (n === 1 ? ' copy' : ' copies') + ', at ' + (k.w || k.u) + '.' }], e.target, { needKey: true });
     if (ok) { selectEditItem(kinds.find(x => x.h === k.h) || k); }
+  });
+  // ---- the inventory as a spreadsheet (a .csv file: Excel, Numbers and Google Sheets all open it)
+  $('inventory-get').addEventListener('click', () => {
+    const cell = v => { const t = String(v == null ? '' : v); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+    const site = location.href.replace(/staff\.html.*$/, '');
+    const order = new Map(units.map((u, i) => [u.code, i]));
+    const rows = kinds.slice().sort((a, b) => (gone(a) - gone(b)) || ((order.get(a.u) ?? 999) - (order.get(b.u) ?? 999)) || ((a.s || 0) - (b.s || 0)) || a.n.localeCompare(b.n)).map(k => {
+      const u = unitBy[k.u], shelf = u && u.shelves && k.s ? boardBelow(u, k.s) : '';
+      return [k.n, k.c, k.t, gone(k) ? 0 : (k.x || 1), u ? u.name : k.u, shelf, u && u.shelves ? (shelf ? u.name + ', shelf ' + shelf : u.name) : (u ? u.name : k.u) + ' (ask at the desk)', gone(k) ? 'Taken out of Lending' : 'In Lending', site + '#i' + k.h];
+    });
+    const head = ['Item', 'Category', 'Type', 'How many', 'Unit', 'Shelf (1 = bottom)', 'Where it lives', 'Status', 'Item page'];
+    const csv = '\ufeff' + [head, ...rows].map(r => r.map(cell).join(',')).join('\r\n') + '\r\n';
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'IDeATe Lending inventory ' + new Date().toISOString().slice(0, 10) + '.csv'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    const waiting = pend.waiting.length;
+    $('inventory-why').textContent = rows.length + ' items.' + (waiting ? ' It includes ' + waiting + (waiting === 1 ? ' change' : ' changes') + ' saved on the website that the console doesn\u2019t have yet.' : '');
   });
   $('log-show').addEventListener('click', () => $('home-wait-show').click());
   $('home-wait-show').addEventListener('click', () => { if (!made.length) return; madeAt = 0; drawCode(); $('code-out').scrollIntoView({ behavior: 'smooth', block: 'start' }); });

@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><link rel="icon" href="favicon.ico?v=2" sizes="any"><link rel="icon" type="image/png" href="favicon.png?v=2"><link rel="apple-touch-icon" href="apple-touch-icon.png?v=2"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400..700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=simple-1"><link rel="stylesheet" href="staff-layout.css?v=simple-1"><link rel="stylesheet" href="dark.css?v=simple-1"><script src="theme.js?v=1"></script></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a><a href="#log">Change history</a><a href="#manuals">Manuals</a></nav></div></header>
+  <link rel="stylesheet" href="styles.css?v=check-1"><link rel="stylesheet" href="staff-layout.css?v=check-1"><link rel="stylesheet" href="dark.css?v=check-1"><script src="theme.js?v=1"></script></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a><a href="#log">Change history</a><a href="#manuals">Manuals</a></nav></div></header>
 <main class="staff-main">
 <h1>Staff tools</h1>
 
@@ -249,7 +249,8 @@
 <p><button type="button" id="log-show" class="link-button" hidden>Show the one code that has all of them</button></p>
 <ul id="log-waiting" class="log-list"></ul>
 <h2>History</h2>
-<ul id="log-done" class="log-list"></ul>
+<label class="log-find">Find in the history<input id="log-find" type="search" placeholder="An item, a unit or a name" autocomplete="off"></label>
+<div id="log-done"></div>
 </details>
 <details class="staff-fold" id="manuals"><summary>Manuals</summary>
 <p class="tool-note">Everything the Room Locator does, for staff and for students. <span class="manual-version">Version 2</span></p>
@@ -272,6 +273,11 @@
 </ul>
 <p class="tool-note">On a CMU campus printer (printing.andrew.cmu.edu) these are already the defaults, so upload the file and print. If the backs come out upside down on another printer, print again with flip on short edge.</p>
 <p class="tool-note"><strong>Then</strong> keep the sheets in the order they come out, fold the stack in half with the cover outside, and staple on the three small marks along the fold.</p>
+</details>
+<details class="staff-fold" id="inventory"><summary>Inventory spreadsheet</summary>
+<p class="tool-note">Every item with where it lives: unit, shelf (1 is the bottom) and how many Lending has. It opens in Excel, Numbers or Google Sheets. Items taken out of Lending are at the end.</p>
+<div class="sync-actions"><button type="button" id="inventory-get">Download the spreadsheet</button></div>
+<p id="inventory-why" class="tool-note"></p>
 </details>
 <details class="staff-fold" id="checks"><summary>Check everything</summary>
 <p class="tool-note">Checks the website, the site key, the passcode and the console link.</p>
@@ -336,7 +342,7 @@
 <li>Shelves are numbered from the bottom.</li>
 <li>This page shows the website's copy of the room. If it disagrees with the console, the console is right, except for changes still waiting for the console (see Change history).</li>
 <li>Saved something by mistake? If the console hasn't had it yet, press Undo next to it in the list under the code. It comes off the website too.</li>
-<li>Made a mistake? On the console, open Recent changes, pick the change and press Select twice. A newly added item can only be removed with Start over.</li>
+<li>Made a mistake? On the console, open Recent changes, pick the change and press Select twice. To take an item out of Lending, open it under Edit an item.</li>
 <li>Start over on the console clears every change and every item added there. To reset the website to match, use the locked section at the very bottom of Help.</li>
 </ul>
 
@@ -351,5 +357,5 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-<script src="room3d.js?v=room-4"></script>
-<script src="staff.js?v=simple-1" defer></script></body></html>
+<script src="room3d.js?v=room-5"></script>
+<script src="staff.js?v=check-1" defer></script></body></html>
