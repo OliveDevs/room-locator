@@ -1,0 +1,4 @@
+{
+  "note": "What student staff can use on the staff page. Anything set to false is turned off. Set by a manager on the staff page.",
+  "student": {}
+}

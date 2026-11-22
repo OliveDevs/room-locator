@@ -289,6 +289,28 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     tabs.forEach(o => { $('tab-' + o).setAttribute('aria-selected', o === t); $('tool-' + o).hidden = o !== t; });
     $('code-out').hidden = !made.length || t === 'sync'; status.textContent = '';
   }));
+  // ---- student staff access (Nov 21): managers choose which tools student staff can use. access.json holds what is
+  // turned off; everything is on until a manager turns it off. Managers always see everything.
+  const ACCESS = [['move', 'Move an item'], ['shelf', 'Move a shelf'], ['many', 'Move several'], ['add', 'Add an item'], ['edit', 'Edit an item'], ['kits', 'Edit kits'], ['sync', 'Sync website'], ['undo', 'Undo changes waiting for the console']];
+  let access = {};
+  const allowed = k => isManager() || access[k] !== false;
+  function applyAccess() {
+    tabs.forEach(t => { $('tab-' + t).hidden = !allowed(t); });
+    const on = document.querySelector('.tool-tabs [aria-selected="true"]');
+    if (on && on.hidden) { const first = tabs.find(t => allowed(t)); if (first) $('tab-' + first).click(); else tabs.forEach(o => { $('tool-' + o).hidden = true; }); }
+    const off = ACCESS.filter(([k]) => access[k] === false).map(([, n]) => n);
+    $('access-note').hidden = isManager() || !off.length;
+    $('access-note').textContent = 'Turned off for student staff by a Lending manager: ' + off.join(', ') + '.';
+    $('access-list').innerHTML = ACCESS.map(([k, n]) => '<label class="access-row"><input type="checkbox" data-access="' + k + '"' + (access[k] === false ? '' : ' checked') + '> ' + esc(n) + '</label>').join('');
+    if (typeof drawCode === 'function' && made.length) drawCode();
+  }
+  fetch('access.json?v=' + Date.now()).then(r => r.ok ? r.json() : {}).catch(() => ({})).then(a => { access = (a && a.student) || {}; applyAccess(); });
+  addEventListener('rl-key-changed', () => applyAccess());
+  $('access-save').addEventListener('click', async e => {
+    if (!isManager()) { $('access-why').textContent = 'Only a Lending manager can change this.'; return; }
+    const next = {}; $('access-list').querySelectorAll('[data-access]').forEach(b => { if (!b.checked) next[b.dataset.access] = false; });
+    if (await publish({ 'access.json': { note: 'What student staff can use on the staff page. Anything set to false is turned off. Set by a manager on the staff page.', student: next } }, 'Student staff access changed (staff page)', e.target)) { access = next; applyAccess(); $('access-why').textContent = 'Saved. Student staff see the change the next time they open the staff page.'; }
+  });
 
   // ---- shared pickers
   function unitOptions(select, list, blank) {
@@ -394,7 +416,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     $('code-all-title').textContent = made.length + (made.length === 1 ? ' change' : ' changes') + ' waiting for the console';
     $('code-all-what').textContent = (saved ? (saved === made.length ? 'All saved on the website already. ' : saved + ' saved on the website already. ') + 'Undo takes a change back off the website too. ' : '') + (all.length > 1 ? 'Too many for one code. The ones in this code are in bold.' : '');
     $('code-all-go').hidden = !(now && now.big);
-    $('code-all-list').innerHTML = made.map((c, i) => '<li data-code="' + esc(c.code) + '" class="' + (now.items.includes(c) ? 'in-code' : 'not-in-code') + '"><span><strong>' + esc(c.title) + '</strong> ' + esc(c.what) + (all.length > 1 && !now.items.includes(c) ? ' <em>(code ' + (all.findIndex(s => s.items.includes(c)) + 1) + ')</em>' : '') + (c.id ? ' <span class="saved-tag">On the website</span>' : '') + '</span><button type="button" class="remove-code" data-remove-code="' + i + '" aria-label="' + esc((c.id ? 'Undo ' : 'Remove ') + c.title) + '">' + (c.id ? 'Undo' : 'Remove') + '</button></li>').join('');
+    $('code-all-list').innerHTML = made.map((c, i) => '<li data-code="' + esc(c.code) + '" class="' + (now.items.includes(c) ? 'in-code' : 'not-in-code') + '"><span><strong>' + esc(c.title) + '</strong> ' + esc(c.what) + (all.length > 1 && !now.items.includes(c) ? ' <em>(code ' + (all.findIndex(s => s.items.includes(c)) + 1) + ')</em>' : '') + (c.id ? ' <span class="saved-tag">On the website</span>' : '') + '</span>' + (c.id && !allowed('undo') ? '' : '<button type="button" class="remove-code" data-remove-code="' + i + '" aria-label="' + esc((c.id ? 'Undo ' : 'Remove ') + c.title) + '">' + (c.id ? 'Undo' : 'Remove') + '</button>') + '</li>').join('');
+    $('code-clear').hidden = made.some(c => c.id) && !allowed('undo');
   }
   $('code-all-list').addEventListener('click', async e => {
     const button = e.target.closest('[data-remove-code]');
@@ -985,7 +1008,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   function showShelf(u, n) {
     const unit = unitBy[u], board = boardBelow(unit, n), things = onShelf(u, board);
     contents.innerHTML = '<h3>' + esc(placeName(u, board)) + '</h3>' + (things.length
-      ? '<ul>' + things.map(k => '<li><span>' + esc(k.n) + (k.x > 1 ? ' <small>× ' + k.x + '</small>' : '') + '</span><button type="button" data-move="' + esc(k.n) + '">Move this</button></li>').join('') + '</ul>'
+      ? '<ul>' + things.map(k => '<li><span>' + esc(k.n) + (k.x > 1 ? ' <small>× ' + k.x + '</small>' : '') + '</span>' + (allowed('move') ? '<button type="button" data-move="' + esc(k.n) + '">Move this</button>' : '') + '</li>').join('') + '</ul>'
       : '<p>Nothing is on this shelf.</p>');
     contents.hidden = false;
   }

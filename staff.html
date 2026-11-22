@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><link rel="icon" href="favicon.ico?v=2" sizes="any"><link rel="icon" type="image/png" href="favicon.png?v=2"><link rel="apple-touch-icon" href="apple-touch-icon.png?v=2"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400..700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=kitcolours-2"><link rel="stylesheet" href="staff-layout.css?v=manuals-2"><link rel="stylesheet" href="dark.css?v=1"><script src="theme.js?v=1"></script></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a><a href="#log">Change history</a><a href="#manuals">Manuals</a></nav></div></header>
+  <link rel="stylesheet" href="styles.css?v=kitcolours-2"><link rel="stylesheet" href="staff-layout.css?v=access-1"><link rel="stylesheet" href="dark.css?v=1"><script src="theme.js?v=1"></script></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a><a href="#log">Change history</a><a href="#manuals">Manuals</a></nav></div></header>
 <main class="staff-main">
 <h1>Staff tools</h1>
 
@@ -14,6 +14,7 @@
 <button type="button" role="tab" id="tab-sync" aria-controls="tool-sync" aria-selected="false">Sync website</button>
 </div>
 
+<p id="access-note" class="tool-note" hidden></p>
 <section class="home-status">
 <p id="home-done" class="home-done" role="status" hidden></p>
 <section id="ack" class="ack" hidden aria-live="polite">
@@ -281,6 +282,12 @@
 <p><button type="button" id="health-paste" class="button-secondary">Paste the new key</button></p>
 </details>
 </details>
+<details class="staff-fold manager-only" id="access" hidden><summary>Student staff access</summary>
+<p class="tool-note">Managers choose which tools student staff can use on the staff page. Untick one to hide it from them. Managers always see everything.</p>
+<div id="access-list" class="access-list"></div>
+<div class="sync-actions"><button type="button" id="access-save">Save for student staff</button></div>
+<p id="access-why" class="tool-note"></p>
+</details>
 <details class="staff-fold" id="device" hidden><summary>Passcode and sign-out</summary>
 <div id="share">
 <p id="role-note" class="tool-note"></p>
@@ -337,4 +344,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="room3d.js?v=room-4"></script>
-<script src="staff.js?v=roles-1" defer></script></body></html>
+<script src="staff.js?v=access-1" defer></script></body></html>
