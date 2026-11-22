@@ -373,9 +373,12 @@ async function load3d(){
 }
 function attach3d(root){
   root.querySelectorAll('.where-3d-go').forEach(b=>b.addEventListener('click',async()=>{
-    const box=b.nextElementSibling;if(!box.hidden){box.hidden=true;b.textContent='See the shelf in 3D';return}
+    const box=b.nextElementSibling;b.dataset.label=b.dataset.label||b.textContent;if(!box.hidden){box.hidden=true;b.textContent=b.dataset.label;return}
     b.disabled=true;b.textContent='Loading the room...';
     try{await load3d();box.hidden=false;
+      if(!box.dataset.ready&&b.dataset.kitShelves!==undefined){const list=b.dataset.kitShelves.split(' ').filter(Boolean).map(x=>{const i=x.lastIndexOf('-');return {unit:x.slice(0,i),shelf:Number(x.slice(i+1)),kind:'pick'}});
+        const view=Room3D.init(box,ROOM,(code,shelf)=>K.filter(k=>k.u===code&&k.in&&boardFor((ROOM.units.find(x=>x.code===code)||{}),k.s)===shelf).length,null,{far:1.1,idleTip:'Drag to turn the room. Green shelves hold the pieces.'});
+        if(view){view.mark(list);box.dataset.ready='1'}else{box.hidden=true;b.remove();return}}
       if(!box.dataset.ready){const u=b.dataset.u,n=Number(b.dataset.s);
         const view=Room3D.init(box,ROOM,(code,shelf)=>K.filter(k=>k.u===code&&k.in&&boardFor((ROOM.units.find(x=>x.code===code)||{}),k.s)===shelf).length,null,{focus:u,idleTip:'Drag to turn the room. The lit shelf is where it lives.'});
         if(view){view.mark([{unit:u,shelf:n,kind:'pick'}]);box.dataset.ready='1'}else{box.hidden=true;b.remove();return}}
@@ -521,15 +524,16 @@ function roomView(){
     (elsewhere.length?'<p class="room-note"><strong>Kept outside this room:</strong> '+elsewhere.map(u=>esc(u.name)+' ('+itemsIn(u.code).length+')').join(', ')+'. Ask at the desk for these.</p>':'')+
     '<p class="room-note">Shelves are numbered from the bottom: shelf 1 is the lowest. In Lending, the console lights the exact shelf when you look an item up.</p>';
   const shelvesOf=unit=>{const m=new Map();(unit.boards&&unit.boards.length?unit.boards:[1]).forEach(b=>m.set(b,[]));itemsIn(unit.code).forEach(k=>{const b=boardFor(unit,k.s);if(!m.has(b))m.set(b,[]);m.get(b).push(k)});return [...m.entries()].sort((x,y)=>y[0]-x[0])};
-  const unitHtml=(unit,title)=>{const sh=shelvesOf(unit),full=sh.filter(s=>s[1].length),empty=sh.filter(s=>!s[1].length).map(s=>s[0]);
-    return (title?'<h3 class="room-sub">'+esc(title)+'</h3>':'')+full.map(([s,items])=>'<div class="room-shelf"><h3>Shelf '+s+' <small>'+items.length+(items.length===1?' thing':' things')+'</small></h3>'+items.map(k=>'<a href="#i'+k.h+'">'+esc(k.n)+'</a>').join('')+'</div>').join('')+(empty.length?'<p class="room-empty">Nothing listed on shelf '+empty.sort((x,y)=>y-x).join(', ')+'.</p>':'')};
+  // the shelf that was tapped comes first, then the rest of the unit from the bottom up
+  const unitHtml=(unit,title,pick)=>{const sh=shelvesOf(unit).sort((x,y)=>(y[0]===pick)-(x[0]===pick)||x[0]-y[0]),full=sh.filter(s=>s[1].length||s[0]===pick),empty=sh.filter(s=>!s[1].length&&s[0]!==pick).map(s=>s[0]);
+    return (title?'<h3 class="room-sub">'+esc(title)+'</h3>':'')+full.map(([s,items])=>'<div class="room-shelf'+(s===pick?' picked':'')+'"><h3>Shelf '+s+' <small>'+(items.length?items.length+(items.length===1?' thing':' things'):'empty')+'</small></h3>'+items.map(k=>'<a href="#i'+k.h+'">'+esc(k.n)+'</a>').join('')+'</div>').join('')+(empty.length?'<p class="room-empty">Nothing listed on shelf '+empty.sort((x,y)=>x-y).join(', ')+'.</p>':'')};
   const showUnit=(code,shelf)=>{
     const unit=ROOM.units.find(u=>u.code===(code==='DOO'?'UND':code)),detail=document.getElementById('room-detail');if(!unit)return;
     app.querySelectorAll('.room-block').forEach(b=>b.classList.toggle('selected',b.dataset.unit===unit.code));
     const doo=unit.code==='UND'?ROOM.units.find(u=>u.code==='DOO'):null;
-    detail.innerHTML='<h2>'+esc(nameOf(unit))+'</h2>'+(doo?unitHtml(doo,'Doodads, on top')+unitHtml(unit,'Under the Desk'):unitHtml(unit,''));
-    const hits=shelf?[...detail.querySelectorAll('.room-shelf h3')].filter(h=>h.textContent.startsWith('Shelf '+shelf+' ')):[],pick=code==='UND'?hits[hits.length-1]:hits[0];
-    if(pick)pick.closest('.room-shelf').classList.add('picked');
+    const parts=doo?(code==='UND'?[[unit,'Under the Desk'],[doo,'Doodads, on top']]:[[doo,'Doodads, on top'],[unit,'Under the Desk']]):[[unit,'']];   // the part that was tapped first
+    detail.innerHTML='<h2>'+esc(nameOf(unit))+'</h2>'+parts.map(([u,t],i)=>unitHtml(u,t,i===0?shelf:0)).join('');
+    detail.scrollTop=0;
     if(matchMedia('(max-width:780px)').matches)detail.scrollIntoView({behavior:'smooth',block:'start'});
   };
   app.querySelectorAll('.room-block').forEach(button=>button.addEventListener('click',()=>showUnit(button.dataset.unit)));
@@ -593,7 +597,8 @@ function placeOf(k){const u=(ROOM.units||[]).find(x=>x.code===k.u);return u&&u.r
 function kitMapHtml(kit){
   const marks=new Map();
   kit.parts.forEach((p,i)=>{const k=p.pick.map(n=>K.find(x=>x.n===n)).filter(Boolean)[0];if(!k||!k.in||!placeOf(k))return;const m=marks.get(k.u)||{u:k.u,n:''};m.n+=(m.n?' ':'')+(i+1);marks.set(k.u,m)});
-  return marks.size?'<div class="where-map kit-map"><p><strong>Where the pieces are.</strong> Each number is a piece in the list below.</p>'+miniRoomHtml([...marks.values()],'#c41230')+'</div>':'';
+  const lit=kit.parts.map(p=>p.pick.map(n=>K.find(x=>x.n===n)).filter(Boolean)[0]).filter(k=>k&&k.in&&placeOf(k)).map(k=>{const u=placeOf(k);return u.code+'-'+boardFor(u,k.s)});
+  return marks.size?'<div class="where-map kit-map"><p><strong>Where the pieces are.</strong> Each number is a piece in the list below.</p>'+miniRoomHtml([...marks.values()],'#c41230')+'<button type="button" class="where-3d-go" data-kit-shelves="'+esc(lit.join(' '))+'">See the pieces in 3D</button><div class="where-3d room3d" hidden></div></div>':'';
 }
 function kitsView(id){
   const kit=KITS.find(x=>x.id===id), find=n=>K.find(k=>k.n===n);
@@ -602,6 +607,7 @@ function kitsView(id){
   document.title=kit.name+' \u00b7 IDeATe Lending';
   app.innerHTML='<a class="back" href="#kits">\u2190 All kits</a>'+reminderHtml(true,kit.name+' kit')+'<div class="hero-row"><div><h1>'+esc(kit.name)+'</h1><p class="intro">'+esc(kit.why)+'</p></div></div><div class="kit-body"><aside class="kit-side">'+kitMapHtml(kit)+'</aside><div class="kit-main"><div class="kit-list">'+kit.parts.map((p,pi)=>{const items=p.pick.map(find).filter(Boolean);if(!items.length)return '';const first=items[0];
     return '<div class="kit-row"><p class="kit-role">'+(first.in&&placeOf(first)?'<span class="kit-num">'+(pi+1)+'</span>':'')+esc(p.role)+'</p><a class="item-card" href="#i'+first.h+'">'+thumbHtml(first)+'<div><strong>'+esc(first.n)+'</strong><span class="card-where">'+esc(first.in?first.w:'Ask at the desk')+'</span></div><span class="arrow" aria-hidden="true">\u2197</span></a>'+(items.length>1?'<p class="kit-or">or '+items.slice(1).map(k=>'<a href="#i'+k.h+'">'+esc(k.n)+'</a> ('+esc(k.in?k.w:'ask at the desk')+')').join(', or ')+'</p>':'')+'</div>'}).join('')+'</div><div class="guide-section kit-tip"><h2>Light the shelves in Lending</h2><p><button type="button" id="kit-code-go" class="kit-code-go">Show the code for the console</button></p><div id="kit-code" aria-live="polite"></div></div><div class="guide-section kit-tip"><h2>Before you go</h2><p>'+esc(kit.tip)+'</p><p class="note">Each piece is checked out separately and may already be on loan. The desk has what is in today.</p></div></div></div>';
+  attach3d(app);
   document.getElementById('kit-code-go').addEventListener('click', async e => {
     const button = e.currentTarget, box = document.getElementById('kit-code');
     button.disabled = true;
