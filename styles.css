@@ -281,3 +281,9 @@ a.item-card.kit-card{padding:18px 20px!important;justify-content:center;min-heig
 .where-3d{margin-top:12px}.where-3d .room3d-tip{font-size:13px}
 .room-3d-wrap{min-width:0}.room-3d-public{margin-top:0;border-radius:12px;overflow:hidden}.room-3d-status{color:var(--muted);padding:40px 0}
 .room-shelf.picked{background:var(--soft);margin:0 -12px;padding:14px 12px;border-radius:8px}
+/* kit pages: each piece in the colour its shelf lights at the console, with its shelf beside it */
+.kit-num{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 6px;margin-right:10px;border-radius:12px;background:var(--kc,#c41230);color:#000;font-size:13px;font-weight:800}
+.kit-piece{display:flex;gap:10px;align-items:stretch}.kit-piece .item-card{flex:1;min-width:0}
+.kit-piece .mini-stack{width:46px;padding:7px 6px;gap:4px}.kit-piece .mini-shelf{height:7px;font-size:0}.kit-piece .mini-shelf.lit{height:11px}
+.mini-unit b i{display:inline-block;min-width:15px;height:15px;margin:0 1px;border-radius:8px;font-style:normal;font-size:10px;line-height:15px;text-align:center;text-shadow:none;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.kit-map .mini-unit.lit{--glow:#fff!important;background:#fff;box-shadow:0 0 0 2px #c41230,0 0 10px 3px rgba(196,18,48,.35)}

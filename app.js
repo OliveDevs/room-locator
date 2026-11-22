@@ -352,7 +352,7 @@ function miniRoomHtml(marks,colour){
   const pos=r=>'left:'+(r[0]/2)+'%;top:'+(r[1]/1.5)+'%;width:'+Math.max(2.5,(r[2]-r[0])/2)+'%;height:'+Math.max(2.5,(r[3]-r[1])/1.5)+'%';
   return '<div class="mini-room" role="img" aria-label="Map of the Lending room with '+esc(marks.map(m=>(ROOM.units.find(u=>u.code===m.u)||{}).name).filter(Boolean).join(', '))+' lit">'+
     DESK_RECTS.map(r=>'<span class="mini-desk" style="'+pos(r)+'"></span>').join('')+'<span class="mini-desk-label">Desk</span>'+
-    ROOM.units.filter(u=>u.rect).map(u=>{const m=lit.get(u.code);return '<span class="mini-unit'+(m?' lit':'')+'" style="'+pos(u.rect)+(m?';--glow:'+colour:'')+'">'+(m&&m.n?'<b>'+esc(m.n)+'</b>':'')+'</span>'}).join('')+'</div>';
+    ROOM.units.filter(u=>u.rect).map(u=>{const m=lit.get(u.code);return '<span class="mini-unit'+(m?' lit':'')+'" style="'+pos(u.rect)+(m?';--glow:'+(m.c||colour):'')+'">'+(m&&m.chips?'<b>'+m.chips.map(c=>'<i style="background:'+c[1]+';color:'+(c[1]==='#1f5bff'?'#fff':'#000')+'">'+c[0]+'</i>').join('')+'</b>':m&&m.n?'<b>'+esc(m.n)+'</b>':'')+'</span>'}).join('')+'</div>';
 }
 function shelfStackHtml(unit,shelf,colour){
   const boards=(unit.boards&&unit.boards.length?unit.boards:[...Array(unit.shelves)].map((_,i)=>i+1)).slice().sort((x,y)=>y-x);
@@ -376,8 +376,8 @@ function attach3d(root){
     const box=b.nextElementSibling;b.dataset.label=b.dataset.label||b.textContent;if(!box.hidden){box.hidden=true;b.textContent=b.dataset.label;return}
     b.disabled=true;b.textContent='Loading the room...';
     try{await load3d();box.hidden=false;
-      if(!box.dataset.ready&&b.dataset.kitShelves!==undefined){const list=b.dataset.kitShelves.split(' ').filter(Boolean).map(x=>{const i=x.lastIndexOf('-');return {unit:x.slice(0,i),shelf:Number(x.slice(i+1)),kind:'pick'}});
-        const view=Room3D.init(box,ROOM,(code,shelf)=>K.filter(k=>k.u===code&&k.in&&boardFor((ROOM.units.find(x=>x.code===code)||{}),k.s)===shelf).length,null,{far:1.1,idleTip:'Drag to turn the room. Green shelves hold the pieces.'});
+      if(!box.dataset.ready&&b.dataset.kitShelves!==undefined){const list=b.dataset.kitShelves.split(' ').filter(Boolean).map(x=>{const f=x.split('-');return {unit:f[0],shelf:Number(f[1]),kind:'k'+f[2]}});
+        const view=Room3D.init(box,ROOM,(code,shelf)=>K.filter(k=>k.u===code&&k.in&&boardFor((ROOM.units.find(x=>x.code===code)||{}),k.s)===shelf).length,null,{far:1.1,colors:Object.fromEntries(KIT_HEX.map((h,i)=>['k'+i,h])),idleTip:'Drag to turn the room. Each piece\'s shelf is lit in its colour.'});
         if(view){view.mark(list);box.dataset.ready='1'}else{box.hidden=true;b.remove();return}}
       if(!box.dataset.ready){const u=b.dataset.u,n=Number(b.dataset.s);
         const view=Room3D.init(box,ROOM,(code,shelf)=>K.filter(k=>k.u===code&&k.in&&boardFor((ROOM.units.find(x=>x.code===code)||{}),k.s)===shelf).length,null,{focus:u,idleTip:'Drag to turn the room. The lit shelf is where it lives.'});
@@ -594,19 +594,29 @@ function showKitCode(kit,box){
   });
 }
 function placeOf(k){const u=(ROOM.units||[]).find(x=>x.code===k.u);return u&&u.rect&&u.shelves?u:null}
+// The console lights a kit's pieces in these colours, in the order of its code (the first item of each piece, up to 8),
+// and two pieces on the same shelf share one. The kit page uses the same colours so the two can be matched up.
+const KIT_RGB=['#16c23a','#1f5bff','#ff7a00','#ff1fa0','#00c2c2','#f2c200'],KIT_HEX=[0x16c23a,0x1f5bff,0xff7a00,0xff1fa0,0x00c2c2,0xf2c200];
+function kitColours(kit){
+  const out={},seen=[];let j=0;
+  kit.parts.forEach((p,pi)=>{const k=K.find(x=>x.n===p.pick[0]);if(!k||j>=8)return;const u=placeOf(k),spot=k.in&&u?u.code+'-'+boardFor(u,k.s):'';
+    let c=j%6;const same=spot&&seen.find(x=>x.spot===spot);if(same)c=same.c;seen.push({spot,c});out[pi]=c;j++});
+  return out;
+}
 function kitMapHtml(kit){
-  const marks=new Map();
-  kit.parts.forEach((p,i)=>{const k=p.pick.map(n=>K.find(x=>x.n===n)).filter(Boolean)[0];if(!k||!k.in||!placeOf(k))return;const m=marks.get(k.u)||{u:k.u,n:''};m.n+=(m.n?' ':'')+(i+1);marks.set(k.u,m)});
-  const lit=kit.parts.map(p=>p.pick.map(n=>K.find(x=>x.n===n)).filter(Boolean)[0]).filter(k=>k&&k.in&&placeOf(k)).map(k=>{const u=placeOf(k);return u.code+'-'+boardFor(u,k.s)});
-  return marks.size?'<div class="where-map kit-map"><p><strong>Where the pieces are.</strong> Each number is a piece in the list below.</p>'+miniRoomHtml([...marks.values()],'#c41230')+'<button type="button" class="where-3d-go" data-kit-shelves="'+esc(lit.join(' '))+'">See the pieces in 3D</button><div class="where-3d room3d" hidden></div></div>':'';
+  const col=kitColours(kit),marks=new Map(),lit=[];
+  kit.parts.forEach((p,i)=>{const k=p.pick.map(n=>K.find(x=>x.n===n)).filter(Boolean)[0];if(!k||!k.in||!placeOf(k))return;const u=placeOf(k),c=col[i]!==undefined?col[i]:0;
+    const m=marks.get(k.u)||{u:k.u,chips:[],c:KIT_RGB[c]};m.chips.push([i+1,KIT_RGB[c]]);marks.set(k.u,m);lit.push(u.code+'-'+boardFor(u,k.s)+'-'+c)});
+  return marks.size?'<div class="where-map kit-map"><p><strong>Where the pieces are.</strong> Each number is a piece in the list, in the colour its shelf lights at the console.</p>'+miniRoomHtml([...marks.values()],'#c41230')+'<button type="button" class="where-3d-go" data-kit-shelves="'+esc(lit.join(' '))+'">See the pieces in 3D</button><div class="where-3d room3d" hidden></div></div>':'';
 }
 function kitsView(id){
   const kit=KITS.find(x=>x.id===id), find=n=>K.find(k=>k.n===n);
   if(!kit){document.title='Kits \u00b7 IDeATe Lending';
     app.innerHTML='<a class="back" href="./">\u2190 All items</a><div class="hero-row"><div><h1>Kits for a whole project</h1><p class="intro">Pick what you are trying to do and get the full list to ask for, with the shelf for each piece.</p></div>'+pup('wave','pup-wave')+'</div><div class="item-grid">'+KITS.map(x=>'<a class="item-card kit-card" href="#kit-'+esc(x.id)+'"><div><strong>'+esc(x.name)+'</strong><span class="card-where">'+x.parts.length+' pieces</span></div><span class="arrow" aria-hidden="true">\u2197</span></a>').join('')+'</div>';return}
   document.title=kit.name+' \u00b7 IDeATe Lending';
-  app.innerHTML='<a class="back" href="#kits">\u2190 All kits</a>'+reminderHtml(true,kit.name+' kit')+'<div class="hero-row"><div><h1>'+esc(kit.name)+'</h1><p class="intro">'+esc(kit.why)+'</p></div></div><div class="kit-body"><aside class="kit-side">'+kitMapHtml(kit)+'</aside><div class="kit-main"><div class="kit-list">'+kit.parts.map((p,pi)=>{const items=p.pick.map(find).filter(Boolean);if(!items.length)return '';const first=items[0];
-    return '<div class="kit-row"><p class="kit-role">'+(first.in&&placeOf(first)?'<span class="kit-num">'+(pi+1)+'</span>':'')+esc(p.role)+'</p><a class="item-card" href="#i'+first.h+'">'+thumbHtml(first)+'<div><strong>'+esc(first.n)+'</strong><span class="card-where">'+esc(first.in?first.w:'Ask at the desk')+'</span></div><span class="arrow" aria-hidden="true">\u2197</span></a>'+(items.length>1?'<p class="kit-or">or '+items.slice(1).map(k=>'<a href="#i'+k.h+'">'+esc(k.n)+'</a> ('+esc(k.in?k.w:'ask at the desk')+')').join(', or ')+'</p>':'')+'</div>'}).join('')+'</div><div class="guide-section kit-tip"><h2>Light the shelves in Lending</h2><p><button type="button" id="kit-code-go" class="kit-code-go">Show the code for the console</button></p><div id="kit-code" aria-live="polite"></div></div><div class="guide-section kit-tip"><h2>Before you go</h2><p>'+esc(kit.tip)+'</p><p class="note">Each piece is checked out separately and may already be on loan. The desk has what is in today.</p></div></div></div>';
+  app.innerHTML='<a class="back" href="#kits">\u2190 All kits</a>'+reminderHtml(true,kit.name+' kit')+'<div class="hero-row"><div><h1>'+esc(kit.name)+'</h1><p class="intro">'+esc(kit.why)+'</p></div></div><div class="kit-body"><aside class="kit-side">'+kitMapHtml(kit)+'</aside><div class="kit-main"><div class="kit-list">'+kit.parts.map((p,pi,all,kc=kitColours(kit))=>{const items=p.pick.map(find).filter(Boolean);if(!items.length)return '';const first=items[0];
+    const pu=first.in&&placeOf(first),pc=KIT_RGB[kc[pi]!==undefined?kc[pi]:0];
+    return '<div class="kit-row"><p class="kit-role">'+(pu?'<span class="kit-num" style="--kc:'+pc+(pc==='#1f5bff'?';color:#fff':'')+'">'+(pi+1)+'</span>':'')+esc(p.role)+'</p><div class="kit-piece"><a class="item-card" href="#i'+first.h+'">'+thumbHtml(first)+'<div><strong>'+esc(first.n)+'</strong><span class="card-where">'+esc(first.in?first.w:'Ask at the desk')+'</span></div><span class="arrow" aria-hidden="true">\u2197</span></a>'+(pu?shelfStackHtml(pu,boardFor(pu,first.s),pc):'')+'</div>'+(items.length>1?'<p class="kit-or">or '+items.slice(1).map(k=>'<a href="#i'+k.h+'">'+esc(k.n)+'</a> ('+esc(k.in?k.w:'ask at the desk')+')').join(', or ')+'</p>':'')+'</div>'}).join('')+'</div><div class="guide-section kit-tip"><h2>Light the shelves in Lending</h2><p><button type="button" id="kit-code-go" class="kit-code-go">Show the code for the console</button></p><div id="kit-code" aria-live="polite"></div></div><div class="guide-section kit-tip"><h2>Before you go</h2><p>'+esc(kit.tip)+'</p><p class="note">Each piece is checked out separately and may already be on loan. The desk has what is in today.</p></div></div></div>';
   attach3d(app);
   document.getElementById('kit-code-go').addEventListener('click', async e => {
     const button = e.currentTarget, box = document.getElementById('kit-code');
