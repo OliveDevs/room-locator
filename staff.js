@@ -358,7 +358,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   // about 12 changes (the scanner has to read it off a phone); more than that become a second code. New items (RL:ADD)
   // are always scanned on their own, because the console asks for their barcode.
   const BIG_BODY = 240; let sendNonce = Math.floor(Math.random() * 250);
-  const canBatch = c => /^RL:(MOVE|SHELF|COUNT):/.test(c.code);
+  const canBatch = c => /^RL:(MOVE|SHELF|COUNT|FOUND):/.test(c.code);
   function steps() {
     const out = []; let cur = null;
     for (const c of made) {
@@ -785,17 +785,18 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const ub = Object.fromEntries(r.units.map(u => [u.code, u]));
     const firstText = lines.length ? lines[0].join('|') : '';
     const start = 0;
-    const count = { I: 0, S: 0, X: 0, U: 0, B: 0, A: 0, C: 0, R: 0 }, notes = [];
+    const count = { I: 0, S: 0, X: 0, U: 0, B: 0, A: 0, C: 0, R: 0, N: 0, F: 0 }, notes = [];
     const byH = Object.fromEntries(d.kinds.map(k => [k.h, k]));
     const inRange = (s, lo, hi) => s >= Number(lo) && s <= Number(hi);
     for (const f of lines.slice(start)) {
       const t = f[0].length === 1 ? f[0].toUpperCase() : 'I';
-      if (t === 'I') { const k = byH[f[0].toLowerCase()]; if (k) { k.u = f[1]; k.s = Number(f[2]); count.I++; } else notes.push('Not on the website yet: item ' + f[0]); }
+      if (t === 'I') { const k = byH[f[0].toLowerCase()]; if (k) { k.u = f[1]; k.s = Number(f[2]); delete k.nf; count.I++; } else notes.push('Not on the website yet: item ' + f[0]); }
+      else if (t === 'N') { const k = byH[(f[1] || '').toLowerCase()]; if (k) { if (f[2] === '1') { k.nf = 1; count.N++; } else { delete k.nf; count.F++; } } }   // an audit: not found (1), found again (0)
       else if (t === 'S') { d.kinds.forEach(k => { if (k.u === f[1] && inRange(k.s, f[2], f[3])) { k.u = f[4]; k.s = Number(f[5]); } }); count.S++; }
       else if (t === 'X') { d.kinds.forEach(k => { if (k.u === f[1] && inRange(k.s, f[2], f[3])) { k.u = f[4]; k.s = Number(f[5]); } else if (k.u === f[4] && inRange(k.s, f[5], f[6])) { k.u = f[1]; k.s = Number(f[2]); } }); count.X++; }
       else if (t === 'U') { const a = ub[f[1]], b = ub[f[2]]; if (a && b) { for (const key of ['first', 'shelves', 'rect']) [a[key], b[key]] = [b[key], a[key]]; count.U++; } }
       else if (t === 'B') { const u = ub[f[1]], n = Number(f[2]); if (u) { const set = new Set(u.boards && u.boards.length ? u.boards : [...Array(u.shelves).keys()].map(i => i + 1)); if (f[3] === '1') set.add(n); else if (n > 1) set.delete(n); u.boards = [...set].sort((x, y) => x - y); count.B++; } }
-      else if (t === 'C') { const k = byH[(f[1] || '').toLowerCase()], n = Number(f[2]); if (k && Number.isInteger(n) && n >= 0) { k.x = n; if (n === 0) count.R++; else count.C++; } }
+      else if (t === 'C') { const k = byH[(f[1] || '').toLowerCase()], n = Number(f[2]); if (k && Number.isInteger(n) && n >= 0) { k.x = n; if (n === 0) { count.R++; delete k.nf; } else count.C++; } }
       else if (t === 'A') {
         const name = f[3], h = nameCode(name);
         if (!byH[h]) { const now = nowBy[h] || {}; const k = { n: name, c: CAT_ORDER[Number(f[1])] || 'Cables & More', t: f[2], x: Number(f[6]) || 1, in: true, d: '', h, u: f[4], s: Number(f[5]) }; for (const key of guideFields) if (now[key] !== undefined) k[key] = now[key]; d.kinds.push(k); byH[h] = k; count.A++; }
@@ -827,7 +828,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     r.source = 'Room Locator console, changes brought over on ' + new Date().toISOString().slice(0, 10);
     outData = d; outRoom = r;
     const list = [];
-    const moved = d.kinds.filter(k => { const b = nowBy[k.h]; return !b || b.u !== k.u || b.s !== k.s || b.x !== k.x || b.w !== k.w; }).length + kinds.filter(k => !byH[k.h]).length;
+    const moved = d.kinds.filter(k => { const b = nowBy[k.h]; return !b || b.u !== k.u || b.s !== k.s || b.x !== k.x || b.w !== k.w || !!b.nf !== !!k.nf; }).length + kinds.filter(k => !byH[k.h]).length;
     const layoutChanged = r.units.some(u => {
       const current = unitBy[u.code];
       return !current || ['first', 'shelves', 'rect', 'boards'].some(key => JSON.stringify(u[key]) !== JSON.stringify(current[key]));
@@ -839,6 +840,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     if (!needsSave) list.push('The website already matches the console.');
     if (count.C) list.push(count.C + (count.C === 1 ? ' count changed' : ' counts changed'));
     if (count.R) list.push(count.R + (count.R === 1 ? ' item taken out of Lending' : ' items taken out of Lending'));
+    if (count.N) list.push(count.N + (count.N === 1 ? ' thing not found in an audit: it goes on the Not found list' : ' things not found in an audit: they go on the Not found list'));
+    if (count.F) list.push(count.F + (count.F === 1 ? ' thing found again' : ' things found again'));
     if (count.I) list.push(count.I + (count.I === 1 ? ' thing moved' : ' things moved'));
     if (count.S) list.push(count.S + (count.S === 1 ? ' whole shelf moved' : ' whole shelves moved'));
     if (count.X) list.push(count.X + (count.X === 1 ? ' pair of shelves swapped' : ' pairs of shelves swapped'));
@@ -874,7 +877,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   function placeIn(r, k) { const u = uBy(r)[k.u]; k.w = u && u.shelves && k.s ? u.name + ', shelf ' + boardBelowIn(u, k.s) : (u ? u.name : k.u); k.in = !!(u && u.shelves && k.s); }
   function doEntry(d, r, e) {
     const f = e.code.split(':'), by = Object.fromEntries(d.kinds.map(k => [k.h, k])), ub = uBy(r);
-    if (f[1] === 'MOVE') { const k = by[f[2]]; if (!k) return null; const [u, s] = f[3].split('-'), undo = { items: [[k.h, k.u, k.s]] }; k.u = u; k.s = Number(s); placeIn(r, k); return undo; }
+    if (f[1] === 'MOVE') { const k = by[f[2]]; if (!k) return null; const [u, s] = f[3].split('-'), undo = { items: [[k.h, k.u, k.s]] }; if (k.nf) { undo.nf = [k.h]; delete k.nf; } k.u = u; k.s = Number(s); placeIn(r, k); return undo; }   // a move says where it is: off the not-found list
+    if (f[1] === 'FOUND') { const k = by[f[2]]; if (!k) return null; const undo = { nf: k.nf ? [k.h] : [] }; delete k.nf; return undo; }
     if (f[1] === 'COUNT') { const k = by[f[2]]; if (!k) return null; const undo = { count: [k.h, k.x] }; k.x = Number(f[3]); return undo; }
     if (f[1] === 'SHELF') {
       const [a, an] = f[2].split('-'), [b, bn] = f[3].split('-'), swap = f[4] === 'SWAP', from = boardOf(ub, a, Number(an)), to = boardOf(ub, b, Number(bn)), items = [];
@@ -891,6 +895,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const u = e.undo; if (!u) return;
     const by = Object.fromEntries(d.kinds.map(k => [k.h, k]));
     (u.items || []).forEach(([h, unit, s]) => { const k = by[h]; if (k) { k.u = unit; k.s = s; placeIn(r, k); } });
+    (u.nf || []).forEach(h => { if (by[h]) by[h].nf = 1; });
     if (u.count && by[u.count[0]]) by[u.count[0]].x = u.count[1];
     if (u.added) { const i = d.kinds.findIndex(k => k.h === u.added); if (i >= 0) e._back = d.kinds.splice(i, 1)[0]; }   // kept, with any details added since, in case it goes back on
   }
@@ -908,7 +913,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   function takeIn(d, p) {                     // the website was just saved: use the saved copy on this page too
     kinds.splice(0, kinds.length, ...d.kinds); data.published = d.published;
     if (p) pend = p;
-    syncMade(); madeAt = Math.max(0, madeAt); drawCode(); drawLog(); drawHomeStatus(); drawTodo();   // (the edit tab's no-photo list too: a new item belongs on it)
+    syncMade(); madeAt = Math.max(0, madeAt); drawCode(); drawLog(); drawHomeStatus(); drawTodo(); if (typeof drawNotFound === 'function') drawNotFound();   // (the edit tab's no-photo list too: a new item belongs on it)
     if (view3d) { view3d.retint(); refresh3d(); }
   }
   async function saveChanges(list, button, opts = {}) {
@@ -979,6 +984,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
       const [u, s] = f[3].split('-'), k = d.kinds.find(x => x.h === f[2]), same = (unit, n) => unit === u && boardOf(ub, u, Number(n)) === boardOf(ub, u, Number(s));
       return seen(l => l[0].length > 1 && l[0].toLowerCase() === f[2] && same(l[1], l[2])) || (!!k && same(k.u, k.s) && !later.some(x => x.code.includes(':' + f[2] + ':')));
     }
+    if (f[1] === 'FOUND') { const k = d.kinds.find(x => x.h === f[2]); return seen(l => l[0] === 'N' && (l[1] || '').toLowerCase() === f[2] && l[2] === '0') || (!!k && !k.nf && !later.some(x => x.code === e.code)); }
     if (f[1] === 'COUNT') { const k = d.kinds.find(x => x.h === f[2]); return seen(l => l[0] === 'C' && (l[1] || '').toLowerCase() === f[2] && Number(l[2]) === Number(f[3])) || (!!k && k.x === Number(f[3]) && !later.some(x => x.code.startsWith('RL:COUNT:' + f[2] + ':'))); }
     if (f[1] === 'ADD') return !!e.item && (d.kinds.some(k => k.h === e.item.h) || seen(l => l[0] === 'A' && nameCode(l[3] || '') === e.item.h));
     if (f[1] === 'SHELF') {
@@ -1394,6 +1400,28 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const ok = await saveChanges([{ code: 'RL:COUNT:' + k.h + ':' + n, title: 'Back in Lending: ' + k.n, what: n + (n === 1 ? ' copy' : ' copies') + ', at ' + (k.w || k.u) + '.' }], e.target, { needKey: true });
     if (ok) { selectEditItem(kinds.find(x => x.h === k.h) || k); }
   });
+  // ---- the not-found list (console audits, v5.51): say where each one is, and it comes off
+  function drawNotFound() {
+    const nf = kinds.filter(k => k.nf && !gone(k)).sort((a, b) => a.n.localeCompare(b.n));
+    $('home-nf-line').hidden = !nf.length;
+    $('home-nf').textContent = nf.length + (nf.length === 1 ? ' thing was' : ' things were') + ' not found in an audit.';
+    $('notfound').hidden = !nf.length;
+    $('nf-list').innerHTML = nf.map(k => '<li class="nf-row"><div><strong>' + esc(k.n) + '</strong><br><span class="tool-note">Listed on ' + esc(k.w || k.u) + '</span></div><div class="sync-actions nf-actions">'
+      + '<button type="button" data-nf="here" data-h="' + esc(k.h) + '">It\u2019s there</button>'
+      + '<button type="button" class="button-secondary" data-nf="move" data-h="' + esc(k.h) + '">It\u2019s on another shelf</button>'
+      + (allowed('remove') ? '<button type="button" class="button-secondary" data-nf="gone" data-h="' + esc(k.h) + '">Gone for good</button>' : '') + '</div></li>').join('');
+  }
+  $('home-nf-show').addEventListener('click', () => { $('notfound').open = true; $('notfound').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  $('nf-list').addEventListener('click', async e => {
+    const b = e.target.closest('[data-nf]'); if (!b) return; const k = kinds.find(x => x.h === b.dataset.h); if (!k) return;
+    if (b.dataset.nf === 'here') { await saveChanges([{ code: 'RL:FOUND:' + k.h, title: 'Found: ' + k.n, what: 'It was on its shelf, ' + (k.w || k.u) + '.' }], b, { needKey: true }); drawNotFound(); return; }
+    if (b.dataset.nf === 'move') { $('tab-move').click(); mf.elements.thing.value = k.n; mf.elements.thing.dispatchEvent(new Event('input', { bubbles: true })); $('tool-move').scrollIntoView({ behavior: 'smooth', block: 'start' }); status.textContent = 'Pick the shelf where ' + k.n + ' is, then save. That takes it off the not-found list.'; return; }
+    if (b.dataset.nf === 'gone') {
+      if (!confirm('Take ' + k.n + ' out of Lending? Students stop seeing it and the console stops finding it once it scans the code. It can be put back.')) return;
+      await saveChanges([{ code: 'RL:COUNT:' + k.h + ':0', title: 'Take out of Lending: ' + k.n, what: 'Not found in an audit. Was ' + (k.x || 1) + ' at ' + (k.w || k.u) + '.' }], b, { needKey: true }); drawNotFound();
+    }
+  });
+  drawNotFound(); addEventListener('rl-key-changed', drawNotFound);
   // ---- the inventory as a spreadsheet (a .csv file: Excel, Numbers and Google Sheets all open it)
   $('inventory-get').addEventListener('click', () => {
     const cell = v => { const t = String(v == null ? '' : v); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
@@ -1401,7 +1429,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const order = new Map(units.map((u, i) => [u.code, i]));
     const rows = kinds.slice().sort((a, b) => (gone(a) - gone(b)) || ((order.get(a.u) ?? 999) - (order.get(b.u) ?? 999)) || ((a.s || 0) - (b.s || 0)) || a.n.localeCompare(b.n)).map(k => {
       const u = unitBy[k.u], shelf = u && u.shelves && k.s ? boardBelow(u, k.s) : '';
-      return [k.n, k.c, k.t, gone(k) ? 0 : (k.x || 1), u ? u.name : k.u, shelf, u && u.shelves ? (shelf ? u.name + ', shelf ' + shelf : u.name) : (u ? u.name : k.u) + ' (ask at the desk)', gone(k) ? 'Taken out of Lending' : 'In Lending', site + '#i' + k.h];
+      return [k.n, k.c, k.t, gone(k) ? 0 : (k.x || 1), u ? u.name : k.u, shelf, u && u.shelves ? (shelf ? u.name + ', shelf ' + shelf : u.name) : (u ? u.name : k.u) + ' (ask at the desk)', gone(k) ? 'Taken out of Lending' : k.nf ? 'Not found in an audit' : 'In Lending', site + '#i' + k.h];
     });
     const head = ['Item', 'Category', 'Type', 'How many', 'Unit', 'Shelf (1 = bottom)', 'Where it lives', 'Status', 'Item page'];
     const csv = '\ufeff' + [head, ...rows].map(r => r.map(cell).join(',')).join('\r\n') + '\r\n';

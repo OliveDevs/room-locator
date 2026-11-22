@@ -46,3 +46,5 @@
 :root[data-theme="dark"] .edit-gone{background:#3a1d1a;color:#f6d0cb}
 
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .edit-gone{background:#3a1d1a;color:#f6d0cb}}
+:root[data-theme="dark"] .nf-row{border-bottom-color:#3b3e44}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .nf-row{border-bottom-color:#3b3e44}}

@@ -207,7 +207,7 @@ MCUFRIEND_kbv tft;
 Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 // the screens (stored in a byte so the Arduino prototype maker is happy)
-enum { HOME, TYPES, KINDS, RESULTS, SHELF, ITEM, PUTAWAY, MAP, UNITVIEW, ACTIONS, MOVEOK, PIN, ADDNEW, RECENT, SYNC, RESETASK, STICKER, IDEAS, RESETWORD, CHECK };
+enum { HOME, TYPES, KINDS, RESULTS, SHELF, ITEM, PUTAWAY, MAP, UNITVIEW, ACTIONS, MOVEOK, PIN, ADDNEW, RECENT, SYNC, RESETASK, STICKER, IDEAS, RESETWORD, CHECK, AUDIT };
 byte mode = HOME;                               // which screen is showing
 const byte BACK_MAX = 10;
 byte backTo[BACK_MAX], backCursor[BACK_MAX], backStage[BACK_MAX], backView[BACK_MAX]; byte backDepth = 0;     // where Back returns to
@@ -247,6 +247,7 @@ byte fromCount = 0;                             // things on the shelf being mov
 byte moveFromDepth = 0;                         // where Back returns once an item move is done
 byte doneNote = 0;                               // what the "Done" footer adds: 1 = move the label card, 2 = swap the bodies, 3 = undone
 byte syncPage = 0, syncPages = 1;                 // the QR pages for the website
+bool justFound = false;    // the thing just scanned was on an audit's not-found list (v5.51)
 byte justCounted = 0;     // 1 = changed, 2 = it was that number already                        // the next item screen says "Count changed"
 bool justMoved = false, justChanged = false, justAdded = false;    // the next screen says "Moved" / "Done" / "Added" once
 // the staff PIN
@@ -503,6 +504,7 @@ byte sleepTaps = 0;
 unsigned long lastSleepTap = 0;
 void drawIdeas(); void findIdeas(); void openIdea(); void drawResetWord(); void resetLetter(char c);   // (shelf ideas, v5.50)
 void drawCheck(); void checkScanned(char* t); void finishCheck();   // (shelf check, v5.51)
+void openAudit(); void drawAudit(); void auditPicked(); bool foundAgain(unsigned long key); extern bool auditOpen; extern uint16_t auditShelves[MAX_UNITS];   // (audit, v5.51)
 void drawStickers(); void stickerScanned(char* t); void saveSticker(); void openStickers(); bool copyFile(const char* from, const char* to, long upTo);   // (the sticker screen, v5.50)
 void draw(); void lightsOff(); bool drawQRText(int x, int y, const char* url); byte firstVisibleRow(); void blinkDot(byte slot, bool lit);   // (written further down)
 const int SLEEP_MID = 318, SLEEP_X = SLEEP_MID - SLEEP_W, SLEEP_Y = 150 - SLEEP_H;   // drawn double size, right of the website's code
@@ -848,7 +850,7 @@ void loadMoves() {
     if (!field[0][0] || !field[1][0]) continue;
     byte a[6] = {0, 0, 0, 0, 0, 0};
     char t = field[0][1] ? 'I' : toupper(field[0][0]);
-    if (t == 'U' || t == 'B' || t == 'A') continue;                 // units were done above; boards and new items are history only
+    if (t == 'U' || t == 'B' || t == 'A' || t == 'N') continue;     // units were done above; boards, new items and not-found marks are history only
     if (t == 'C') { unsigned long k = strtoul(field[1], NULL, 16); a[0] = (k >> 16) & 255; a[1] = (k >> 8) & 255; a[2] = k & 255; a[3] = atoi(field[2]); }
     else if (t == 'S' || t == 'X') { a[0] = unitIndex(field[1]); a[1] = atoi(field[2]); a[2] = atoi(field[3]); a[3] = unitIndex(field[4]); a[4] = atoi(field[5]); a[5] = atoi(field[6]); if (a[0] == 255 || a[3] == 255) continue; }
     else { t = 'I'; unsigned long k = strtoul(field[0], NULL, 16); a[0] = (k >> 16) & 255; a[1] = (k >> 8) & 255; a[2] = k & 255; a[3] = unitIndex(field[1]); a[4] = atoi(field[2]); if (a[3] == 255) continue; }
@@ -893,6 +895,7 @@ bool saveChange(char type, const byte* a) {     // adds one line to MOVES.TSV
   char buf[48];
   if (type == 'I') snprintf_P(buf, sizeof(buf), PSTR("%02x%02x%02x\t%s\t%d"), a[0], a[1], a[2], unitCode[a[3]], a[4]);
   else if (type == 'C') snprintf_P(buf, sizeof(buf), PSTR("C\t%02x%02x%02x\t%d"), a[0], a[1], a[2], a[3]);
+  else if (type == 'N') snprintf_P(buf, sizeof(buf), PSTR("N\t%02x%02x%02x\t%d"), a[0], a[1], a[2], a[3]);   // not found in an audit (1), or found again (0)
   else if (type == 'S') snprintf_P(buf, sizeof(buf), PSTR("S\t%s\t%d\t%d\t%s\t%d"), unitCode[a[0]], a[1], a[2], unitCode[a[3]], a[4]);
   else if (type == 'X') snprintf_P(buf, sizeof(buf), PSTR("X\t%s\t%d\t%d\t%s\t%d\t%d"), unitCode[a[0]], a[1], a[2], unitCode[a[3]], a[4], a[5]);
   else if (type == 'B') snprintf_P(buf, sizeof(buf), a[3] ? PSTR("B\t%s\t%d\t%d\tS") : PSTR("B\t%s\t%d\t%d"), unitCode[a[0]], a[1], a[2]);
@@ -1079,7 +1082,7 @@ enum { A_OPEN, A_MOVEALL, A_REMOVE, A_TOGETHER, A_SWAP, A_CHECK };   // the choi
 // rows on the side view of a unit: n = board n, 100 + n = empty groove n, 0 = "swap this whole unit"
 const byte ROW_SWAP_UNIT = 0, ROW_GROOVE = 100;
 // the last three spots on the map are not units
-const byte ROW_IDEAS = 249, ROW_RESET = 250, ROW_PHONE = 251, ROW_RECENT = 252, ROW_SYNC = 253, ROW_PIN = 254;   // (ROW_IDEAS: shelf ideas, v5.50)
+const byte ROW_AUDIT = 248, ROW_IDEAS = 249, ROW_RESET = 250, ROW_PHONE = 251, ROW_RECENT = 252, ROW_SYNC = 253, ROW_PIN = 254;   // (ROW_IDEAS: shelf ideas, v5.50)
 const char BACKUP_NAME[] PROGMEM = "Nov 16 setup";   // what "Start over" goes back to: the files the laptop last sent, with no changes
 const long ROW_UNDO = -1;                        // the first row of Recent changes
 long undoArmed = -2;                             // the change (its place in MOVES.TSV) that the next Select would take back. -2 = none
@@ -1096,7 +1099,7 @@ void loadMapUnits() {
   rowCount = 0;
   if (stage == ST_FROM) row[rowCount++] = ROW_PHONE;
   for (byte u = 0; u < unitTotal && rowCount < MAX_ROWS; u++) if (mapListed(u)) row[rowCount++] = u;
-  if (stage == ST_FROM && rowCount + 5 <= MAX_ROWS) { row[rowCount++] = ROW_IDEAS; row[rowCount++] = ROW_RECENT; row[rowCount++] = ROW_SYNC; row[rowCount++] = ROW_PIN; row[rowCount++] = ROW_RESET; }
+  if (stage == ST_FROM && rowCount + 6 <= MAX_ROWS) { row[rowCount++] = ROW_AUDIT; row[rowCount++] = ROW_IDEAS; row[rowCount++] = ROW_RECENT; row[rowCount++] = ROW_SYNC; row[rowCount++] = ROW_PIN; row[rowCount++] = ROW_RESET; }
 }
 void countThings(byte u) {                       // how many kinds sit on each shelf of unit u
   memset(thingCount, 0, sizeof(thingCount));
@@ -1124,7 +1127,7 @@ void preview() {
   if (moving && moveWhat == W_SHELF) addSpace(fromUnit, fromLo, LIGHT_ITEM);
   if (moving && moveWhat == W_UNIT) addLights(unitFirst[fromUnit], unitCount[fromUnit], LIGHT_ITEM);
   if (moving && moveWhat == W_ITEM) { loadKind(currentKind); addPlace(field[K_UNIT], atoi(field[K_SHELF]), LIGHT_ITEM); }
-  if (mode == MAP && rowCount && row[cursor] < ROW_IDEAS) { byte u = row[cursor]; addLights(unitFirst[u], unitCount[u], moving ? LIGHT_NEW_SPOT : LIGHT_UNIT); }
+  if (mode == MAP && rowCount && row[cursor] < ROW_AUDIT) { byte u = row[cursor]; addLights(unitFirst[u], unitCount[u], moving ? LIGHT_NEW_SPOT : LIGHT_UNIT); }
   if (mode == UNITVIEW && rowCount) {
     byte r = row[cursor];
     if (r == ROW_SWAP_UNIT) addLights(unitFirst[viewUnit], unitCount[viewUnit], LIGHT_UNIT);
@@ -1227,6 +1230,7 @@ void drawRows(int onlyA = -1, int onlyB = -1) {   // with two row numbers: just 
         if (hi > r) snprintf_P(top, sizeof(top), PSTR("Shelf %d   (tall: lights %d to %d)"), r, r, hi); else snprintf_P(top, sizeof(top), PSTR("Shelf %d"), r);
         byte n = r <= 16 ? thingCount[r] : 0;
         if (!n) strcpy_P(under, PSTR("empty")); else snprintf_P(under, sizeof(under), n == 1 ? PSTR("1 thing") : PSTR("%d things"), n);
+        if (auditOpen && stage == ST_FROM) strcat_P(under, r <= 16 && (auditShelves[viewUnit] & (1 << (r - 1))) ? PSTR("   - checked in the audit") : PSTR("   - not checked yet"));
       }
       drawRow(s, i == cursor, top, under, -1);
     } else if (mode == RECENT) {
@@ -1391,9 +1395,10 @@ void drawItem() {
   // Working out a QR takes the Mega over a second, and nothing else can happen meanwhile. So the page is drawn
   // without it, and loop() adds the QR once nobody has pressed anything for a moment: flicking through items stays quick.
   tft.fillRect(312, 82, 156, 156, PANEL); qrWanted = 1; qrAt = millis();
-  if (justCounted) { if (justCounted == 2) footer(F("It already says that. Nothing was changed.")); else doneBar(justCounted == 3 ? F("Taken out.   Select = update the website") : F("Count changed.   Select = update the website")); offerSync = justCounted != 2; justCounted = 0; }
+  if (justCounted) { if (justCounted == 2) footer(F("It already says that. Nothing was changed.")); else doneBar(justCounted == 4 ? F("Marked found.   Select = update the website") : justCounted == 3 ? F("Taken out.   Select = update the website") : F("Count changed.   Select = update the website")); offerSync = justCounted != 2; justCounted = 0; }
   else if (justMoved) { justMoved = false; doneBar(F("Moved and saved.   Select = update the website")); offerSync = true; }
   else if (justAdded) { justAdded = false; footer(F("Added. It is saved on the card.")); }
+  else if (justFound) { justFound = false; footer(F("Found: it was on the audit's not-found list")); }
   else if (staffOK()) footer(itemWasScanned ? F("Down: move   Up: its stickers   Scan more: a list") : F("Down: move it     Up: its stickers"));
   else footer(itemWasScanned ? F("Down: move it     Scan more: a list") : F("Down: move it     Back"));
 }
@@ -1416,7 +1421,7 @@ void drawMapBody(int was = -1) {                 // was = the row the cursor jus
   const uint16_t WOOD = RGB(205, 178, 130), OFF = RGB(80, 86, 100);
   int h = -1;                                                              // the unit shown green: where the thing being moved is now
   if (stage == ST_TO) { h = fromUnit; if (moveWhat == W_ITEM) { loadKind(currentKind); h = findUnit(field[K_UNIT]); } }
-  bool quick = was >= 0 && was < rowCount && row[was] < ROW_IDEAS && rowCount && row[cursor] < ROW_IDEAS;
+  bool quick = was >= 0 && was < rowCount && row[was] < ROW_AUDIT && rowCount && row[cursor] < ROW_AUDIT;
   for (byte u = 0; u < unitTotal; u++) {
     if (quick && u != row[was] && !(u > row[was] && boxesTouch(u, row[was]))) continue;
     if (!quick && u == 0) tft.fillRect(MAP_X, MAP_Y, 288, 216, RGB(36, 52, 98));   // the blue floor, 400 x 300 mm
@@ -1438,10 +1443,11 @@ void drawMapBody(int was = -1) {                 // was = the row the cursor jus
     textF(316, 196, F("Down or Select:"), WHITE, SMALL); textF(316, 220, F("change things"), DIM, SMALL);
     return;
   }
-  if (u >= ROW_RECENT || u == ROW_RESET || u == ROW_IDEAS) {                      // the last spots are not units: a card over the map says what Select does
+  if (u >= ROW_RECENT || u == ROW_RESET || u == ROW_IDEAS || u == ROW_AUDIT) {                      // the last spots are not units: a card over the map says what Select does
     tft.fillRect(MAP_X, MAP_Y, 288, 216, PANEL);
     const __FlashStringHelper *title, *l1, *l2, *l3;
-    if (u == ROW_IDEAS) { title = F("Shelf ideas"); l1 = F("Shelves that could share"); l2 = F("a board, or need one back."); l3 = F("Nothing changes by itself."); }
+    if (u == ROW_AUDIT) { title = F("Audit"); l1 = F("Check shelves one by one."); l2 = F("What is not found goes on"); l3 = F("a list on the website."); }
+    else if (u == ROW_IDEAS) { title = F("Shelf ideas"); l1 = F("Shelves that could share"); l2 = F("a board, or need one back."); l3 = F("Nothing changes by itself."); }
     else if (u == ROW_RECENT) { title = F("Recent changes"); l1 = F("Every change made here,"); l2 = F("newest first."); l3 = F("Undo any of them here."); }
     else if (u == ROW_RESET) { title = F("Start over"); l1 = F("Takes back every change"); l2 = F("and every item added here."); l3 = F("Back to the Nov 16 setup."); }
     else if (u == ROW_SYNC) { title = F("Send to website"); l1 = F("Shows the changes as QR"); l2 = F("codes. Scan them on the"); l3 = F("website's staff page."); }
@@ -1453,7 +1459,7 @@ void drawMapBody(int was = -1) {                 // was = the row the cursor jus
       text(MAP_X + 16, MAP_Y + 176, buf, ACCENT, SMALL, 260);
     }
     textF(MAP_X + 16, MAP_Y + 86, l1, DIM, SMALL); textF(MAP_X + 16, MAP_Y + 110, l2, DIM, SMALL); textF(MAP_X + 16, MAP_Y + 134, l3, DIM, SMALL);
-    textF(316, 72, F("Select:"), WHITE, BOLD); textF(316, 96, u == ROW_IDEAS ? F("see the ideas") : u == ROW_RECENT ? F("see the list") : u == ROW_SYNC ? F("show the codes") : u == ROW_RESET ? F("asks for the PIN") : F("set a new PIN"), DIM, SMALL);
+    textF(316, 72, F("Select:"), WHITE, BOLD); textF(316, 96, u == ROW_AUDIT ? (auditOpen ? F("save or stop it") : F("start one")) : u == ROW_IDEAS ? F("see the ideas") : u == ROW_RECENT ? F("see the list") : u == ROW_SYNC ? F("show the codes") : u == ROW_RESET ? F("asks for the PIN") : F("set a new PIN"), DIM, SMALL);
     return;
   }
   mapBox(u, ACCENT, WHITE);
@@ -1467,6 +1473,10 @@ void drawMapBody(int was = -1) {                 // was = the row the cursor jus
   int ly = unitMap[u][0] == 255 ? 190 : 150;                     // below the "not on the map" lines when they are there
   if (stage == ST_TO) { tft.fillRect(316, ly, 12, 12, GREEN); textF(334, ly + 11, F("now"), DIM, SMALL); tft.fillRect(316, ly + 22, 12, 12, ACCENT); textF(334, ly + 33, F("goes here"), DIM, SMALL); }
   else if (unitCount[u]) textF(316, ly + 11, F("Its lights are on"), DIM, SMALL);
+  if (auditOpen && stage == ST_FROM && unitCount[u]) {             // how far the audit has got on this unit
+    byte all = 0, done = 0; for (byte n = 1; n <= unitCount[u] && n <= 16; n++) if (hasBoard(u, n)) { all++; if (auditShelves[u] & (1 << (n - 1))) done++; }
+    snprintf_P(buf, sizeof(buf), PSTR("Audit: %d of %d shelves"), done, all); text(316, ly + 40, buf, done == all ? GREEN : ACCENT, SMALL, 156);
+  }
 }
 void drawMap() {
   const char* t = "Staff tools";
@@ -1643,6 +1653,7 @@ void draw() {
   else if (mode == IDEAS) drawIdeas();
   else if (mode == RESETWORD) drawResetWord();
   else if (mode == CHECK) drawCheck();
+  else if (mode == AUDIT) drawAudit();
   else if (mode == SYNC) drawSync();
   else drawList();
   if (queryLen) drawTyping();
@@ -1707,9 +1718,10 @@ void startOrganize() {
 }
 void pickedUnit(byte u) {                       // Select on the map
   if (u == ROW_PHONE) {
-    if (rowCount > 1 && row[1] < ROW_IDEAS) { cursor = 1; drawMapBody(); preview(); }
+    if (rowCount > 1 && row[1] < ROW_AUDIT) { cursor = 1; drawMapBody(); preview(); }
     return;
   }
+  if (u == ROW_AUDIT) { openAudit(); return; }
   if (u == ROW_IDEAS) { header("Shelf ideas", NULL); textF(18, 90, F("Looking at every shelf..."), WHITE, SMALL); findIdeas(); go(IDEAS); rowCount = ideaCount; draw(); preview(); return; }
   if (u == ROW_RECENT) { go(RECENT); loadRecent(); draw(); lightsOff(); return; }
   if (u == ROW_SYNC) { go(SYNC); syncPage = 0; syncPages = countSyncPages(); draw(); lightsOff(); return; }
@@ -1935,6 +1947,12 @@ bool batchApply(char* c, const __FlashStringHelper** why) {
     byte a[6] = {(byte)((key >> 16) & 255), (byte)((key >> 8) & 255), (byte)(key & 255), (byte)n, 0, 0};
     return quietSave('C', a, key, why);
   }
+  if (strncasecmp_P(c, PSTR("FOUND:"), 6) == 0) {                 // the website's not-found list: it was there after all (v5.51)
+    unsigned long key = strtoul(c + 6, NULL, 16);
+    if (findNameCode(key) < 0) { *why = F("An item is not in this console's list."); return false; }
+    if (!foundAgain(key)) batchUnchanged++;
+    return true;
+  }
   *why = F("Only moves and counts can be sent together."); return false;
 }
 void drawBatch() {
@@ -2053,6 +2071,13 @@ void runCode(char* c) {
     if (!saveOrSay('C', a, key)) return;
     staffUntil = millis() + STAFF_MS;
     backDepth = 0; mode = HOME; justCounted = n ? 1 : 3; openItem(kind, false); return;
+  }
+  if (strncasecmp_P(c, PSTR("FOUND:"), 6) == 0) {
+    unsigned long key = strtoul(c + 6, NULL, 16); long kind = findNameCode(key);
+    if (kind < 0) { codeProblem(F("That item is not in this console's list.")); return; }
+    bool changed = foundAgain(key);
+    staffUntil = millis() + STAFF_MS; if (!staffUntil) staffUntil = 1;
+    backDepth = 0; mode = HOME; justCounted = changed ? 4 : 2; openItem(kind, false); return;
   }
   if (strncasecmp_P(c, PSTR("MOVE:"), 5) == 0) {
     char* place = strchr(c + 5, ':'); if (!place) { codeProblem(F("The code is not complete.")); return; }
@@ -2218,23 +2243,70 @@ void saveSticker() {
 // here is ticked off. What is listed here but never scanned stays put: it may be checked out, or on another shelf, and
 // the end screen says how many. A shelf whose board was taken out is one space, so its things are checked together.
 byte checkU = 0, checkLo = 0, checkN = 0, checkMoved = 0, checkHere = 0; bool checkBad = false;
-byte checkSeen[48][3];                           // the things scanned so far (their 6-letter codes): each counts once
 char checkMsg[46] = "";
-bool checkWasSeen(unsigned long k) { for (byte i = 0; i < checkN; i++) if (checkSeen[i][0] == ((k >> 16) & 255) && checkSeen[i][1] == ((k >> 8) & 255) && checkSeen[i][2] == (k & 255)) return true; return false; }
+// ---- audit (v5.51): an audit is shelf checks that add up. Staff start one under Audit on the map, then check shelves
+// (any number, over any number of days: it is kept on the card in AUDIT.TSV). "Save the audit" puts every thing that is
+// listed on a checked shelf but was never scanned during the audit on the not-found list: an N line in MOVES.TSV, which
+// goes to the website with the next update like any change. Nothing moves for it; it keeps its shelf. It comes off the
+// list by itself when it is scanned here again, or when the website says it was found (RL:FOUND) or moves it.
+const int AUDIT_MAX = 512;                       // things, by their line in KINDS.TSV
+bool auditOpen = false, auditStopArmed = false;
+byte auditSeen[AUDIT_MAX / 8];                   // scanned (in this check, or in the whole audit)
+uint16_t auditShelves[MAX_UNITS];                // the boards checked in the audit, one bit each
+bool isSeen(int i) { return i >= AUDIT_MAX || (auditSeen[i >> 3] & (1 << (i & 7))); }   // (past the end: never called missing)
+int kindIndex(long pos) {                        // which line of KINDS.TSV starts at pos
+  long p = 0, next; int i = 0; bool was = searching; searching = true;
+  while ((next = readLine(kindsFile, p)) >= 0 && p != pos) { p = next; i++; }
+  searching = was; return i;
+}
 bool checkBelongs() {                            // the kind in `line` is listed on the shelf being checked, and is still in Lending
   int u = findUnit(field[K_UNIT]);
   return u == checkU && unitCount[u] && spaceLo(u, atoi(field[K_SHELF])) == checkLo && atoi(field[K_COPIES]) != 0;
 }
+bool auditMissing() {                            // the kind in `line` is on a checked shelf of the audit, and still in Lending
+  int u = findUnit(field[K_UNIT]); if (u < 0 || !unitCount[u] || atoi(field[K_COPIES]) == 0) return false;
+  byte lo = spaceLo(u, atoi(field[K_SHELF])); return lo >= 1 && lo <= 16 && (auditShelves[u] & (1 << (lo - 1)));
+}
+void saveAudit() {
+  cardRemove("AUDIT.TSV"); if (!auditOpen) return;
+  File f = cardOpen("AUDIT.TSV", FILE_WRITE); if (!f) return;
+  char buf[96];                                                    // (three lines: two of things scanned, one of shelves checked)
+  for (int part = 0; part < 2; part++) { strcpy_P(buf, PSTR("SEEN\t")); for (int i = part * 32; i < part * 32 + 32; i++) snprintf_P(buf + strlen(buf), 3, PSTR("%02x"), auditSeen[i]); f.println(buf); }
+  strcpy_P(buf, PSTR("SHELVES\t")); for (byte u = 0; u < MAX_UNITS; u++) snprintf_P(buf + strlen(buf), 5, PSTR("%04x"), auditShelves[u]); f.println(buf);
+  f.close();
+}
+void loadAudit() {
+  auditOpen = false; memset(auditSeen, 0, sizeof(auditSeen)); memset(auditShelves, 0, sizeof(auditShelves));
+  File f = cardOpen("AUDIT.TSV"); if (!f) return;
+  auditOpen = true; long pos = 0; byte part = 0;
+  while ((pos = readLine(f, pos)) >= 0) {
+    if (strcmp_P(field[0], PSTR("SEEN")) == 0 && part < 2) { for (int i = 0; i < 32 && field[1][i * 2] && field[1][i * 2 + 1]; i++) { char h[3] = {field[1][i * 2], field[1][i * 2 + 1], 0}; auditSeen[part * 32 + i] = strtoul(h, NULL, 16); } part++; }
+    else if (strcmp_P(field[0], PSTR("SHELVES")) == 0) for (byte u = 0; u < MAX_UNITS && field[1][u * 4]; u++) { char h[5]; memcpy(h, field[1] + u * 4, 4); h[4] = 0; auditShelves[u] = strtoul(h, NULL, 16); }
+  }
+  f.close();
+}
+// the latest not-found mark for this thing is "not found": write that it was found again. True when something was written
+bool foundAgain(unsigned long key) {
+  char want[7]; snprintf_P(want, 7, PSTR("%02x%02x%02x"), (byte)((key >> 16) & 255), (byte)((key >> 8) & 255), (byte)(key & 255));
+  File f = cardOpen("MOVES.TSV"); long pos = 0; char last = '0';
+  while (f && (pos = readLine(f, pos)) >= 0) if (field[0][0] == 'N' && !field[0][1] && strcasecmp(field[1], want) == 0) last = field[2][0];
+  if (f) f.close();
+  if (last != '1') return false;
+  byte a[6] = {(byte)((key >> 16) & 255), (byte)((key >> 8) & 255), (byte)(key & 255), 0, 0, 0};
+  return saveChange('N', a);
+}
 void startCheck() {
   checkU = fromUnit; checkLo = fromLo; checkN = checkMoved = checkHere = 0; checkBad = false; checkMsg[0] = '\0';
+  if (!auditOpen) memset(auditSeen, 0, sizeof(auditSeen));     // in an audit, what was scanned on other shelves still counts
   go(CHECK); draw();
 }
 void checkLights() { strip.clear(); addSpace(checkU, checkLo, LIGHT_SHELF); strip.show(); }
 // the things listed on this shelf that were not scanned: how many, and the first `show` names drawn from y down
 byte checkMissing(byte show, int y) {
-  byte n = 0; long pos = 0, next;
+  byte n = 0; long pos = 0, next; int i = 0;
   while ((next = readLine(kindsFile, pos)) >= 0) {
-    if (checkBelongs() && !checkWasSeen(nameCode(field[K_NAME]))) { if (n < show) text(30, y + n * 22, field[K_NAME], WHITE, SMALL, 436); if (n < 255) n++; }
+    bool missing = checkBelongs() && !isSeen(i); i++;
+    if (missing) { if (n < show) text(30, y + n * 22, field[K_NAME], WHITE, SMALL, 436); if (n < 255) n++; }
     pos = next;
   }
   return n;
@@ -2258,11 +2330,11 @@ void checkScanned(char* t) {
   checkBad = true;
   long kind = (strncasecmp_P(t, PSTR("RL:"), 3) == 0 || strncasecmp_P(t, PSTR("LOC:"), 4) == 0) ? -1 : findCode(t);
   if (kind < 0) { strcpy_P(checkMsg, PSTR("That is not a sticker this console knows")); draw(); return; }
+  int idx = kindIndex(kind);
   loadKind(kind);
   unsigned long key = nameCode(field[K_NAME]); char name[28]; copyText(name, field[K_NAME], sizeof(name));
-  if (checkWasSeen(key)) { snprintf_P(checkMsg, sizeof(checkMsg), PSTR("%s: scanned already"), name); draw(); return; }
+  if (isSeen(idx)) { snprintf_P(checkMsg, sizeof(checkMsg), auditOpen ? PSTR("%s: scanned already in this audit") : PSTR("%s: scanned already"), name); draw(); return; }
   if (atoi(field[K_COPIES]) == 0) { snprintf_P(checkMsg, sizeof(checkMsg), PSTR("%s: taken out of Lending"), name); draw(); return; }
-  if (checkN >= 48) { strcpy_P(checkMsg, PSTR("48 things is the most for one check")); draw(); return; }
   if (checkBelongs()) { checkHere++; snprintf_P(checkMsg, sizeof(checkMsg), PSTR("%s: already here"), name); }
   else {
     byte a[6] = {(byte)((key >> 16) & 255), (byte)((key >> 8) & 255), (byte)(key & 255), checkU, checkLo, 0};
@@ -2270,12 +2342,15 @@ void checkScanned(char* t) {
     if (!quietSave('I', a, key, &why)) { strncpy_P(checkMsg, (const char*)why, sizeof(checkMsg) - 1); checkMsg[sizeof(checkMsg) - 1] = '\0'; draw(); return; }
     checkMoved++; snprintf_P(checkMsg, sizeof(checkMsg), PSTR("%s: moved here"), name);
   }
-  checkSeen[checkN][0] = (key >> 16) & 255; checkSeen[checkN][1] = (key >> 8) & 255; checkSeen[checkN][2] = key & 255; checkN++;
+  auditSeen[idx >> 3] |= 1 << (idx & 7); if (checkN < 255) checkN++;
+  foundAgain(key);                                                 // it was on a not-found list: not any more
+  if (auditOpen) saveAudit();
   checkBad = false; draw();
 }
 void finishCheck() {
   char buf[60];
   byte moved = checkMoved, here = checkHere;
+  if (auditOpen && checkLo >= 1 && checkLo <= 16) { auditShelves[checkU] |= 1 << (checkLo - 1); saveAudit(); }
   backDepth = 0; mode = HOME; homeMessage = true; offerSync = false; lightsOff();
   header("Shelf check done", NULL);
   snprintf_P(buf, sizeof(buf), PSTR("%s, shelf %d"), unitName[checkU], checkLo); text(18, 84, buf, WHITE, TITLE, 450);
@@ -2284,10 +2359,70 @@ void finishCheck() {
   byte left = checkMissing(0, 0);
   if (left) {
     snprintf_P(buf, sizeof(buf), PSTR("%d listed here were not scanned."), left); text(18, 156, buf, WHITE, SMALL, 450);
-    textF(18, 180, F("They may be checked out. Their shelf stays the same."), DIM, SMALL);
+    textF(18, 180, auditOpen ? F("They go on the not-found list when the audit is saved.") : F("They may be checked out. Their shelf stays the same."), DIM, SMALL);
   }
+  if (auditOpen) textF(18, 250, F("Part of the audit. Save it under Audit on the map."), ACCENT, SMALL);
   if (moved) { textF(18, 218, F("Review the moves under Recent changes."), WHITE, SMALL); doneBar(F("Saved.   Select = update the website")); offerSync = true; }
   else footer(F("Any button = Home"));
+}
+// the audit screen: start one, or save it / stop it
+enum { AU_START, AU_SAVE, AU_MORE, AU_STOP };
+void openAudit() { auditStopArmed = false; go(AUDIT); rowCount = 0; if (auditOpen) { row[rowCount++] = AU_SAVE; row[rowCount++] = AU_MORE; row[rowCount++] = AU_STOP; } else row[rowCount++] = AU_START; cursor = 0; draw(); lightsOff(); }
+int auditCount(int* shelves, int* scanned) {     // shelves checked, things scanned, and (returned) things not found so far
+  *shelves = 0; for (byte u = 0; u < MAX_UNITS; u++) for (byte b = 0; b < 16; b++) if (auditShelves[u] & (1 << b)) (*shelves)++;
+  *scanned = 0; for (int i = 0; i < AUDIT_MAX; i++) if (auditSeen[i >> 3] & (1 << (i & 7))) (*scanned)++;
+  int missing = 0, i = 0; long pos = 0, next;
+  while ((next = readLine(kindsFile, pos)) >= 0) { if (auditMissing() && !isSeen(i)) missing++; i++; pos = next; }
+  return missing;
+}
+void drawAudit() {
+  char top[48], under[56];
+  header("Audit", NULL);
+  for (byte s = 0; s < rowCount; s++) {
+    byte r = row[s];
+    if (r == AU_START) { strcpy_P(top, PSTR("Start an audit")); strcpy_P(under, PSTR("then check shelves: pick a unit, then a shelf")); }
+    else if (r == AU_SAVE) { strcpy_P(top, PSTR("Save the audit")); strcpy_P(under, PSTR("what was not found goes on the website's list")); }
+    else if (r == AU_MORE) { strcpy_P(top, PSTR("Check more shelves")); strcpy_P(under, PSTR("back to the map: the audit stays open")); }
+    else { strcpy_P(top, auditStopArmed ? PSTR("Select again to stop") : PSTR("Stop the audit")); strcpy_P(under, PSTR("forget it: nothing goes on the list")); }
+    drawRow(s, s == cursor, top, under, -1);
+  }
+  if (auditOpen) {
+    int shelves, scanned, missing = auditCount(&shelves, &scanned);
+    snprintf_P(under, sizeof(under), PSTR("%d shelves checked, %d things scanned"), shelves, scanned); text(18, 216, under, WHITE, SMALL, 450);
+    snprintf_P(under, sizeof(under), missing == 1 ? PSTR("%d thing not found so far") : PSTR("%d things not found so far"), missing); text(18, 240, under, missing ? ACCENT : GREEN, SMALL, 450);
+  } else {
+    textF(18, 200, F("An audit adds shelf checks together. Things on a"), DIM, SMALL);
+    textF(18, 222, F("checked shelf that are never scanned go on the"), DIM, SMALL);
+    textF(18, 244, F("not-found list. It keeps going after a restart."), DIM, SMALL);
+  }
+  footer(F("Up / Down, Select.   Back"));
+}
+void saveTheAudit() {
+  int n = 0, i = 0; long pos = 0, next; bool ok = true;
+  while ((next = readLine(kindsFile, pos)) >= 0) {
+    if (auditMissing() && !isSeen(i)) {
+      unsigned long key = nameCode(field[K_NAME]); byte a[6] = {(byte)((key >> 16) & 255), (byte)((key >> 8) & 255), (byte)(key & 255), 1, 0, 0};
+      if (saveChange('N', a)) n++; else ok = false;
+    }
+    i++; pos = next;
+  }
+  auditOpen = false; saveAudit(); memset(auditSeen, 0, sizeof(auditSeen)); memset(auditShelves, 0, sizeof(auditShelves));
+  backDepth = 0; mode = HOME; homeMessage = true; offerSync = false; lightsOff();
+  header("Audit saved", NULL);
+  char buf[56];
+  snprintf_P(buf, sizeof(buf), n == 1 ? PSTR("%d thing was not found") : PSTR("%d things were not found"), n); text(18, 84, buf, WHITE, TITLE, 450);
+  if (!ok) textF(18, 122, F("Some could not be written: is the SD card locked?"), ACCENT, SMALL);
+  else if (n) { textF(18, 122, F("They keep their shelves. After the update they are"), WHITE, SMALL); textF(18, 146, F("on the staff page's Not found list. Scanning one"), WHITE, SMALL); textF(18, 170, F("here later takes it off."), WHITE, SMALL); }
+  else textF(18, 122, F("Everything on the checked shelves was scanned."), GREEN, SMALL);
+  if (n || webDirty) { doneBar(F("Saved.   Select = update the website")); offerSync = true; } else footer(F("Any button = Home"));
+}
+void auditPicked() {
+  byte r = row[cursor];
+  if (r == AU_START) { auditOpen = true; memset(auditSeen, 0, sizeof(auditSeen)); memset(auditShelves, 0, sizeof(auditShelves)); saveAudit(); back(); return; }   // back to the map: pick a unit
+  if (r == AU_MORE) { back(); return; }
+  if (r == AU_SAVE) { header("Audit", NULL); textF(18, 90, F("Saving..."), WHITE, SMALL); saveTheAudit(); return; }
+  if (!auditStopArmed) { auditStopArmed = true; draw(); return; }
+  auditOpen = false; auditStopArmed = false; saveAudit(); memset(auditSeen, 0, sizeof(auditSeen)); memset(auditShelves, 0, sizeof(auditShelves)); back();
 }
 // ---- shelf ideas (v5.50): staff mode, between the units and Recent changes. The console counts what is on every shelf
 // and suggests up to five changes: two neighbouring shelves that hold three things or fewer between them could share one
@@ -2400,6 +2535,11 @@ void describeChange(long pos, char* top, byte topSize, char* under, byte underSi
     long k = findNameCode(strtoul(field[1], NULL, 16));
     if (k >= 0) { loadKind(k); copyText(top, field[K_NAME], topSize); } else strcpy_P(top, PSTR("A thing"));
     if (atoi(n) == 0) strcpy_P(under, PSTR("taken out of Lending")); else snprintf_P(under, underSize, PSTR("Lending now has %s"), n);
+  }
+  else if (t == 'N') {
+    bool lost = atoi(field[2]) != 0; long k = findNameCode(strtoul(field[1], NULL, 16));
+    if (k >= 0) { loadKind(k); copyText(top, field[K_NAME], topSize); } else strcpy_P(top, PSTR("A thing"));
+    strcpy_P(under, lost ? PSTR("not found in the audit") : PSTR("found again"));
   }
   else if (t == 'U') { int u2 = findUnit(field[2]); snprintf_P(top, topSize, PSTR("%s and %s traded places"), n1, u2 >= 0 ? unitName[u2] : field[2]); }
   else if (t == 'S' || t == 'X') {
@@ -2612,6 +2752,7 @@ void pressed(byte b) {                          // Up, Down, Select or Back, fro
     draw(); return;
   }
   if (mode == CHECK) { if (b == B_BACK) finishCheck(); return; }      // Back ends the check; nothing else to pick
+  if (mode == AUDIT && b != B_BACK) { if (b == B_SELECT) auditPicked(); else if (rowCount) { cursor = b == B_UP ? (cursor + rowCount - 1) % rowCount : (cursor + 1) % rowCount; auditStopArmed = false; draw(); } return; }
   if (b == B_BACK) { back(); return; }
   if (mode == PIN) {
     if (b == B_UP) pinDigit = (pinDigit + 1) % 10;
@@ -2669,6 +2810,7 @@ void pressed(byte b) {                          // Up, Down, Select or Back, fro
 
 // ============================== Scans and typing ==============================
 void scannedKind(long kind) {
+  loadKind(kind); if (foundAgain(nameCode(field[K_NAME]))) justFound = true;     // it was on an audit's not-found list: here it is
   if (mode == PUTAWAY) { listIsKit = false; addToPutAway(kind); }
   else if (mode == ITEM && itemWasScanned && kind != currentKind) { clearPutAway(); addToPutAway(currentKind); addToPutAway(kind); backDepth = 0; mode = PUTAWAY; }
   else { backDepth = 0; mode = HOME; openItem(kind, true); return; }
@@ -2910,7 +3052,7 @@ void readLaptop() {                              // a line of text from the Seri
       Serial.print(F(" web=")); Serial.print(webPass[0] ? F("linked") : F("no"));
       Serial.print(F(" staff=")); Serial.print(staffOK() ? F("open") : F("locked"));
       Serial.print(F(" asleep=")); Serial.print(asleep ? 1 : 0);
-      if (mode == MAP && rowCount) Serial.print(row[cursor] == ROW_PHONE ? F(" map=staff-qr") : row[cursor] < ROW_IDEAS ? F(" map=unit") : F(" map=action"));
+      if (mode == MAP && rowCount) Serial.print(row[cursor] == ROW_PHONE ? F(" map=staff-qr") : row[cursor] < ROW_AUDIT ? F(" map=unit") : F(" map=action"));
       Serial.print(F(" screen=")); Serial.println(mode); continue;
     }
     if (buf[0] == '@') { Serial.print(F("@ROOMLOCATOR ")); Serial.println((const __FlashStringHelper*)VERSION); continue; }
@@ -2944,7 +3086,7 @@ void setup() {
   kindsFile = cardOpen("KINDS.TSV");
   staffUntil = 0;                                                  // a restart locks changes again
   for (byte i = 0; i < sizeof(OLD_FILES) / sizeof(OLD_FILES[0]); i++) { char old[14]; strcpy_P(old, (const char*)pgm_read_ptr(&OLD_FILES[i])); cardRemove(old); }
-  loadUnits(); loadBoards(); loadMoves(); loadSent(); loadStaff(); loadWeb(); findAddedFrom();
+  loadUnits(); loadBoards(); loadMoves(); loadSent(); loadStaff(); loadWeb(); findAddedFrom(); loadAudit();
   if (!kindsFile || unitTotal == 0) {                              // card without the v5 files: wait for the laptop to send them
     stopWith(F("Waiting for the laptop"), F("The SD card needs the data files (push_card.py)"));
     while (!kindsFile || unitTotal == 0) readLaptop();
