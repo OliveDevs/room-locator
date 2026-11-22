@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><link rel="icon" href="favicon.ico?v=2" sizes="any"><link rel="icon" type="image/png" href="favicon.png?v=2"><link rel="apple-touch-icon" href="apple-touch-icon.png?v=2"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400..700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=audit-1"><link rel="stylesheet" href="staff-layout.css?v=audit-1"><link rel="stylesheet" href="dark.css?v=audit-1"><script src="theme.js?v=1"></script></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a><a href="#log">Change history</a><a href="#manuals">Manuals</a></nav></div></header>
+  <link rel="stylesheet" href="styles.css?v=remove-1"><link rel="stylesheet" href="staff-layout.css?v=remove-2"><link rel="stylesheet" href="dark.css?v=remove-1"><script src="theme.js?v=1"></script></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a><a href="#log">Change history</a><a href="#manuals">Manuals</a></nav></div></header>
 <main class="staff-main">
 <h1>Staff tools</h1>
 
@@ -25,6 +25,7 @@
 </section>
 <p class="status-line home-wait-line"><span id="home-wait"></span> <button type="button" id="home-wait-show" class="link-button" hidden>Show the console code</button></p>
 <p class="status-line"><span id="home-sync"></span> <span id="home-key"></span> <button type="button" id="home-key-set" class="link-button"></button></p>
+<form class="home-who" id="home-who" hidden><label>Who's using this device? <small class="field-help">Managers see who is signed in, and your changes show your name.</small><input id="home-who-name" autocomplete="name" maxlength="24" placeholder="First name or initials" required></label><button type="submit">Save</button></form>
 <p id="home-expiry" class="health-warn" hidden></p>
 </section>
 
@@ -134,10 +135,17 @@
 <label class="wide">What you need to use it (one per line)<textarea name="need" rows="3"></textarea></label>
 <label class="wide">First steps (one per line)<textarea name="start" rows="3"></textarea><small class="field-help">Leave both lists blank to keep the standard guide.</small></label>
 <label class="wide">Tips (one per line)<textarea name="tips" rows="3"></textarea></label>
+<p class="wide edit-gone" id="edit-gone" hidden>This item was taken out of Lending. Students don't see it and the console doesn't find it. To bring it back, set how many Lending has and press <strong>Put it back in Lending</strong>.</p>
 <label class="wide check"><input type="checkbox" name="out"> Out of service: broken, missing or away for repair</label>
-<label class="wide" id="edit-out-why-row">What students should know <small class="field-help">(optional) shown on its page, for example "Battery door broken, back in December"</small><input name="outwhy" maxlength="140"></label>
+<label class="wide" id="edit-out-why-row">What students should know <small class="field-help">(optional) shown on its page, for example "Battery door broken, back in December". The console stops lighting its shelf once it scans the code.</small><input name="outwhy" maxlength="140"></label>
 <label>How many Lending has<input name="copies" type="number" min="1" max="250" step="1" inputmode="numeric"></label>
 <button type="button" id="edit-publish" class="wide">Save to the website</button>
+<button type="button" id="edit-back" class="wide" hidden>Put it back in Lending</button>
+<details class="wide sync-paste danger-zone" id="edit-remove-box"><summary>Take it out of Lending for good</summary>
+<p class="tool-note">For something Lending no longer has: lost, broken past fixing, or given away. Its page tells students it's gone, search and the room view stop showing it, and the console stops finding it once it scans the code. Change history keeps a record, and it can be put back. Something coming back after a repair? Use Out of service instead.</p>
+<div class="sync-actions"><button type="button" id="edit-remove" class="button-secondary">Take it out of Lending</button></div>
+<p class="tool-note" id="edit-remove-why"></p>
+</details>
 
 </div>
 </div>
@@ -185,6 +193,7 @@
 <h2>Sign in to save</h2>
 <p id="connect-why" class="tool-note"></p>
 <p id="connect-how"></p>
+<label>Your name or initials <small class="field-help">Managers see who is signed in. A first name or initials is enough.</small><input id="connect-name" autocomplete="name" maxlength="24"></label>
 <label id="connect-passrow">Staff passcode (not the console PIN)<input id="connect-pass" type="password" autocomplete="off"></label>
 <div class="sync-actions"><button type="button" id="connect-unlock">Unlock saving</button><button type="button" id="connect-forget" class="button-secondary">Sign this device out</button></div>
 <details class="sync-paste"><summary>Set up a new site key</summary>
@@ -290,6 +299,11 @@
 <div class="sync-actions"><button type="button" id="access-save">Save for student staff</button></div>
 <p id="access-why" class="tool-note"></p>
 </details>
+<details class="staff-fold manager-only" id="people" hidden><summary>Who is signed in</summary>
+<p class="tool-note">Every phone and laptop signed in to save, with the name it gave. Sign out one that shouldn't be signed in any more, like a student who left the job or a lost phone.</p>
+<ul class="people-list" id="people-list"></ul>
+<p id="people-why" class="tool-note"></p>
+</details>
 <details class="staff-fold" id="device" hidden><summary>Passcode and sign-out</summary>
 <div id="share">
 <p id="role-note" class="tool-note"></p>
@@ -347,4 +361,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="room3d.js?v=room-4"></script>
-<script src="staff.js?v=audit-1" defer></script></body></html>
+<script src="staff.js?v=remove-2" defer></script></body></html>

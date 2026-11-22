@@ -146,7 +146,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.50";
+const char VERSION[] PROGMEM = "5.51";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -174,6 +174,10 @@ const char STAFF_URL[] PROGMEM = "https://olivedevs.github.io/room-locator/staff
 const uint16_t BG = RGB(0, 0, 0), PANEL = RGB(40, 40, 42), PICKED = RGB(74, 74, 78), WHITE = 0xFFFF,
                DIM = RGB(176, 177, 180), ACCENT = RGB(253, 181, 21), BLACK = 0x0000, GREEN = RGB(0, 150, 71),
                CMU_RED = RGB(196, 18, 48);
+// v5.51: an item can be taken out of Lending (a count of 0: RL:COUNT:<code6>:0) and marked out of service
+// (RL:OUT:<code6>:1, back with :0). Both come from the website's Edit an item and wait on its list like a move. A
+// removed item no longer comes up in a search or counts on its shelf; scanning its sticker says it was removed. An item
+// out of service still comes up, but its shelf does not light and the screen says to ask at the desk.
 // v5.50: every category has its own colour, and the screen shows the same colour its shelf lights in (before, Computing
 // and Tools both lit white and Soft Tech showed tan but lit orange)
 //                             blue                green              yellow              pink
@@ -282,6 +286,7 @@ long addedFrom = 0;                             // where the original KINDS.TSV 
 struct Change { char type; byte a[6]; };        // one line of MOVES.TSV kept in memory: type 'I' (a thing), 'S' or 'X' (see the top)
 Change changes[MAX_MOVES]; byte moveTotal = 0;
 char movedUnit[5], movedShelf[4], movedCopies[5];
+bool kindOut = false;                            // the kind just read is out of service (v5.51)
 byte thingCount[17];                            // things on each shelf of the unit on screen (by its bottom groove)
 
 // the data files
@@ -629,11 +634,11 @@ int findUnit(const char* code) {                // -1 = no such unit
 // changes done at the console live in MOVES.TSV and are played back, in order, over KINDS.TSV every time a kind is read
 bool moveListHasRoom(char type, unsigned long key) {   // a thing already on the list can always be moved again
   if (moveTotal < MAX_MOVES) return true;
-  if (type == 'I' || type == 'C') for (byte i = 0; i < moveTotal; i++) if (changes[i].type == type && changes[i].a[0] == ((key >> 16) & 255) && changes[i].a[1] == ((key >> 8) & 255) && changes[i].a[2] == (key & 255)) return true;
+  if (type == 'I' || type == 'C' || type == 'O') for (byte i = 0; i < moveTotal; i++) if (changes[i].type == type && changes[i].a[0] == ((key >> 16) & 255) && changes[i].a[1] == ((key >> 8) & 255) && changes[i].a[2] == (key & 255)) return true;
   return false;
 }
 void rememberChange(char type, const byte* a) {          // call moveListHasRoom() first. A thing moved again: its old line goes, the new one is last
-  if (type == 'I' || type == 'C') {                          // (a new count for a thing replaces its older new count the same way)
+  if (type == 'I' || type == 'C' || type == 'O') {           // (a new count for a thing replaces its older new count the same way)
     for (byte i = 0; i < moveTotal; i++) if (changes[i].type == type && changes[i].a[0] == a[0] && changes[i].a[1] == a[1] && changes[i].a[2] == a[2]) {
       for (byte j = i; j + 1 < moveTotal; j++) changes[j] = changes[j + 1];
       moveTotal--; break;
@@ -643,7 +648,14 @@ void rememberChange(char type, const byte* a) {          // call moveListHasRoom
   changes[moveTotal].type = type; memcpy(changes[moveTotal].a, a, 6); moveTotal++;
 }
 bool inRange(byte s, byte lo, byte hi) { return s >= lo && s <= hi; }
+bool goneKind() {                                // the kind in `line` was taken out of Lending (its count is 0). Works while searching too
+  if (!moveTotal) return false;
+  unsigned long k = nameCode(field[K_NAME]);
+  for (byte i = 0; i < moveTotal; i++) if (changes[i].type == 'C' && changes[i].a[3] == 0 && changes[i].a[0] == ((k >> 16) & 255) && changes[i].a[1] == ((k >> 8) & 255) && changes[i].a[2] == (k & 255)) return true;
+  return false;
+}
 void applyMove() {                               // play every change back over the kind in `line`
+  kindOut = false;
   if (!moveTotal) return;
   int u = findUnit(field[K_UNIT]); int s = atoi(field[K_SHELF]);
   int u0 = u, s0 = s, copies = -1;
@@ -653,7 +665,8 @@ void applyMove() {                               // play every change back over 
     const byte* a = changes[i].a;
     switch (changes[i].type) {
       case 'I': if (a[0] == k0 && a[1] == k1 && a[2] == k2) { u = a[3]; s = a[4]; } break;
-      case 'C': if (a[0] == k0 && a[1] == k1 && a[2] == k2) copies = a[3]; break;      // how many Lending has was changed
+      case 'C': if (a[0] == k0 && a[1] == k1 && a[2] == k2) copies = a[3]; break;      // how many Lending has was changed (0 = taken out of Lending)
+      case 'O': if (a[0] == k0 && a[1] == k1 && a[2] == k2) kindOut = a[3] != 0; break;   // out of service, or back
       case 'S': if (u == a[0] && inRange(s, a[1], a[2])) { u = a[3]; s = a[4]; } break;
       case 'X': if (u == a[0] && inRange(s, a[1], a[2])) { u = a[3]; s = a[4]; }
                 else if (u == a[3] && inRange(s, a[4], a[5])) { u = a[0]; s = a[1]; }
@@ -814,7 +827,7 @@ void loadMoves() {
     byte a[6] = {0, 0, 0, 0, 0, 0};
     char t = field[0][1] ? 'I' : toupper(field[0][0]);
     if (t == 'U' || t == 'B' || t == 'A') continue;                 // units were done above; boards and new items are history only
-    if (t == 'C') { unsigned long k = strtoul(field[1], NULL, 16); a[0] = (k >> 16) & 255; a[1] = (k >> 8) & 255; a[2] = k & 255; a[3] = atoi(field[2]); }
+    if (t == 'C' || t == 'O') { unsigned long k = strtoul(field[1], NULL, 16); a[0] = (k >> 16) & 255; a[1] = (k >> 8) & 255; a[2] = k & 255; a[3] = atoi(field[2]); }
     else if (t == 'S' || t == 'X') { a[0] = unitIndex(field[1]); a[1] = atoi(field[2]); a[2] = atoi(field[3]); a[3] = unitIndex(field[4]); a[4] = atoi(field[5]); a[5] = atoi(field[6]); if (a[0] == 255 || a[3] == 255) continue; }
     else { t = 'I'; unsigned long k = strtoul(field[0], NULL, 16); a[0] = (k >> 16) & 255; a[1] = (k >> 8) & 255; a[2] = k & 255; a[3] = unitIndex(field[1]); a[4] = atoi(field[2]); if (a[3] == 255) continue; }
     rememberChange(t, a);
@@ -858,6 +871,7 @@ bool saveChange(char type, const byte* a) {     // adds one line to MOVES.TSV
   char buf[48];
   if (type == 'I') snprintf_P(buf, sizeof(buf), PSTR("%02x%02x%02x\t%s\t%d"), a[0], a[1], a[2], unitCode[a[3]], a[4]);
   else if (type == 'C') snprintf_P(buf, sizeof(buf), PSTR("C\t%02x%02x%02x\t%d"), a[0], a[1], a[2], a[3]);
+  else if (type == 'O') snprintf_P(buf, sizeof(buf), PSTR("O\t%02x%02x%02x\t%d"), a[0], a[1], a[2], a[3]);
   else if (type == 'S') snprintf_P(buf, sizeof(buf), PSTR("S\t%s\t%d\t%d\t%s\t%d"), unitCode[a[0]], a[1], a[2], unitCode[a[3]], a[4]);
   else if (type == 'X') snprintf_P(buf, sizeof(buf), PSTR("X\t%s\t%d\t%d\t%s\t%d\t%d"), unitCode[a[0]], a[1], a[2], unitCode[a[3]], a[4], a[5]);
   else if (type == 'B') snprintf_P(buf, sizeof(buf), a[3] ? PSTR("B\t%s\t%d\t%d\tS") : PSTR("B\t%s\t%d\t%d"), unitCode[a[0]], a[1], a[2]);
@@ -1011,6 +1025,7 @@ void loadResults() {
   while ((next = readLine(kindsFile, pos)) >= 0) {
     if (live && keyCount) break;                                 // another letter was typed: stop, the search starts again with it
     byte sc = matchKind(words, count);
+    if (sc && goneKind()) sc = 0;                                 // taken out of Lending (v5.51)
     if (sc) {
       if (rowCount < MAX_ROWS) { row[rowCount] = pos; score[rowCount++] = sc; }
       else {
@@ -1026,7 +1041,7 @@ void loadResults() {
     pos = 0;
     while (rowCount < MAX_ROWS && (next = readLine(kindsFile, pos)) >= 0) {
       if (live && keyCount) break;
-      if (nearKind(words, count)) { row[rowCount] = pos; score[rowCount++] = 1; }
+      if (nearKind(words, count) && !goneKind()) { row[rowCount] = pos; score[rowCount++] = 1; }
       pos = next;
     }
     closeOnly = rowCount > 0;
@@ -1065,7 +1080,7 @@ void loadMapUnits() {
 void countThings(byte u) {                       // how many kinds sit on each shelf of unit u
   memset(thingCount, 0, sizeof(thingCount));
   long pos = 0, next;
-  while ((next = readLine(kindsFile, pos)) >= 0) { if (findUnit(field[K_UNIT]) == u) { byte lo = spaceLo(u, atoi(field[K_SHELF])); if (lo <= 16) thingCount[lo]++; } pos = next; }
+  while ((next = readLine(kindsFile, pos)) >= 0) { if (findUnit(field[K_UNIT]) == u && atoi(field[K_COPIES]) != 0) { byte lo = spaceLo(u, atoi(field[K_SHELF])); if (lo <= 16) thingCount[lo]++; } pos = next; }
 }
 void loadUnitRows() {                            // the unit from the side, top first: boards and empty grooves
   rowCount = 0;
@@ -1312,7 +1327,8 @@ void drawQR(int x, int y) {                     // the item's guide page
 void drawItem() {
   loadKind(currentKind);
   byte cat = constrain(atoi(field[K_CAT]), 0, 7);
-  strip.clear(); addPlace(field[K_UNIT], atoi(field[K_SHELF]), itemLight(cat)); strip.show();   // the shelf lights up first: the screen takes a moment to draw
+  bool gone = atoi(field[K_COPIES]) == 0, out = kindOut;            // taken out of Lending / out of service: no light (v5.51)
+  strip.clear(); if (!gone && !out) addPlace(field[K_UNIT], atoi(field[K_SHELF]), itemLight(cat)); strip.show();   // the shelf lights up first: the screen takes a moment to draw
   char buf[64];
   const int LEFT_W = 286;                                         // the left column; the QR takes the right
   tft.fillScreen(BG);
@@ -1326,8 +1342,15 @@ void drawItem() {
   drawItemName(field[K_NAME]);
   int led = ledFor(field[K_UNIT], atoi(field[K_SHELF]));
   whereText(buf, sizeof(buf));
+  if (gone || out) {
+    tft.fillRect(14, 82, LEFT_W, 70, PANEL);
+    textF(28, 116, gone ? F("Not in Lending") : F("Out of service"), ACCENT, TITLE);
+    textF(28, 142, gone ? F("Staff took it off the list") : F("Ask at the desk"), DIM, SMALL);
+    led = -2;                                                     // (the shelf box below is skipped)
+  }
   char kept[40] = "";                                             // no light: "Ask at the desk" big, the place it is kept under it
-  if (led < 0) { char* open = strchr(buf, '('); if (open) { snprintf_P(kept, sizeof(kept), PSTR("Kept in: %s"), open + 1); kept[strlen(kept) - 1] = '\0'; *(open - 1) = '\0'; } }
+  if (led == -1) { char* open = strchr(buf, '('); if (open) { snprintf_P(kept, sizeof(kept), PSTR("Kept in: %s"), open + 1); kept[strlen(kept) - 1] = '\0'; *(open - 1) = '\0'; } }
+  if (led != -2) {
   tft.fillRect(14, 82, LEFT_W, 70, led >= 0 ? CAT_COLOR[cat] : PANEL);
   uint16_t onBox = led >= 0 ? onCat : WHITE;
   Font f = HUGE_FONT;                                             // the biggest letters that fit
@@ -1337,6 +1360,7 @@ void drawItem() {
   if (led >= 0) { char colour[11]; strcpy_P(colour, CAT_LIGHT_NAME[cat]); snprintf_P(buf, sizeof(buf), PSTR("Its shelf is lit %s in the room"), colour); text(28, 142, buf, onBox, SMALL, LEFT_W - 28); }
   else if (kept[0]) text(28, 142, kept, DIM, SMALL, LEFT_W - 28);
   else textF(28, 142, F("Not on the shelves in this room"), DIM, SMALL);
+  }
   int y = 180;                                                    // the two notes stack under the shelf, each as long as it needs
   if (field[K_WHAT][0]) { textF(14, y, F("What it is"), DIM, SMALL); y += 22; y += 20 * paragraph(14, y, field[K_WHAT], WHITE, LEFT_W, 3) + 16; }
   if (field[K_GOOD][0]) { textF(14, y, F("Good for"), DIM, SMALL); y += 22; y += 20 * paragraph(14, y, field[K_GOOD], WHITE, LEFT_W, (284 - y) / 20 + 1); }
@@ -1344,7 +1368,7 @@ void drawItem() {
   // Working out a QR takes the Mega over a second, and nothing else can happen meanwhile. So the page is drawn
   // without it, and loop() adds the QR once nobody has pressed anything for a moment: flicking through items stays quick.
   tft.fillRect(312, 82, 156, 156, PANEL); qrWanted = 1; qrAt = millis();
-  if (justCounted) { if (justCounted == 2) footer(F("It already says that. Nothing was changed.")); else doneBar(F("Count changed.   Select = update the website")); offerSync = justCounted == 1; justCounted = 0; }
+  if (justCounted) { if (justCounted == 2) footer(F("It already says that. Nothing was changed.")); else doneBar(justCounted == 3 ? F("Saved.   Select = update the website") : F("Count changed.   Select = update the website")); offerSync = justCounted != 2; justCounted = 0; }
   else if (justMoved) { justMoved = false; doneBar(F("Moved and saved.   Select = update the website")); offerSync = true; }
   else if (justAdded) { justAdded = false; footer(F("Added. It is saved on the card.")); }
   else if (staffOK()) footer(itemWasScanned ? F("Down: move   Up: its stickers   Scan more: a list") : F("Down: move it     Up: its stickers"));
@@ -1880,10 +1904,20 @@ bool batchApply(char* c, const __FlashStringHelper** why) {
     unsigned long key = strtoul(c + 6, NULL, 16); int n = atoi(num);
     long kind = findNameCode(key);
     if (kind < 0) { *why = F("An item is not in this console's list."); return false; }
-    if (n < 1 || n > 250) { *why = F("A count was not between 1 and 250."); return false; }
+    if (n < 0 || n > 250) { *why = F("A count was not between 0 and 250."); return false; }
     if (loadKind(kind) && atoi(field[K_COPIES]) == n) { batchUnchanged++; return true; }
     byte a[6] = {(byte)((key >> 16) & 255), (byte)((key >> 8) & 255), (byte)(key & 255), (byte)n, 0, 0};
     return quietSave('C', a, key, why);
+  }
+  if (strncasecmp_P(c, PSTR("OUT:"), 4) == 0) {                   // out of service (v5.51)
+    char* num = strchr(c + 4, ':'); if (!num) { *why = F("A part was not complete."); return false; }
+    *num++ = '\0';
+    unsigned long key = strtoul(c + 4, NULL, 16); byte n = atoi(num) ? 1 : 0;
+    long kind = findNameCode(key);
+    if (kind < 0) { *why = F("An item is not in this console's list."); return false; }
+    if (loadKind(kind) && kindOut == (n != 0)) { batchUnchanged++; return true; }
+    byte a[6] = {(byte)((key >> 16) & 255), (byte)((key >> 8) & 255), (byte)(key & 255), n, 0, 0};
+    return quietSave('O', a, key, why);
   }
   *why = F("Only moves and counts can be sent together."); return false;
 }
@@ -1996,13 +2030,25 @@ void runCode(char* c) {
     *num++ = '\0';
     unsigned long key = strtoul(c + 6, NULL, 16); long kind = findNameCode(key); int n = atoi(num);
     if (kind < 0) { codeProblem(F("That item is not in this console's list.")); return; }
-    if (n < 1 || n > 250) { codeProblem(F("The count has to be between 1 and 250.")); return; }
+    if (n < 0 || n > 250) { codeProblem(F("The count has to be between 0 and 250.")); return; }
     loadKind(kind);
     if (atoi(field[K_COPIES]) == n) { staffUntil = millis() + STAFF_MS; backDepth = 0; mode = HOME; justCounted = 2; openItem(kind, false); return; }   // the same code again: nothing to write, nothing new on Recent changes
     byte a[6] = {(byte)((key >> 16) & 255), (byte)((key >> 8) & 255), (byte)(key & 255), (byte)n, 0, 0};
     if (!saveOrSay('C', a, key)) return;
     staffUntil = millis() + STAFF_MS;
-    backDepth = 0; mode = HOME; justCounted = 1; openItem(kind, false); return;
+    backDepth = 0; mode = HOME; justCounted = n ? 1 : 3; openItem(kind, false); return;
+  }
+  if (strncasecmp_P(c, PSTR("OUT:"), 4) == 0) {                   // out of service, or back in service (v5.51)
+    char* num = strchr(c + 4, ':'); if (!num) { codeProblem(F("The code is not complete.")); return; }
+    *num++ = '\0';
+    unsigned long key = strtoul(c + 4, NULL, 16); long kind = findNameCode(key); byte n = atoi(num) ? 1 : 0;
+    if (kind < 0) { codeProblem(F("That item is not in this console's list.")); return; }
+    loadKind(kind);
+    if (kindOut == (n != 0)) { staffUntil = millis() + STAFF_MS; backDepth = 0; mode = HOME; justCounted = 2; openItem(kind, false); return; }
+    byte a[6] = {(byte)((key >> 16) & 255), (byte)((key >> 8) & 255), (byte)(key & 255), n, 0, 0};
+    if (!saveOrSay('O', a, key)) return;
+    staffUntil = millis() + STAFF_MS;
+    backDepth = 0; mode = HOME; justCounted = 3; openItem(kind, false); return;
   }
   if (strncasecmp_P(c, PSTR("MOVE:"), 5) == 0) {
     char* place = strchr(c + 5, ':'); if (!place) { codeProblem(F("The code is not complete.")); return; }
@@ -2170,7 +2216,7 @@ void saveSticker() {
 void findIdeas() {
   byte n[MAX_UNITS][17]; memset(n, 0, sizeof(n));               // things on each shelf, by the board they sit on
   long pos = 0, next;
-  while ((next = readLine(kindsFile, pos)) >= 0) { int u = findUnit(field[K_UNIT]); if (u >= 0 && unitCount[u]) { byte lo = spaceLo(u, atoi(field[K_SHELF])); if (lo >= 1 && lo <= 16 && n[u][lo] < 255) n[u][lo]++; } pos = next; }
+  while ((next = readLine(kindsFile, pos)) >= 0) { int u = findUnit(field[K_UNIT]); if (u >= 0 && unitCount[u] && atoi(field[K_COPIES]) != 0) { byte lo = spaceLo(u, atoi(field[K_SHELF])); if (lo >= 1 && lo <= 16 && n[u][lo] < 255) n[u][lo]++; } pos = next; }
   ideaCount = 0;
   byte score[5];
   for (byte u = 0; u < unitTotal; u++) {
@@ -2273,7 +2319,12 @@ void describeChange(long pos, char* top, byte topSize, char* under, byte underSi
     char n[4]; copyText(n, field[2], sizeof(n));
     long k = findNameCode(strtoul(field[1], NULL, 16));
     if (k >= 0) { loadKind(k); copyText(top, field[K_NAME], topSize); } else strcpy_P(top, PSTR("A thing"));
-    snprintf_P(under, underSize, PSTR("Lending now has %s"), n);
+    if (atoi(n) == 0) strcpy_P(under, PSTR("taken out of Lending")); else snprintf_P(under, underSize, PSTR("Lending now has %s"), n);
+  }
+  else if (t == 'O') {
+    long k = findNameCode(strtoul(field[1], NULL, 16)); bool out = atoi(field[2]) != 0;
+    if (k >= 0) { loadKind(k); copyText(top, field[K_NAME], topSize); } else strcpy_P(top, PSTR("A thing"));
+    strcpy_P(under, out ? PSTR("out of service") : PSTR("back in service"));
   }
   else if (t == 'U') { int u2 = findUnit(field[2]); snprintf_P(top, topSize, PSTR("%s and %s traded places"), n1, u2 >= 0 ? unitName[u2] : field[2]); }
   else if (t == 'S' || t == 'X') {

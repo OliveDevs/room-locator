@@ -134,3 +134,10 @@
 .staff-main label.access-row { display: flex; flex-direction: row; align-items: center; gap: 10px; font-weight: 500; }
 .staff-main .access-row input { width: 18px; height: 18px; min-height: 0; margin: 0; flex: none; }
 .log-list .log-by { color: #6d6e71; font-size: 13px; white-space: nowrap; }
+.home-who { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin: 8px 0 14px; padding: 12px 14px; background: #fff7e0; border-radius: 8px; }
+.home-who label { flex: 1 1 220px; }
+.people-list { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 10px; }
+.people-list .person { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #e0e0e0; }
+.people-list .person-out { opacity: .6; }
+.edit-gone { background: #fdecea; color: #5a1a12; padding: 10px 12px; border-radius: 6px; }
+.people-list .person button { flex: none; min-height: 40px; padding: 8px 14px; font-size: 14px; border-radius: 8px; }
