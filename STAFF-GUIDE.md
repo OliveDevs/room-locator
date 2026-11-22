@@ -1,36 +1,60 @@
-# Maintaining the IDeATe Lending guide
+# Looking after the Room Locator
 
-This is a student project, ready for IDeATe staff to review and own. The public site is a **snapshot**, not the checkout system or a source of live availability.
+The Room Locator has two parts: the console in the Lending room (an Arduino Mega with a screen, a scanner and the shelf lights) and this website. The printed staff manual covers day-to-day use. This page is for whoever maintains it. The website is a guide to where things live. It is not the checkout system and does not know what is checked out.
 
-## Publish under an IDeATe GitHub account
+## How the two parts stay in step
 
-1. Ask the IDeATe repository owner to fork or copy `OliveDevs/room-locator` into an IDeATe organization repository. Keep the files at the repository root.
-2. In the new repository, enable GitHub Pages for the main branch and root folder. Open several item pages and the room view on the new Pages URL.
-3. Existing QR labels and the Room Locator firmware currently point to `https://olivedevs.github.io/room-locator/?i=<six-character-code>`. Keep that old site available as a redirect, or change the firmware QR base and replace printed labels. Relative links inside this site already work under a different repository name.
-4. Have an IDeATe staff member check the item list, photos, manual versions, due-date language, and room positions before linking the new site from an official page. The copyright or use permission for any staff or catalog photos should be confirmed first.
+- Changes can start in either place. On the **staff page** (`staff.html`) a change is saved to the website straight away and waits on a list until the console has scanned its code. On the **console**, a change is saved to its SD card and goes to the website with **Send to website**.
+- The console is the record of where things are. A website sync plays the console's change list over a starting point, so undoing a change on the console takes it off the website too.
+- The staff page answers each sync with a code for the console (`RL:GOT`). Only then does the console count those changes as on the website.
 
-No GitHub password or access token is stored in the site. The student authors do not need organization administrator access. Staff can use GitHub's web editor and normal review process.
+## The console tidies up by itself
 
-## Move or add items (staff tools)
+The console holds 128 changes in memory. When its list reaches 100 and the website has all of them, it folds the changes into its own item list on the SD card and starts an empty list ("Room made" on its screen, about a minute). From then on:
 
-Open `staff.html` on the published site. It has three tools: **Move a thing**, **Move a shelf**, and **Add a new item**. Each one shows a QR code. Show it to the Room Locator's scanner, type the staff PIN on the console, check the screen and the lights, and press Select. See `SHELF-MOVES.md` for the code formats, the shelf rules, and how to bring console changes back into this site.
+- **Start over** on the console goes back to that point, not to the Nov 16 setup.
+- The next website sync notices (the website code carries the tidy-up number) and the website takes its own state as its new starting point too (`base/data.json` and `base/room.json`).
+- Changes from before the tidy-up can no longer be undone one by one on the console. The website's Change history and Earlier editions still show them.
 
-For a new item, the same form can also download an updated `data.json` with the item's guide (preparation list, first steps, tips, maker guide, photo). Upload it after a check so the item gets its page. Its page code is made from its name, the same way the console makes it, so the QR on the console's item page leads to the right guide.
+Nothing needs a laptop. If the console ever says the change list is full, update the website and scan its answer: it makes room then.
 
-For a model name that could mean several generations, add verified versions to `MODEL_CHOICES` in `app.js`, or leave the maker guide blank until the unit label is checked. Do not link a manual for a guessed version.
+## What the website keeps
 
-The form stores a custom preparation list, first steps, and tips directly in the new item's data. Existing entries can be edited in `data.json`: `n` name, `c` category, `t` type, `x` copies, `u` unit, `s` groove, `w` display location, `d` short description, `r` official links, `need`, `start`, and `tips`. Keep the existing `h` code unchanged; changing it breaks printed QR links. `photos.json` maps existing items to licensed photos or illustrations. Each photo record has a source and license link; an individual item can instead have a `p` photo object.
+| File | What it is |
+|---|---|
+| `data.json` | Every item: name, category, type, count, unit, shelf, guide text. A count of 0 means taken out of Lending |
+| `room.json` | The units, their shelves and boards, and how far the last sync got |
+| `pending.json` | Changes waiting for the console, and the newest 150 to 250 lines of history |
+| `history/<year>.json` | Older history. Nothing is dropped |
+| `editions/<day>.json` | The whole item list as it was at the end of each day it changed |
+| `base/` | The starting point after the console's last tidy-up |
+| `backup/2026-11-16/` | The first setup |
+| `key.json` | The site key, locked with the passcodes. Useless without one |
+| `access.json` | Which tools student staff can use |
+| `kits.json`, `photos.json`, `howto.json` | Kits, photos and how-to guides |
 
-## Refresh locations and shelf boards
+**Earlier editions** on the staff page shows any day's list next to today's and downloads it as a spreadsheet. GitHub's own history has every version of every file as well.
 
-For a verified SD card snapshot, run `python3 sync_room.py /path/to/SD-card-files`. This reads `KINDS.TSV`, `UNITS.TSV`, `BOARDS.TSV`, and `TYPES.TSV` and updates item locations in `data.json` plus the room layout in `room.json`. It stops if a new console item is missing a website guide, so the new item can be reviewed first. Do not sync an old SD snapshot over newer staff edits. Commit the updated files together and check a few real shelves.
+## The GitHub account
 
-The room view treats shelves as groove positions counted from the bottom. Only grooves listed in `BOARDS.TSV` have physical boards. For a listed item at groove `g`, the displayed support board is the highest board at or below `g`. The room view uses the November 13, 2026 SD snapshot and must be refreshed when the physical layout changes.
+The site lives in one GitHub repository (`OliveDevs/room-locator`) and saves through a site key, a fine-grained token for that repository with Contents: Read and write. Keys run out on the date set when they were made. **Check everything** on the staff page warns three weeks before, and lists the steps for a new one.
 
-## Return reminders and official rules
+Before the account's owner leaves CMU: transfer the repository to an IDeATe account, or make a Lending manager an admin, and have that person make a new site key. If the site moves to a different address, change `STAFF_URL` and `MANUAL_URL` at the top of the console's code and flash it, or keep the old address as a redirect: the stickers and the console's codes point there.
 
-The calendar button makes a draft event in the borrower's own Google Calendar. The borrower enters the due date from their checkout email and saves the event themselves. The shortcut fills CMU's normal three-day, 6 p.m. estimate; holidays or special checkout terms can change the actual date. The current IDeATe Lending page says renewals ended in Fall 2026: https://ideate.cmu.edu/resources/lending/index.html. Recheck the official page each term and update `app.js` if the policy changes.
+## Passcodes and roles
 
-## Photos and manuals
+- **Console PIN**: four digits, on the console's SD card (scrambled). Opens staff mode. Changed on the console.
+- **Staff passcode** and **manager passcode**: at least 10 characters, set by a manager on the staff page. A new one signs out every device that used the old one. Linking the console again does the same for phones that signed in by scanning it.
+- Roles are a lock on the page. Everyone who is signed in uses the same site key underneath, so only give passcodes to people who should be able to change the site.
 
-Existing images are either original site illustrations or Wikimedia Commons images with an individual source and license link in `photos.json`. Many are deliberately marked “Representative photo” because the inventory name does not identify an exact model. Replace those with staff photos of the loaned unit when possible. Use an image only when IDeATe has permission to publish it; a library catalog image is not automatically reusable just because it appears in the catalog. Preserve creator credit and any required license text. Manuals link to makers or their official support sites; verify the unit's full model and generation before changing a link.
+## The console
+
+- Code: `firmware/RoomLocatorV5/` (open `RoomLocatorV5.ino` in the Arduino IDE; `dog.h` sits beside it). Board: Arduino Mega 2560. Libraries: Adafruit GFX, MCUFRIEND_kbv, Adafruit NeoPixel, QRCode (ricmoo), SD.
+- The top of the code lists every file on the SD card and every command the Serial Monitor takes (115200 baud). `@STATUS`, `@FILES` and `@LIGHTS` are the useful ones for a check-up.
+- Forgotten PIN: take the card out, delete `STAFF.TSV` on a computer, put it back. The PIN is 1234 again.
+- Keep a copy of the SD card's files somewhere safe after each tidy-up. `firmware/tools/push_card.py` sends files to the card over USB.
+- `firmware/tools/apply_moves.py`, `fold_added.py` and `fix_offsets.py` rebuild the card's files on a laptop from a saved `MOVES.TSV`. The console does the same job itself now, so they are only for repairs.
+
+## Guides, photos and manuals
+
+Edit an item on the staff page changes its photo, description, checklists and manual link. Use photos Lending took, or ones IDeATe has permission to publish. Link a manual only for the exact model on the shelf. The lending rules on item pages come from https://ideate.cmu.edu/resources/lending/index.html: recheck them each term and update `app.js` if the policy changes.

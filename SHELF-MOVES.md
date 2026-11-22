@@ -1,42 +1,44 @@
-# Moving things with a phone code
+# The codes between the staff page and the console
 
-Room Locator v5.4 and later (code versions 14 and 15) read codes made on `staff.html`. The website never changes the console directly: the code only tells the console what to propose. The console checks every part, shows the change with the old spot lit green and the new spot lit blue, and asks for the staff PIN before it saves anything to its SD card.
+The website never changes the console directly. The staff page shows a QR code, the console's scanner reads it, and the console asks for the staff PIN before it saves anything. Codes that only light shelves or answer a sync need no PIN.
 
-## The codes
+## From the staff page to the console
 
 | Code | What it does |
 |---|---|
-| `RL:MOVE:<code6>:<UNIT>-<shelf>` | Moves one item (every copy). `<code6>` is the item's page code (`h` in `data.json`). |
-| `RL:SHELF:<UNIT>-<shelf>:<UNIT>-<shelf>` | Moves everything on one shelf onto another shelf. |
-| `RL:SHELF:...:SWAP` | Swaps the two shelves' contents. |
-| `RL:ADD:<type>\|<UNIT>-<shelf>\|<copies>\|<name>` | Starts the 3-step "new item" setup: check the details, scan the item's own barcode sticker (or skip), check the spot. `<type>` is the type's line number in the console's `TYPES.TSV` (listed in `room.json` as `types`). |
+| `RL:MOVE:<code6>:<UNIT>-<shelf>` | Moves one item (every copy). `<code6>` is the item's page code (`h` in `data.json`) |
+| `RL:SHELF:<UNIT>-<shelf>:<UNIT>-<shelf>` | Moves everything on one shelf onto another. `:SWAP` on the end swaps the two |
+| `RL:COUNT:<code6>:<n>` | How many Lending has. 0 takes the item out of Lending; a later count puts it back |
+| `RL:FOUND:<code6>` | Takes an item off an audit's not-found list |
+| `RL:ADD:<type>\|<UNIT>-<shelf>\|<copies>\|<name>` | Starts the new-item steps on the console |
+| `RL:Q:<id>:<how many>:<check>:<change>*<change>...` | Up to about twelve MOVE, SHELF, COUNT and FOUND changes in one code, with a checksum |
+| `RL:B:<id>:<part>/<parts>:<change>` | The same changes one at a time, for a scanner that cannot read the big code |
+| `RL:KIT:<code6>,<code6>,...` | Lights every piece of a kit. No PIN |
+| `RL:WEB:<pass>` | Links the console to the website, once |
+| `RL:GOT:<n>` | The staff page's answer after a sync: the website has the console's list up to byte `<n>` |
+| `RL:RESEND` | The two have lost track of each other: the console sends its whole list again |
 
-Every code must be under 60 characters, because the scanner hands the console 64 characters at a time. The staff page enforces this.
+## From the console to the website
 
-## Shelf rules the console uses
+**Send to website** shows the console's change list as QR pages. Each is the staff page's address followed by
+`#RLSYNC~page~pages~lines~from~to~tidy!line!line...` with `~` for tab and `!` for a new line. `from` and `to` are byte positions in the console's `MOVES.TSV`; `tidy` is how many times the console has tidied up.
 
-- Grooves are numbered from the bottom, starting at 1. `BOARDS.TSV` lists which grooves have a board.
-- A shelf is the space from one board up to the next. An item at a groove with no board sits on the board below, and all the lights of that tall space light up together.
-- Taking a board out (on the console) puts its things on the shelf below. Putting it back splits the space again; things already below stay put.
-- A whole unit can only swap with another unit that has the same number of lights (done on the console, not by phone code).
-- The console cannot see boards. Whoever moves a board in the model tells the console on the unit's screen.
+The lines, as the console keeps them:
 
-## The staff PIN
+| Line | Meaning |
+|---|---|
+| `code6, unit, shelf` | One item moved |
+| `S, unit, low, high, unit, shelf` | A shelf's things moved to another shelf |
+| `X, unit, low, high, unit, low, high` | Two shelves swapped |
+| `B, unit, groove, 1 or 0` | A board put in or taken out |
+| `U, unit, unit` | Two units traded places |
+| `A, category, type, name, unit, shelf, copies` | A new item |
+| `C, code6, copies` | A new count (0 = taken out of Lending) |
+| `N, code6, 1 or 0` | Not found in an audit (1), or found again (0) |
 
-- Stored on the console's SD card in `STAFF.TSV` (4 digits; 1234 if the file is missing). It is never on this website.
-- Once typed, changes stay open for 5 minutes; a restart locks them again.
-- Change it on the console: Home, Down past the last picture, Select, then the last spot on the map, "Change staff PIN".
+## Shelf rules
 
-## Fixing a mistake on the console (v5.5)
-
-Home, Down past the last picture, Select, then **Recent changes** near the end of the map. It lists every change since the laptop last collected them, newest first. **Undo the last change** takes back the newest one (moves, shelf moves, swaps, boards). Adding a new item cannot be undone on the console.
-
-## Bringing console changes to this site without a laptop (v5.5)
-
-On the console: **Send to website** shows the change list as one or more QR codes. On a phone: `staff.html`, tab **From the console**, scan every page. The page applies the changes in order (the same rules as the console) and offers `data.json` and `room.json` to upload. It remembers how far it got (`synced` in `room.json`), so scanning again later only adds what is new.
-
-## Bringing console changes back to the laptop and this site
-
-1. Moves: type `@MOVES` in the Serial Monitor, save the output as `MOVES.TSV`, run `apply_moves.py "SD card files" MOVES.TSV`, send the files back to the card, then `@CLEARMOVES`.
-2. New items: type `@ADDED`, save the output as `ADDED.txt`, run `fold_added.py "SD card files" ADDED.txt`, send `KINDS.TSV`, `TYPES.TSV`, `CODES.TSV` to the card.
-3. Run `python3 sync_room.py "SD card files"` here and upload `data.json` and `room.json`, so the room view and staff page match the console again.
+- Grooves are numbered from the bottom, starting at 1. A shelf is the space from one board up to the next, and an item at a groove with no board sits on the board below.
+- Taking a board out puts its things on the shelf below. Putting it back splits the space again.
+- A whole unit only swaps with a unit that has the same number of lights.
+- The console cannot see boards. Whoever moves one tells the console on that unit's screen.

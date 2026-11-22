@@ -126,12 +126,47 @@ async function publishTogether(files, message, blobs) {
   const commit = await gitJson('commits', 'POST', { tree: tree.sha, parents: [head], message });
   await gitJson('refs/' + ref, 'PATCH', { sha: commit.sha, force: false });
 }
+// ---- records kept with every save (Nov 22)
+// Editions: one file a day on which the item list changed, holding the whole list as it was at the end of that day
+// (editions/2026-11-22.json, listed in editions/index.json). The staff page can show any of them next to today's.
+// History: pending.json keeps the newest changes; older ones move to history/<year>.json, so nothing is ever dropped.
+// A file that is not there yet reads as null; a read that fails throws, and then that save simply adds no records.
+async function readRecord(name) {
+  const r = await gh('/contents/' + name + '?ref=' + BRANCH + '&x=' + Date.now(), { headers: { Accept: 'application/vnd.github.raw+json' } });
+  if (r.status === 404) return null; if (!r.ok) throw Error('records'); return r.json();
+}
+const dayId = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const editionOf = (d, at) => ({ note: 'The item list as it was. One line per item: code, name, category, type, how many (0 = taken out), unit, shelf, where it said, not found in an audit (1).', at, items: d.kinds.map(k => [k.h, k.n, k.c, k.t, k.x === 0 ? 0 : (k.x || 1), k.u, k.s || 0, k.w || '', k.nf ? 1 : 0].join('\t')) });
+const HISTORY_KEEP = 150, HISTORY_MOVE_AT = 250;
+async function withRecords(files) {
+  try {
+    const d = files['data.json'];
+    if (d && Array.isArray(d.kinds)) {
+      const now = new Date(), id = dayId(now), idx = (await readRecord('editions/index.json')) || { editions: [] };
+      const list = (Array.isArray(idx.editions) ? idx.editions : []).filter(e => e && e.id !== id);
+      list.unshift({ id, at: now.toISOString(), items: d.kinds.filter(k => k.x !== 0).length });
+      files['editions/' + id + '.json'] = editionOf(d, now.toISOString());
+      files['editions/index.json'] = { note: 'Every saved edition of the item list, newest first. Written by the staff page.', editions: list };
+    }
+    const p = files['pending.json'];
+    if (p && Array.isArray(p.history) && p.history.length > HISTORY_MOVE_AT) {
+      const old = p.history.slice(HISTORY_KEEP), years = {};
+      for (const x of old) { const y = String(new Date(x.at).getFullYear() || 'older'); (years[y] = years[y] || []).push(x); }
+      const idx = (await readRecord('history/index.json')) || { years: [] }, known = new Set(Array.isArray(idx.years) ? idx.years : []), out = {};
+      for (const y of Object.keys(years)) { const was = (await readRecord('history/' + y + '.json')) || { history: [] }; out['history/' + y + '.json'] = { note: 'Changes from ' + y + ', newest first. Moved here from pending.json by the staff page.', history: years[y].concat(Array.isArray(was.history) ? was.history : []) }; known.add(y); }
+      Object.assign(files, out); files['history/index.json'] = { note: 'The years that have a history file.', years: [...known].sort().reverse() };
+      p.history = p.history.slice(0, HISTORY_KEEP);
+    }
+  } catch (e) { for (const k of Object.keys(files)) if (/^(editions|history)\//.test(k)) delete files[k]; }   // records are extra: a save never fails because of them
+  return files;
+}
 // Returns true when the branch contains the update.
 async function publish(files, message, button, blobs) {
   if (!keep.get('rl-key')) { afterKey = () => button ? button.click() : publish(files, message, button, blobs); askForKey('Saving to the website needs the staff passcode on this device, once.'); return false; }
   const label = button ? button.textContent : ''; if (button) { button.disabled = true; button.textContent = 'Saving...'; }
   try {
     const stamp = new Date().toISOString();
+    await withRecords(files);
     const entries = Object.entries(files);
     for (const [path, value] of entries) if (path === 'data.json' || path === 'room.json' || path === 'pending.json') value.published = stamp;
     if (entries.length > 1 || blobs) await publishTogether(files, message, blobs);
@@ -250,7 +285,7 @@ async function latest(name, isIt) {
   const res = await fetch(name + '?x=' + Date.now()); return res.ok ? res.json() : null;
 }
 // pending.json: changes saved to the website first that the console has not taken in yet, and a history of every change
-const cleanPend = p => ({ note: 'Changes saved to the website first, waiting for the console, and the history of changes. Written by the staff page.', waiting: Array.isArray(p && p.waiting) ? p.waiting.filter(e => e && e.id && typeof e.code === 'string') : [], history: Array.isArray(p && p.history) ? p.history.filter(Boolean).slice(0, 400) : [], ...(p && p.published ? { published: p.published } : {}) });
+const cleanPend = p => ({ note: 'Changes saved to the website first, waiting for the console, and the history of changes. Written by the staff page.', waiting: Array.isArray(p && p.waiting) ? p.waiting.filter(e => e && e.id && typeof e.code === 'string') : [], history: Array.isArray(p && p.history) ? p.history.filter(Boolean).slice(0, 2000) : [], ...(p && p.published ? { published: p.published } : {}) });
 const readPending = async () => cleanPend(await latest('pending.json', g => g && Array.isArray(g.waiting)).catch(() => null));
 
 Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room.json?v=' + Date.now()).then(r => r.json()), fetch('pending.json?v=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null)]).then(([data, room, pendIn]) => {
@@ -320,6 +355,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     $('access-note').textContent = 'Turned off for student staff by a Lending manager: ' + off.join(', ') + '.';
     $('access-list').innerHTML = ACCESS.map(([k, n]) => '<label class="access-row"><input type="checkbox" data-access="' + k + '"' + ((OFF_BY_DEFAULT.includes(k) ? access[k] === true : access[k] !== false) ? ' checked' : '') + '> ' + esc(n) + '</label>').join('');
     if (typeof drawCode === 'function' && made.length) drawCode();
+    if (typeof drawNotFound === 'function') drawNotFound();
   }
   fetch('access.json?v=' + Date.now()).then(r => r.ok ? r.json() : {}).catch(() => ({})).then(a => { access = (a && a.student) || {}; applyAccess(); });
   addEventListener('rl-key-changed', () => applyAccess());
@@ -610,7 +646,9 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const f = af.elements, name = f.name.value.trim();
     if (!name) return 'Enter the item name.';
     if (/[|\r\n]/.test(name) || /[^\x20-\x7e]/.test(name)) return 'Use plain letters, numbers and punctuation in the name (no | and no accents), so the scanner reads it exactly.';
-    if (kinds.some(k => k.n.toLowerCase() === name.toLowerCase())) return 'That item is already in the list. Move it instead.';
+    const same = kinds.find(k => k.n.toLowerCase() === name.toLowerCase());
+    if (same && gone(same)) return 'That item was taken out of Lending. To bring it back, find it under Edit an item and press Put it back in Lending.';
+    if (same) return 'That item is already in the list. Move it instead.';
     if (kinds.some(k => k.h === nameCode(name))) return 'That name clashes with another item’s code. Add a word to the name.';
     if (f.type.value === '') return 'Choose a category and type.';
     if (!unitBy[f.unit.value]) return 'Choose where it goes.';
@@ -675,10 +713,11 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     if (head[0] !== 'RLSYNC') return false;
     const p = Number(head[1]), n = Number(head[2]), total = Number(head[3]);
     const from = head.length >= 6 ? Number(head[4]) : 0, tag = head.length >= 6 ? Number(head[5]) : null;   // console v5.46: only the changes after `from`; `tag` is where they end
+    const epoch = head.length >= 7 && Number.isInteger(Number(head[6])) ? Number(head[6]) : 0;                 // console v5.51: how many times it has tidied up (its list starts again each time)
     if (head.length >= 6 && !(Number.isInteger(from) && Number.isInteger(tag) && from >= 0 && tag >= from)) return false;
     if (![p, n, total].every(Number.isInteger) || p < 1 || p > n || n > 255 || total < 0 || n > Math.max(1, total)) return false;
     if (pageCount && (n !== pageCount || Object.values(pages).some(x => x.total !== total || x.tag !== tag))) { Object.keys(pages).forEach(k => delete pages[k]); }   // a different list: start over
-    pageCount = n; pages[p] = { total, tag, lines: lines.slice(1).filter(Boolean) };
+    pageCount = n; pages[p] = { total, tag, epoch, lines: lines.slice(1).filter(Boolean) };
     remember();
     showPages();
     if (Object.keys(pages).length === pageCount) {
@@ -692,7 +731,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
         status.textContent = 'The scanned pages do not match. Scan all pages again, starting at page 1.';
         return false;
       }
-      apply(all.map(l => l.split('|')), from, tag).catch(() => { status.textContent = 'Could not load the website\'s files. Check the internet connection and scan again.'; });
+      apply(all.map(l => l.split('|')), from, tag, epoch).catch(() => { status.textContent = 'Could not load the website\'s files. Check the internet connection and scan again.'; });
     }
     return true;
   }
@@ -727,14 +766,25 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     apply(text.split('\n').filter(l => l.trim() && !l.startsWith('@')).map(l => l.split(/\t|\|/)));
   });
 
-  let outData = null, outRoom = null, outPend = null;
+  let outData = null, outRoom = null, outPend = null, outBase = null;
   // The console's list is EVERY change since the Nov 16 setup, so the website is rebuilt from scratch each time:
   // the Nov 16 backup, then every line in order. That way a change taken back on the console disappears here too, and an
   // empty list (after Start over on the console) puts the website back to the setup. What only the website knows about an
   // item (photo, manual link, description) is carried over.
   let baseline = null, autoTimer = 0, cameFromConsole = false;
   $('sync-auto-cancel').addEventListener('click', () => { clearInterval(autoTimer); $('sync-auto').hidden = true; status.textContent = 'Not saved. Press Save when you are ready.'; });
-  const loadBaseline = async () => baseline || (baseline = await Promise.all([fetch('backup/2026-11-16/data.json?x=' + Date.now()).then(x => x.json()), fetch('backup/2026-11-16/room.json?x=' + Date.now()).then(x => x.json())]));
+  // The starting point the console's list is played over. To begin with it is the Nov 16 setup (backup/2026-11-16).
+  // Each time the console tidies up (folds its changes into its own files and empties its list), the website takes
+  // its own state at that moment as the new starting point (base/data.json, base/room.json) and remembers which
+  // tidy-up it belongs to (synced.epoch in room.json).
+  const loadBaseline = async epoch => {
+    if (baseline && baseline.epoch === epoch) return baseline.files;
+    const files = epoch ? await Promise.all([latest('base/data.json', g => g && Array.isArray(g.kinds)), latest('base/room.json', g => g && Array.isArray(g.units))])
+      : await Promise.all([fetch('backup/2026-11-16/data.json?x=' + Date.now()).then(x => x.json()), fetch('backup/2026-11-16/room.json?x=' + Date.now()).then(x => x.json())]);
+    if (!files[0] || !files[1]) throw Error('files');
+    baseline = { epoch, files }; return files;
+  };
+  const baseName = r => r && r.synced && r.synced.epoch ? 'the last tidy-up' + (r.synced.baseAt ? ' (' + new Date(r.synced.baseAt).toLocaleDateString([], { month: 'short', day: 'numeric' }) + ')' : '') : 'the Nov 16 setup';
   // ---- the answer back to the console (v5.46). The console only counts changes as "on the website" when it scans this.
   function showAck(code, title, what) {
     const qr = qrcode(0, 'M'); qr.addData(code); qr.make();
@@ -745,15 +795,27 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   const ackGot = tag => showAck('RL:GOT:' + tag, 'Last step: show this to the console', 'Hold this up to the console\'s scanner so it knows the website is updated.');
   $('ack-done').addEventListener('click', () => { $('ack').hidden = true; });
   let syncTag = null;
-  async function apply(lines, from = 0, tag = null) {
-    syncTag = tag; $('ack').hidden = true;
+  async function apply(lines, from = 0, tag = null, epoch = null) {   // epoch null: a pasted list, taken as following the website's own starting point
+    syncTag = tag; $('ack').hidden = true; outBase = null;
     const allLines = lines.length;
     // Straight from the repository when it answers: the public pages lag about a minute behind a save, and a second
     // sync inside that minute would otherwise be judged against the website as it was before the first one.
     const [liveData, liveRoom, livePend] = await Promise.all([latest('data.json', g => g && Array.isArray(g.kinds)), latest('room.json', g => g && Array.isArray(g.units)), readPending()]);
     if (!liveData || !liveRoom) throw Error('files');
-    const have = liveRoom.synced && Number.isInteger(liveRoom.synced.bytes) ? liveRoom.synced.bytes : -1;   // how far into the console's list the website already is
+    const siteEpoch = (liveRoom.synced && liveRoom.synced.epoch) || 0; if (epoch === null) epoch = siteEpoch;
+    const tidied = epoch !== siteEpoch;    // the console tidied up since the website last synced
+    const have = tidied ? 0 : liveRoom.synced && Number.isInteger(liveRoom.synced.bytes) ? liveRoom.synced.bytes : -1;   // how far into the console's list the website already is
     const adding = from > 0;                    // the console sent only what is new: add it to the website as it is now
+    let newBase = null;
+    if (tidied) {
+      // The console only tidies up once the website has its whole list, so the website as it is now (without the
+      // changes still waiting for the console) is exactly what the console folded into its files: the new starting point.
+      const bd = JSON.parse(JSON.stringify(liveData)), br = JSON.parse(JSON.stringify(liveRoom));
+      rewind(bd, br, JSON.parse(JSON.stringify(livePend.waiting)));
+      const names = Object.fromEntries(br.units.map(u => [u.code, u.name])), bub = Object.fromEntries(br.units.map(u => [u.code, u]));
+      for (const k of bd.kinds) { const u = bub[k.u]; k.w = u && u.shelves && k.s ? names[k.u] + ', shelf ' + boardBelowIn(u, k.s) : (names[k.u] || k.u); k.in = !!(u && u.shelves && k.s); }
+      delete br.synced; newBase = [bd, br];
+    }
     if (adding) {
       // The website may already hold the first few of these (saved, but the console never got the answer). Each line
       // is its letters plus the two that end a line on the console's card, so they can be counted off exactly.
@@ -772,7 +834,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
         ackGot(tag); return;
       }
     }
-    const [baseData, baseRoom] = adding ? [liveData, liveRoom] : await loadBaseline();
+    const [baseData, baseRoom] = adding ? [liveData, liveRoom] : newBase || await loadBaseline(epoch);
     const d = JSON.parse(JSON.stringify(baseData)), r = JSON.parse(JSON.stringify(baseRoom));
     const nowBy = Object.fromEntries((adding ? liveData.kinds : kinds).map(k => [k.h, k]));
     // changes saved on the website first: take them off (the website as it is holds them), then put back the ones the
@@ -817,6 +879,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     for (const k of d.kinds) { const u = ub[k.u]; k.w = u && u.shelves && k.s ? names[k.u] + ', shelf ' + boardBelowIn(u, k.s) : (names[k.u] || k.u); k.in = !!(u && u.shelves && k.s); }
     d.kinds.sort((a, b) => a.n.localeCompare(b.n));
     r.synced = { lines: lines.length, first: firstText, at: new Date().toISOString() };
+    if (epoch) { r.synced.epoch = epoch; r.synced.baseAt = tidied ? r.synced.at : (liveRoom.synced && liveRoom.synced.baseAt) || r.synced.at; }
+    if (newBase) outBase = { 'base/data.json': newBase[0], 'base/room.json': newBase[1] };
     if (tag !== null) r.synced.bytes = tag;       // how far into the console's list the website now is
     // the shelves whose things changed with this sync, so the staff map can show them in blue
     const changed = new Map(), mark = (code, n) => { const u = ub[code]; if (u && u.shelves && n) { const b = boardBelowIn(u, n); changed.set(code + '-' + b, [code, b]); } };
@@ -834,7 +898,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
       return !current || ['first', 'shelves', 'rect', 'boards'].some(key => JSON.stringify(u[key]) !== JSON.stringify(current[key]));
     });
     const needsSave = moved > 0 || layoutChanged || (tag !== null && have !== tag) || done.length > 0 || back.length > 0;
-    list.push(adding ? 'The console has ' + lines.length + (lines.length === 1 ? ' new change' : ' new changes') + '. Saving adds ' + (lines.length === 1 ? 'it' : 'them') + ' to the website.' : lines.length ? 'The console has ' + lines.length + (lines.length === 1 ? ' change' : ' changes') + ' since the Nov 16 setup. Saving makes the website match it exactly.' : 'The console has no changes. Saving puts the website back to the Nov 16 setup.');
+    list.push(adding ? 'The console has ' + lines.length + (lines.length === 1 ? ' new change' : ' new changes') + '. Saving adds ' + (lines.length === 1 ? 'it' : 'them') + ' to the website.' : lines.length ? 'The console has ' + lines.length + (lines.length === 1 ? ' change' : ' changes') + ' since ' + (tidied ? 'its tidy-up' : baseName(liveRoom)) + '. Saving makes the website match it exactly.' : tidied ? 'The console has no changes since its tidy-up. The website already matches it.' : 'The console has no changes. Saving puts the website back to ' + baseName(liveRoom) + '.');
+    if (tidied) list.push(epoch === siteEpoch + 1 ? 'The console tidied up: it folded its changes into its own item list. The website now starts from this point too, and Start over goes back to here.' : 'The console and the website disagree about the last tidy-up. The website takes its own item list as the starting point: check a few shelves after saving.');
     if (moved) list.push(moved + (moved === 1 ? ' item page will change.' : ' item pages will change.'));
     if (layoutChanged) list.push('The room map will change.');
     if (!needsSave) list.push('The website already matches the console.');
@@ -903,7 +968,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   const replay = (d, r, list) => list.forEach(e => { e.undo = doEntry(d, r, e); });
   const tidy = p => cleanPend({ waiting: p.waiting.map(({ _back, ...e }) => e), history: p.history });
   const withLog = async (files, title, what) => { const p = await readPending().catch(() => null); if (p) { p.history.unshift({ at: stamp(), title, what, did: 'edited', ...byMe() }); files['pending.json'] = tidy(p); } return files; };
-  const DID = { saved: 'Saved on the website', sent: 'Shown to the console', console: 'The console has it too', undone: 'Undone on the website', back: 'The console did not save it: back on the list', sync: 'Website synced with the console', edited: 'Edited on the website (nothing for the console)', reset: 'Cleared when the website was put back to Nov 16' };
+  const DID = { saved: 'Saved on the website', sent: 'Shown to the console', console: 'The console has it too', undone: 'Undone on the website', back: 'The console did not save it: back on the list', sync: 'Website synced with the console', edited: 'Edited on the website (nothing for the console)', reset: 'Cleared when the website was put back to its starting point' };
   const stamp = () => new Date().toISOString();
   function syncMade() {                       // the list of codes = everything saved and waiting, then anything only on this device
     const local = made.filter(c => !c.id);
@@ -995,14 +1060,15 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   }
   // ---- the change history (at the bottom of the page)
   const when = iso => new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  let archived = [], archiveLoaded = false;
   function drawLog() {
     const w = pend.waiting;
   $('log-show').hidden = !made.length;
     $('log-waiting').innerHTML = w.length ? w.map(e => '<li><span class="log-when">' + esc(when(e.at)) + '</span><strong>' + esc(e.title) + '</strong> ' + esc(e.what || '') + ' <span class="saved-tag' + (e.sent ? ' sent' : '') + '">' + (e.sent ? 'Shown to the console, waiting for its sync' : 'On the website, waiting for the console') + '</span></li>').join('') : '<li>Nothing is waiting. The website and the console have the same changes.</li>';
-    const h = pend.history;
     // The last 3 days show as they are. Older ones fold away: one fold for "3+ days ago" (this past month), then a fold
     // for each earlier month this year, then one for each earlier year. Every line keeps its own date. Typing in the box
     // shows every match, from any time.
+    const h = pend.history.concat(archived);
     const find = ($('log-find').value || '').trim().toLowerCase(), row = x => '<li><span class="log-when">' + esc(when(x.at)) + '</span><strong>' + esc(x.title) + '</strong> ' + esc(x.what || '') + (x.by ? ' <span class="log-by">by ' + esc(x.by) + '</span>' : '') + (x.did === 'sync' ? '' : ' <em>' + esc(DID[x.did] || x.did || '') + '</em>') + '</li>';
     const list = find ? h.filter(x => [x.title, x.what, x.by, DID[x.did]].join(' ').toLowerCase().includes(find)) : h;
     if (!h.length) { $('log-done').innerHTML = '<p class="tool-note">No changes yet.</p>'; return; }
@@ -1022,18 +1088,72 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     if (groups[0].key !== 'recent') $('log-done').insertAdjacentHTML('afterbegin', '<p class="tool-note">Nothing in the last 3 days.</p>');
   }
   $('log-find').addEventListener('input', () => drawLog());
+  // older changes live in history/<year>.json: fetched the first time Change history is opened
+  $('log').addEventListener('toggle', async () => {
+    if (!$('log').open || archiveLoaded) return; archiveLoaded = true;
+    try {
+      const idx = await fetch('history/index.json?x=' + Date.now()).then(r => r.ok ? r.json() : null); if (!idx || !Array.isArray(idx.years)) return;
+      const parts = await Promise.all(idx.years.map(y => fetch('history/' + y + '.json?x=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null)));
+      const have = new Set(pend.history.map(x => x.at + x.title));
+      archived = parts.flatMap(p => (p && Array.isArray(p.history)) ? p.history : []).filter(x => x && !have.has(x.at + x.title)).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+      drawLog();
+    } catch (e) { archiveLoaded = false; }
+  });
+  // ---- earlier editions: the item list as it was on any day it changed, next to today's
+  const edRow = t => { const f = t.split('\t'); return { h: f[0], n: f[1], c: f[2], t: f[3], x: Number(f[4]), u: f[5], s: Number(f[6]), w: f[7], nf: f[8] === '1' }; };
+  let edition = null;
+  const csvOf = rows => '\ufeff' + rows.map(r => r.map(v => { const t = String(v == null ? '' : v); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; }).join(',')).join('\r\n') + '\r\n';
+  const saveCsv = (csv, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
+  function drawEdition() {
+    const box = $('edition-view'); if (!edition) { box.innerHTML = ''; return; }
+    const then = edition.items, thenBy = Object.fromEntries(then.map(k => [k.h, k])), nowBy = Object.fromEntries(kinds.map(k => [k.h, k]));
+    const inNow = k => k && k.x !== 0, moved = [], counts = [], added = [], goneNow = [];
+    for (const k of then) { if (k.x === 0) continue; const n = nowBy[k.h]; if (!inNow(n)) { goneNow.push(k); continue; } if (n.u !== k.u || (n.s || 0) !== k.s) moved.push([k, n]); if ((n.x || 1) !== k.x) counts.push([k, n]); }
+    for (const n of kinds) { if (!inNow(n)) continue; const k = thenBy[n.h]; if (!k || k.x === 0) added.push(n); }
+    const line = (title, rows) => rows.length ? '<h3>' + esc(title) + ' <span class="tool-note">' + rows.length + '</span></h3><ul class="log-list">' + rows.slice(0, 200).map(r => '<li>' + r + '</li>').join('') + (rows.length > 200 ? '<li class="tool-note">and ' + (rows.length - 200) + ' more: the spreadsheet has them all</li>' : '') + '</ul>' : '';
+    const find = ($('edition-find').value || '').trim().toLowerCase(), hits = find ? then.filter(k => k.x !== 0 && (k.n + ' ' + k.w + ' ' + k.t + ' ' + k.c).toLowerCase().includes(find)) : [];
+    const day = new Date(edition.at).toLocaleDateString([], { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' }), total = then.filter(k => k.x !== 0).length;
+    box.innerHTML = '<p><strong>' + esc(day) + '</strong>: ' + total + ' items in Lending. Today: ' + kinds.filter(inNow).length + '.</p>'
+      + (find ? line('Then: matching \u201c' + find + '\u201d', hits.map(k => '<strong>' + esc(k.n) + '</strong> ' + esc(k.w) + (k.x > 1 ? ', ' + k.x + ' of them' : ''))) || '<p class="tool-note">Nothing in that edition matches.</p>'
+        : (moved.length || counts.length || added.length || goneNow.length ? '' : '<p class="tool-note">Nothing has changed since then.</p>')
+        + line('Moved since then', moved.map(([k, n]) => '<strong>' + esc(k.n) + '</strong> was at ' + esc(k.w) + ', now at ' + esc(n.w || n.u)))
+        + line('Added since then', added.map(n => '<strong>' + esc(n.n) + '</strong> ' + esc(n.w || n.u)))
+        + line('No longer in Lending', goneNow.map(k => '<strong>' + esc(k.n) + '</strong> was at ' + esc(k.w)))
+        + line('Count changed', counts.map(([k, n]) => '<strong>' + esc(k.n) + '</strong> was ' + k.x + ', now ' + (n.x || 1))));
+    $('edition-tools').hidden = false;
+  }
+  async function loadEditions() {
+    const pick = $('edition-pick'); if (pick.dataset.ready) return;
+    const idx = await latest('editions/index.json', g => g && Array.isArray(g.editions)).catch(() => null), list = (idx && idx.editions) || [];
+    pick.innerHTML = '<option value="">Pick a day...</option>' + list.map(e => '<option value="' + esc(e.id) + '">' + esc(new Date(e.at).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })) + (e.label ? ' \u2013 ' + esc(e.label) : '') + ' \u00b7 ' + e.items + ' items</option>').join('');
+    $('edition-why').textContent = list.length ? '' : 'No editions saved yet. One is kept for every day the item list changes.';
+    pick.dataset.ready = '1';
+  }
+  $('editions').addEventListener('toggle', () => { if ($('editions').open) loadEditions(); });
+  $('edition-pick').addEventListener('change', async e => {
+    edition = null; $('edition-tools').hidden = true; $('edition-find').value = ''; drawEdition(); if (!e.target.value) return;
+    $('edition-why').textContent = 'Loading...';
+    const got = await latest('editions/' + e.target.value + '.json', g => g && Array.isArray(g.items)).catch(() => null);
+    if (!got || !Array.isArray(got.items)) { $('edition-why').textContent = 'Could not load that edition. Check the internet connection.'; return; }
+    $('edition-why').textContent = ''; edition = { id: e.target.value, at: got.at, items: got.items.map(edRow) }; drawEdition();
+  });
+  $('edition-find').addEventListener('input', drawEdition);
+  $('edition-get').addEventListener('click', () => { if (!edition) return;
+    saveCsv(csvOf([['Item', 'Category', 'Type', 'How many', 'Unit', 'Shelf (1 = bottom)', 'Where it lived', 'Status']].concat(edition.items.slice().sort((a, b) => (a.x === 0) - (b.x === 0) || a.u.localeCompare(b.u) || a.s - b.s || a.n.localeCompare(b.n)).map(k => [k.n, k.c, k.t, k.x, (unitBy[k.u] || {}).name || k.u, k.s || '', k.w, k.x === 0 ? 'Taken out of Lending' : k.nf ? 'Not found in an audit' : 'In Lending']))), 'IDeATe Lending inventory as of ' + edition.id + '.csv'); });
   const download = (obj, name) => { const blob = new Blob([JSON.stringify(obj, null, 2) + '\n'], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
-  $('sync-publish').addEventListener('click', async e => { if (!outData) return; if (await publish({ 'data.json': outData, 'room.json': outRoom, ...(outPend ? { 'pending.json': outPend } : {}) }, 'Website matched to the console (staff page)', e.target)) { $('sync-saved').hidden = false; try { if (outRoom.synced && outRoom.synced.changed && outRoom.synced.changed.length) sessionStorage.setItem('rl-moved', '1'); sessionStorage.setItem('rl-done', syncTag !== null ? 'Saved. The site updates in about a minute. One last step below.' : 'Saved. The site updates in about a minute. Nothing else to do.'); if (syncTag !== null) sessionStorage.setItem('rl-ack', String(syncTag)); } catch (err) { } setTimeout(() => location.reload(), 2500); } });
+  $('sync-publish').addEventListener('click', async e => { if (!outData) return; if (await publish({ 'data.json': outData, 'room.json': outRoom, ...(outPend ? { 'pending.json': outPend } : {}), ...(outBase || {}) }, 'Website matched to the console (staff page)', e.target)) { $('sync-saved').hidden = false; try { if (outRoom.synced && outRoom.synced.changed && outRoom.synced.changed.length) sessionStorage.setItem('rl-moved', '1'); sessionStorage.setItem('rl-done', syncTag !== null ? 'Saved. The site updates in about a minute. One last step below.' : 'Saved. The site updates in about a minute. Nothing else to do.'); if (syncTag !== null) sessionStorage.setItem('rl-ack', String(syncTag)); } catch (err) { } setTimeout(() => location.reload(), 2500); } });
   // after that reload, say plainly that it worked (the page used to come back looking as if nothing had happened)
   try { const done = sessionStorage.getItem('rl-done'); if (done) { sessionStorage.removeItem('rl-done'); $('home-done').textContent = done; $('home-done').hidden = false; } const ack = sessionStorage.getItem('rl-ack'); if (ack !== null) { sessionStorage.removeItem('rl-ack'); if (ack === 'RESEND') showAck('RL:RESEND', 'Does the console still hold changes?', 'The website is reset. To put the console\'s changes back on it, show the console this code and type the PIN, then scan the code it shows. To clear the console too, use Start over there.'); else ackGot(ack); } } catch (err) { }
   $('web-reset-word').addEventListener('input', e => { $('web-reset').disabled = e.target.value.trim().toUpperCase() !== 'START OVER'; });
   $('web-reset').addEventListener('click', async e => {
     if ($('web-reset-word').value.trim().toUpperCase() !== 'START OVER' || !isManager()) return;
-    if (!confirm('Put the website back to the Nov 16 setup? This removes every change and edit made since then.')) return;
-    const [d, r] = await Promise.all([fetch('backup/2026-11-16/data.json?x=' + Date.now()).then(x => x.json()), fetch('backup/2026-11-16/room.json?x=' + Date.now()).then(x => x.json())]);
+    const epoch = (room.synced && room.synced.epoch) || 0, name = baseName(room);
+    if (!confirm('Put the website back to ' + name + '? This removes every change and edit made since then.')) return;
+    let d, r; try { [d, r] = (await loadBaseline(epoch)).map(x => JSON.parse(JSON.stringify(x))); } catch (err) { status.textContent = 'Could not load the starting point. Check the internet connection and try again.'; return; }
+    if (epoch) r.synced = { lines: 0, first: '', at: new Date().toISOString(), bytes: 0, epoch, baseAt: room.synced.baseAt };
     const p = await readPending().catch(() => cleanPend(null)), at = stamp();
     p.history.unshift(...p.waiting.map(x => ({ at, title: x.title, what: x.what, did: 'reset', ...byMe() }))); p.waiting = [];
-    if (await publish({ 'data.json': d, 'room.json': r, 'pending.json': tidy(p) }, 'Website back to the Nov 16 setup (staff page)', e.target)) { try { sessionStorage.setItem('rl-ack', 'RESEND'); } catch (err) { } setTimeout(() => location.reload(), 1500); }
+    if (await publish({ 'data.json': d, 'room.json': r, 'pending.json': tidy(p) }, 'Website back to ' + name + ' (staff page)', e.target)) { try { sessionStorage.setItem('rl-ack', 'RESEND'); } catch (err) { } setTimeout(() => location.reload(), 1500); }
   });
   // ---- the 3D room: click a shelf instead of using the two menus
   const card = $('room3d-card'), help = $('room3d-help');
@@ -1099,7 +1219,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   // ---- the status line at the top: is the website in step with the console, and can this device save
   const drawHomeStatus = () => {
     const sy = room.synced, when = sy && sy.at ? new Date(sy.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
-    $('home-sync').textContent = when ? 'Last website sync: ' + when + '.' : 'Website shows the Nov 16 setup.';
+    $('home-sync').textContent = when ? 'Last website sync: ' + when + '.' : 'Website shows the Nov 16 setup.'; $('web-reset').textContent = 'Put the website back to ' + baseName(room);
     const wait = pend.waiting.filter(e => !e.sent).length, sent = pend.waiting.length - wait;
     $('home-wait').textContent = wait ? wait + (wait === 1 ? ' change is' : ' changes are') + ' on the website, waiting for the console.' : sent ? 'The console took ' + sent + (sent === 1 ? ' change' : ' changes') + ' from the website. Sync the website so it knows.' : '';
     $('home-wait-show').hidden = !wait; $('home-wait').parentElement.hidden = !$('home-wait').textContent;
@@ -1408,14 +1528,14 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     $('notfound').hidden = !nf.length;
     $('nf-list').innerHTML = nf.map(k => '<li class="nf-row"><div><strong>' + esc(k.n) + '</strong><br><span class="tool-note">Listed on ' + esc(k.w || k.u) + '</span></div><div class="sync-actions nf-actions">'
       + '<button type="button" data-nf="here" data-h="' + esc(k.h) + '">It\u2019s there</button>'
-      + '<button type="button" class="button-secondary" data-nf="move" data-h="' + esc(k.h) + '">It\u2019s on another shelf</button>'
+      + (allowed('move') ? '<button type="button" class="button-secondary" data-nf="move" data-h="' + esc(k.h) + '">It\u2019s on another shelf</button>' : '')
       + (allowed('remove') ? '<button type="button" class="button-secondary" data-nf="gone" data-h="' + esc(k.h) + '">Gone for good</button>' : '') + '</div></li>').join('');
   }
   $('home-nf-show').addEventListener('click', () => { $('notfound').open = true; $('notfound').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
   $('nf-list').addEventListener('click', async e => {
     const b = e.target.closest('[data-nf]'); if (!b) return; const k = kinds.find(x => x.h === b.dataset.h); if (!k) return;
     if (b.dataset.nf === 'here') { await saveChanges([{ code: 'RL:FOUND:' + k.h, title: 'Found: ' + k.n, what: 'It was on its shelf, ' + (k.w || k.u) + '.' }], b, { needKey: true }); drawNotFound(); return; }
-    if (b.dataset.nf === 'move') { $('tab-move').click(); mf.elements.thing.value = k.n; mf.elements.thing.dispatchEvent(new Event('input', { bubbles: true })); $('tool-move').scrollIntoView({ behavior: 'smooth', block: 'start' }); status.textContent = 'Pick the shelf where ' + k.n + ' is, then save. That takes it off the not-found list.'; return; }
+    if (b.dataset.nf === 'move') { if (!allowed('move')) return; $('tab-move').click(); mf.elements.thing.value = k.n; mf.elements.thing.dispatchEvent(new Event('input', { bubbles: true })); $('tool-move').scrollIntoView({ behavior: 'smooth', block: 'start' }); status.textContent = 'Pick the shelf where ' + k.n + ' is, then save. That takes it off the not-found list.'; return; }
     if (b.dataset.nf === 'gone') {
       if (!confirm('Take ' + k.n + ' out of Lending? Students stop seeing it and the console stops finding it once it scans the code. It can be put back.')) return;
       await saveChanges([{ code: 'RL:COUNT:' + k.h + ':0', title: 'Take out of Lending: ' + k.n, what: 'Not found in an audit. Was ' + (k.x || 1) + ' at ' + (k.w || k.u) + '.' }], b, { needKey: true }); drawNotFound();

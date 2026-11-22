@@ -110,7 +110,12 @@
 //                 X, unit, low, high, unit, low, high   two shelves swapped
 //                 B, unit, groove, 1 or 0[, S]      a board put in (1) or taken out (0); S = the line before moved its things down
 //                 A, category, type, name, unit, shelf, copies   a new item was added (history only)
-//                 C, name code, copies              how many Lending has of one thing was changed (from the website)
+//                 C, name code, copies              how many Lending has of one thing was changed (0 = taken out of Lending)
+//                 N, name code, 1 or 0              not found in an audit (1), or found again (0): history only
+//   AUDIT.TSV   an audit that is open: the things scanned and the shelves checked so far
+//   TIDY.TSV    how many times the console has tidied up, and where KINDS.TSV ended then (see "Tidy-up")
+//   NFOUND.TSV  things still on an audit's not-found list from before the last tidy-up
+//   BASEBRD.TSV the boards as they were at the last tidy-up (Start over goes back to them)
 //                 U, unit, unit                     two whole units traded places in the room (each keeps its name, things
 //                                                   and boards; the lights at each spot now belong to the other one)
 // Shelf 1 is the BOTTOM shelf of a unit. The light for groove n is (first light + n - 1).
@@ -126,7 +131,7 @@
 //   @RESET        the same as "Start over" on the map: every change and added item goes (the laptop needs no PIN)
 //   @STATUS       how many changes are waiting, and whether the staff PIN is still the starting one (never the PIN itself)
 //   @MOVES        prints MOVES.TSV, then @END
-//   @CLEARMOVES   deletes MOVES.TSV (after the laptop has collected the changes)
+//   @CLEARMOVES   deletes MOVES.TSV (for repairs: the console empties its list by itself, see "Tidy-up")
 //   @ADDED        prints the items added at the console (and their barcodes), then @END
 //   @FILES        prints every file on the card and its size, then @END (v5.48)
 //   @PUT NAME N   the laptop sends a .TSV file of N bytes for the card
@@ -161,7 +166,9 @@ const unsigned long IDLE_MS = 120000;          // 2 minutes with nobody touching
 const byte MAX_ROWS = 40;                      // longest list a screen can hold
 const byte MAX_LIST = 8;                       // most things on the put-away list
 const byte MAX_UNITS = 20;
-const byte MAX_MOVES = 128;                    // most changes the console keeps before the laptop must collect them
+const byte MAX_MOVES = 128;                    // most changes the console keeps in memory (it tidies up before that: TIDY_AT)
+const byte TIDY_AT = 100;                        // changes in memory before the console tidies up (of MAX_MOVES)
+const long TIDY_BYTES = 4000;                    // or this much in MOVES.TSV (not-found marks and added items count here)
 const byte ROWS_ON_SCREEN = 5;
 // the QR on an item opens its page: this address plus 6 letters/digits worked out from the item's name
 const char MANUAL_URL[] PROGMEM = "https://olivedevs.github.io/room-locator/?i=";
@@ -504,6 +511,7 @@ byte sleepTaps = 0;
 unsigned long lastSleepTap = 0;
 void drawIdeas(); void findIdeas(); void openIdea(); void drawResetWord(); void resetLetter(char c);   // (shelf ideas, v5.50)
 void drawCheck(); void checkScanned(char* t); void finishCheck();   // (shelf check, v5.51)
+byte tidyUp(); void finishTidy(); void loadTidy(); bool inNotFoundFile(const char* code); extern int tidyEpoch; extern long tidyBaseEnd;   // (tidy-up, v5.51)
 void openAudit(); void drawAudit(); void auditPicked(); bool foundAgain(unsigned long key); extern bool auditOpen; extern uint16_t auditShelves[MAX_UNITS];   // (audit, v5.51)
 void drawStickers(); void stickerScanned(char* t); void saveSticker(); void openStickers(); bool copyFile(const char* from, const char* to, long upTo);   // (the sticker screen, v5.50)
 void draw(); void lightsOff(); bool drawQRText(int x, int y, const char* url); byte firstVisibleRow(); void blinkDot(byte slot, bool lit);   // (written further down)
@@ -1249,7 +1257,7 @@ void drawRows(int onlyA = -1, int onlyB = -1) {   // with two row numbers: just 
     } else if (mode == PUTAWAY) {
       loadKind(listKind[i]);
       copyText(top, field[K_NAME], sizeof(top));
-      char where[40], blink[16]; whereText(where, sizeof(where)); strcpy_P(blink, BLINK_NAME[listColor[i]]);
+      char where[40], blink[16]; if (atoi(field[K_COPIES]) == 0) strcpy_P(where, PSTR("Not in Lending: taken out")); else whereText(where, sizeof(where)); strcpy_P(blink, BLINK_NAME[listColor[i]]);
       strcpy(under, where);
       bool blinks = listLed[i] >= 0 && LIST_BLINKS;
       drawRow(s, i == cursor, top, under, listLed[i] >= 0 ? listColor[i] : -1, blinks ? BLINK_DOT_X - 16 : 470);
@@ -1281,7 +1289,7 @@ void drawList() {
   if (rowCount == 0) {
     if (mode == RESULTS && looksLikeCode(query)) textF(18, 90, F("This barcode is not in the list. Ask at the desk."), DIM, SMALL);
     else if (mode == ACTIONS) textF(18, 90, F("The bottom shelf is empty. Nothing to change here."), DIM, SMALL);
-    else if (mode == RECENT) textF(18, 90, F("No changes since the laptop last collected them."), DIM, SMALL);
+    else if (mode == RECENT) textF(18, 90, tidyEpoch ? F("No changes since the last tidy-up.") : F("No changes yet."), DIM, SMALL);
     else textF(18, 90, mode == RESULTS ? F("Nothing matches. Try another word.") : F("Nothing here."), DIM, SMALL);
     if (mode == RESULTS) startShow(TILT, TILT_N, TILT_W, TILT_H, 2, 1, 1);             // nothing found: the dog tilts its head
   }
@@ -1449,7 +1457,7 @@ void drawMapBody(int was = -1) {                 // was = the row the cursor jus
     if (u == ROW_AUDIT) { title = F("Audit"); l1 = F("Check shelves one by one."); l2 = F("What is not found goes on"); l3 = F("a list on the website."); }
     else if (u == ROW_IDEAS) { title = F("Shelf ideas"); l1 = F("Shelves that could share"); l2 = F("a board, or need one back."); l3 = F("Nothing changes by itself."); }
     else if (u == ROW_RECENT) { title = F("Recent changes"); l1 = F("Every change made here,"); l2 = F("newest first."); l3 = F("Undo any of them here."); }
-    else if (u == ROW_RESET) { title = F("Start over"); l1 = F("Takes back every change"); l2 = F("and every item added here."); l3 = F("Back to the Nov 16 setup."); }
+    else if (u == ROW_RESET) { title = F("Start over"); l1 = F("Takes back every change"); l2 = F("and every item added here."); l3 = tidyEpoch ? F("Back to the last tidy-up.") : F("Back to the Nov 16 setup."); }
     else if (u == ROW_SYNC) { title = F("Send to website"); l1 = F("Shows the changes as QR"); l2 = F("codes. Scan them on the"); l3 = F("website's staff page."); }
     else { title = F("Change staff PIN"); l1 = F("Pick a new 4-digit PIN."); l2 = F("It is asked before every"); l3 = F("change to the room."); }
     textF(MAP_X + 16, MAP_Y + 44, title, WHITE, BOLD);
@@ -1628,7 +1636,7 @@ void drawAddNew() {
 bool resetYes = false;                           // which answer is picked on the "Start over?" screen. It always starts on No
 void drawResetAsk() {
   header("Start over?", NULL);
-  textF(14, 66, F("This puts the console back to the Nov 16 setup:"), WHITE, SMALL);
+  textF(14, 66, tidyEpoch ? F("This puts the console back to the last tidy-up:") : F("This puts the console back to the Nov 16 setup:"), WHITE, SMALL);
   textF(14, 92, F("- every move and shelf change is taken back"), DIM, SMALL);
   textF(14, 114, F("- every item added at the console is removed"), DIM, SMALL);
   textF(14, 136, F("- every shelf board goes back in, units to their spots"), DIM, SMALL);
@@ -1666,7 +1674,7 @@ void addToPutAway(long kind) {
   for (byte i = 0; i < listCount; i++) if (listKind[i] == kind) return;      // already on it
   if (listCount >= MAX_LIST) return;
   loadKind(kind);
-  int led = ledFor(field[K_UNIT], atoi(field[K_SHELF]));
+  int led = atoi(field[K_COPIES]) == 0 ? -1 : ledFor(field[K_UNIT], atoi(field[K_SHELF]));   // taken out of Lending: no light (v5.51)
   byte color = listCount % 6;
   for (byte i = 0; i < listCount; i++) if (led >= 0 && listLed[i] == led) color = listColor[i];   // same shelf: same colour and blink
   listKind[listCount] = kind; listLed[listCount] = led; listSpan[listCount] = spanFor(field[K_UNIT], atoi(field[K_SHELF])); listColor[listCount] = color; listCount++;
@@ -1759,7 +1767,7 @@ void pickedAction(byte a) {
   swapShelves = a == A_SWAP; go(MOVEOK); draw();
 }
 bool saveOrSay(char type, const byte* a, unsigned long key) {     // writes one change, or says why it could not
-  if (!moveListHasRoom(type, key)) { header("Move list is full", NULL); textF(18, 90, F("The console holds 128 changes. The laptop must"), WHITE, SMALL); textF(18, 114, F("collect them now: apply_moves.py, send the new"), WHITE, SMALL); textF(18, 138, F("files, then type @CLEARMOVES."), WHITE, SMALL); footer(F("Back")); return false; }
+  if (!moveListHasRoom(type, key)) { header("Change list is full", NULL); textF(18, 90, F("Update the website: Send to website, then scan"), WHITE, SMALL); textF(18, 114, F("its answer here. The console then makes room"), WHITE, SMALL); textF(18, 138, F("by itself."), WHITE, SMALL); footer(F("Back")); return false; }
   if (!saveChange(type, a)) { header("Could not save", NULL); textF(18, 90, F("The SD card would not write. Is it locked?"), WHITE, SMALL); footer(F("Back")); return false; }
   rememberChange(type, a);
   return true;
@@ -2040,6 +2048,20 @@ void gotCode(char* c) {
   header("To the website", NULL);
   textF(18, 100, webDirty ? F("The website has those changes.") : F("The website has every change."), WHITE, BOLD);
   if (webDirty) { textF(18, 150, F("Newer changes were made here since."), DIM, SMALL); textF(18, 174, F("Open Send to website for those."), DIM, SMALL); footer(F("Any button = Home")); }
+  else if (moveTotal >= TIDY_AT || movesSize() > TIDY_BYTES) {        // nearly full, and the website has it all: make room now
+    byte why = tidyUp();
+    backDepth = 0; mode = HOME; homeMessage = true; offerSync = false;
+    if (!why) {
+      header("Room made", NULL);
+      textF(18, 90, F("The website has every change, so the console"), WHITE, SMALL); textF(18, 114, F("folded them into its item list. Its change"), WHITE, SMALL); textF(18, 138, F("list is empty again."), WHITE, SMALL);
+      textF(18, 178, F("Start over now goes back to this point."), DIM, SMALL);
+      doneBar(F("Done. Website up to date."));
+    } else {
+      header("To the website", NULL); textF(18, 100, F("The website has every change."), WHITE, BOLD);
+      textF(18, 150, F("The SD card would not take the tidy-up."), ACCENT, SMALL);
+      textF(18, 174, F("Nothing was lost. Ask whoever looks after it."), DIM, SMALL); footer(F("Any button = Home"));
+    }
+  }
   else { textF(18, 150, F("The console and the website match."), DIM, SMALL); doneBar(F("Done. Website up to date.")); }
 }
 void runCode(char* c) {
@@ -2288,9 +2310,10 @@ void loadAudit() {
 // the latest not-found mark for this thing is "not found": write that it was found again. True when something was written
 bool foundAgain(unsigned long key) {
   char want[7]; snprintf_P(want, 7, PSTR("%02x%02x%02x"), (byte)((key >> 16) & 255), (byte)((key >> 8) & 255), (byte)(key & 255));
-  File f = cardOpen("MOVES.TSV"); long pos = 0; char last = '0';
-  while (f && (pos = readLine(f, pos)) >= 0) if (field[0][0] == 'N' && !field[0][1] && strcasecmp(field[1], want) == 0) last = field[2][0];
+  File f = cardOpen("MOVES.TSV"); long pos = 0; char last = '0'; bool sawMark = false;
+  while (f && (pos = readLine(f, pos)) >= 0) if (field[0][0] == 'N' && !field[0][1] && strcasecmp(field[1], want) == 0) { last = field[2][0]; sawMark = true; }
   if (f) f.close();
+  if (last == '0' && !sawMark && inNotFoundFile(want)) last = '1';   // kept from before the last tidy-up
   if (last != '1') return false;
   byte a[6] = {(byte)((key >> 16) & 255), (byte)((key >> 8) & 255), (byte)(key & 255), 0, 0, 0};
   return saveChange('N', a);
@@ -2557,9 +2580,123 @@ void describeChange(long pos, char* top, byte topSize, char* under, byte underSi
 bool copyFile(const char* from, const char* to, long upTo) {     // the first upTo bytes of one file into another (Arduino SD has no rename)
   File a = cardOpen(from); cardRemove(to); File b = cardOpen(to, FILE_WRITE);
   if (!a || !b) { if (a) a.close(); if (b) b.close(); return false; }
-  for (long i = 0; i < upTo && a.available(); i++) b.write((byte)a.read());
+  byte buf[64];                                                   // 64 letters at a time: a whole item list copies in seconds, not minutes
+  for (long i = 0; i < upTo; ) { int want = upTo - i < (long)sizeof(buf) ? (int)(upTo - i) : (int)sizeof(buf); int got = a.read(buf, want); if (got <= 0) break; if (b.write(buf, got) != (size_t)got) { a.close(); b.close(); return false; } i += got; }
   a.close(); b.close(); return true;
 }
+// ---------- Tidy-up (v5.51): the console makes room in its change list by itself
+// The console keeps at most MAX_MOVES changes in memory. When the list is nearly full (TIDY_AT) and the website has
+// every change (it answered RL:GOT for all of MOVES.TSV), the console folds the changes into its own files:
+// KINDS.TSV gets every thing's new shelf and count, UNITS.TSV the units that traded places, CODES.TSV and TYPES.TSV
+// the new places of the lines in KINDS.TSV. MOVES.TSV starts empty again. From then on Start over goes back to this
+// point (the "last tidy-up"), and the website code says so (the tidy-up number), so the website moves its own starting
+// point at the same moment. Things still on an audit's not-found list are kept in NFOUND.TSV.
+// A line of KINDS.TSV keeps its length when it gets shorter (spaces at the end), so the lines after it do not move;
+// only lines that grow push the rest along. Each shift is noted in BRK.TMP (8 bytes: where, and by how much in all),
+// and CODES.TSV and TYPES.TSV look their places up there (a binary search on the card, so any number of shifts works).
+// Every new file is written first (*.NEW), then TIDY.GO is written, then they are copied over the old ones. A power
+// cut in the middle: at start-up TIDY.GO is still there and the copying is done again.
+int tidyEpoch = 0; long tidyBaseEnd = -1;        // how many tidy-ups so far; where KINDS.TSV ended at the last one (-1 = never)
+void loadTidy() {
+  tidyEpoch = 0; tidyBaseEnd = -1;
+  File f = cardOpen("TIDY.TSV"); if (!f) return;
+  if (readLine(f, 0) >= 0) { tidyEpoch = atoi(field[0]); tidyBaseEnd = atol(field[1]); }
+  f.close();
+}
+bool writeText(File& f, const char* s) { size_t n = strlen(s); return f.write((const uint8_t*)s, n) == n; }
+// where a line that started at old position pos starts now: pos plus the last shift noted at or before it
+void putLong(byte* b, long v) { for (byte i = 0; i < 4; i++) b[i] = (v >> (8 * i)) & 255; }
+long getLong(const byte* b) { long v = 0; for (byte i = 0; i < 4; i++) v |= (long)b[i] << (8 * i); return v; }
+long movedPos(File& brk, long pos) {
+  long lo = 0, hi = (long)(brk.size() / 8) - 1, by = 0; byte r[8];
+  while (lo <= hi) { long mid = (lo + hi) / 2; brk.seek(mid * 8); brk.read(r, 8); if (getLong(r) <= pos) { by = getLong(r + 4); lo = mid + 1; } else hi = mid - 1; }
+  return pos + by;
+}
+// the not-found marks still open after the marks in MOVES.TSV: kept in NFOUND.TSV, one 6-letter code a line
+bool stillNotFound(const char* code, long after) {  // no later N line in MOVES.TSV for this code
+  File m = cardOpen("MOVES.TSV"); long pos = after, next; bool later = false;
+  while (m && (next = readLine(m, pos)) >= 0 && !later) { if (field[0][0] == 'N' && !field[0][1] && strcasecmp(field[1], code) == 0) later = true; pos = next; }
+  if (m) m.close(); return !later;
+}
+bool writeNotFound() {
+  cardRemove("NFOUND.NEW"); File o = cardOpen("NFOUND.NEW", FILE_WRITE); if (!o) return false;
+  char code[8];
+  File n = cardOpen("NFOUND.TSV"); long pos = 0, next;            // the ones kept from before, unless a mark since says otherwise
+  while (n && (next = readLine(n, pos)) >= 0) { copyText(code, field[0], sizeof(code)); long here = next; n.close(); if (code[0] && stillNotFound(code, 0)) { o.write((const uint8_t*)code, strlen(code)); o.write((byte)'\n'); } n = cardOpen("NFOUND.TSV"); pos = here; }
+  if (n) n.close();
+  File m = cardOpen("MOVES.TSV"); pos = 0;                         // the marks in MOVES.TSV that are the last one for their thing
+  while (m && (next = readLine(m, pos)) >= 0) {
+    if (field[0][0] == 'N' && !field[0][1] && field[2][0] == '1') { copyText(code, field[1], sizeof(code)); m.close(); if (stillNotFound(code, next)) { o.write((const uint8_t*)code, strlen(code)); o.write((byte)'\n'); } m = cardOpen("MOVES.TSV"); }
+    pos = next;
+  }
+  if (m) m.close(); o.close(); return true;
+}
+bool inNotFoundFile(const char* code) {
+  File n = cardOpen("NFOUND.TSV"); long pos = 0, next; bool in = false;
+  while (n && !in && (next = readLine(n, pos)) >= 0) { if (strcasecmp(field[0], code) == 0) in = true; pos = next; }
+  if (n) n.close(); return in;
+}
+bool copyOver(const char* from, const char* to) { File a = cardOpen(from); long n = a ? (long)a.size() : -1; if (a) a.close(); return n >= 0 && copyFile(from, to, n); }
+void finishTidy() {                              // TIDY.GO is there: the new files are complete. Put them in place
+  File g = cardOpen("TIDY.GO"); if (!g) return;
+  int epoch = 0; long end = -1; if (readLine(g, 0) >= 0) { epoch = atoi(field[0]); end = atol(field[1]); } g.close();
+  kindsFile.close();
+  copyOver("KINDS.NEW", "KINDS.TSV"); copyOver("CODES.NEW", "CODES.TSV"); copyOver("TYPES.NEW", "TYPES.TSV"); copyOver("UNITS.NEW", "UNITS.TSV");
+  copyOver("BOARDS.TSV", "BASEBRD.TSV"); copyOver("NFOUND.NEW", "NFOUND.TSV");
+  cardRemove("MOVES.TSV");
+  cardRemove("TIDY.TSV"); File t = cardOpen("TIDY.TSV", FILE_WRITE); if (t) { char buf[24]; snprintf_P(buf, sizeof(buf), PSTR("%d\t%ld"), epoch, end); t.println(buf); t.close(); }
+  webSentBytes = 0; webExtra = false; webShown = false; syncTag = -1; saveSent();       // the website has all of it: nothing to send
+  cardRemove("KINDS.NEW"); cardRemove("CODES.NEW"); cardRemove("TYPES.NEW"); cardRemove("UNITS.NEW"); cardRemove("NFOUND.NEW"); cardRemove("BRK.TMP");
+  cardRemove("TIDY.GO");
+  kindsFile = cardOpen("KINDS.TSV");
+  loadTidy(); loadUnits(); loadBoards(); loadMoves(); findAddedFrom();
+}
+// Returns 0 when it tidied up, or why not: 1 the website does not have everything yet, 3 the card would not write
+byte tidyUp() {
+  if (webDirty || webExtra) return 1;
+  header("Making room", NULL);
+  textF(18, 90, F("The website has every change, so the console is"), WHITE, SMALL);
+  textF(18, 114, F("folding them into its own item list. Please do"), WHITE, SMALL);
+  textF(18, 138, F("not turn it off: this takes about a minute."), WHITE, SMALL);
+  cardRemove("KINDS.NEW"); cardRemove("BRK.TMP");
+  File out = cardOpen("KINDS.NEW", FILE_WRITE), brk = cardOpen("BRK.TMP", FILE_WRITE);
+  if (!out || !brk) { if (out) out.close(); if (brk) brk.close(); return 3; }
+  long pos = 0, next, by = 0, written = 0; bool ok = true;
+  while (ok && (next = readLine(kindsFile, pos)) >= 0) {             // each line with its changes played in (readLine does that)
+    long oldBody = next - pos - 1;                                  // (the line and its \n; KINDS.TSV has no \r)
+    byte n = 8; while (n > 6 && !field[n - 1][0]) n--;              // leave empty fields off the end
+    long len = 0;
+    for (byte i = 0; i < n && ok; i++) { if (i) ok = out.write((byte)'\t') == 1; ok = ok && writeText(out, field[i]); len += (i ? 1 : 0) + strlen(field[i]); }
+    for (; len < oldBody && ok; len++) ok = out.write((byte)' ') == 1;   // shorter: pad, so nothing after it moves
+    ok = ok && out.write((byte)'\n') == 1; written += len + 1;
+    if (len > oldBody) { by += len - oldBody; byte r[8]; putLong(r, next); putLong(r + 4, by); ok = ok && brk.write(r, 8) == 8; }
+    pos = next;
+  }
+  out.close(); brk.close();
+  if (!ok) return 3;
+  brk = cardOpen("BRK.TMP"); if (!brk) return 3;
+  cardRemove("CODES.NEW"); out = cardOpen("CODES.NEW", FILE_WRITE); File in = cardOpen("CODES.TSV"); pos = 0;
+  while (ok && out && in && (next = readLine(in, pos)) >= 0) { if (field[0][0]) { char b2[60]; snprintf_P(b2, sizeof(b2), PSTR("%s\t%ld"), field[0], movedPos(brk, atol(field[1]))); ok = writeText(out, b2) && out.write((byte)'\n') == 1; } pos = next; }
+  if (in) in.close(); if (out) out.close(); else ok = false;
+  cardRemove("TYPES.NEW"); out = cardOpen("TYPES.NEW", FILE_WRITE); in = cardOpen("TYPES.TSV"); pos = 0;
+  while (ok && out && in && (next = readLine(in, pos)) >= 0) { if (field[1][0]) { char b2[80]; snprintf_P(b2, sizeof(b2), PSTR("%s\t%s\t%s\t%ld"), field[0], field[1], field[2], movedPos(brk, atol(field[3]))); ok = writeText(out, b2) && out.write((byte)'\n') == 1; } pos = next; }
+  if (in) in.close(); if (out) out.close(); else ok = false;
+  cardRemove("UNITS.NEW"); out = cardOpen("UNITS.NEW", FILE_WRITE); in = cardOpen("UNITS.TSV"); pos = 0; byte u = 0;
+  while (ok && out && in && (next = readLine(in, pos)) >= 0) {        // each unit's line, with the code and name now at that spot
+    if (field[0][0] && u < unitTotal) { ok = writeText(out, unitCode[u]) && out.write((byte)'\t') == 1 && writeText(out, unitName[u]); for (byte i = 2; i < 8 && field[i][0] && ok; i++) ok = out.write((byte)'\t') == 1 && writeText(out, field[i]); ok = ok && out.write((byte)'\n') == 1; u++; }
+    pos = next;
+  }
+  if (in) in.close(); if (out) out.close(); else ok = false;
+  brk.close();
+  ok = ok && writeNotFound();
+  if (!ok) return 3;                                               // nothing was replaced: everything stays as it was
+  File g = cardOpen("TIDY.GO", FILE_WRITE);
+  if (!g) return 3;
+  { char b2[24]; snprintf_P(b2, sizeof(b2), PSTR("%d\t%ld"), tidyEpoch + 1, written); g.println(b2); g.close(); }
+  finishTidy();
+  return 0;
+}
+
 void reloadData() { loadUnits(); loadBoards(); loadMoves(); }   // after an undo: everything as if the console had just started
 bool cutBytes(const char* name, long from, long to) {            // takes the letters from..to out of a file (through a spare file: the card cannot cut)
   File a = cardOpen(name); cardRemove("CUT.TMP"); File b = cardOpen("CUT.TMP", FILE_WRITE);
@@ -2608,8 +2745,11 @@ void startOver() {
   loadUnits();                                                     // unit names back in their own spots, every board in
   for (byte u = 0; u < unitTotal; u++) unitBoards[u] = 0xFFFF;
   saveBoards();
-  if (addedFrom > 0 && (long)kindsFile.size() > addedFrom) {
-    long size = kindsFile.size();
+  if (tidyBaseEnd >= 0) copyFile("BASEBRD.TSV", "BOARDS.TSV", 4000);   // after a tidy-up: its boards, not every board
+  auditOpen = false; saveAudit(); memset(auditSeen, 0, sizeof(auditSeen)); memset(auditShelves, 0, sizeof(auditShelves));   // an audit open now would count changes that are gone
+  long keepTo = tidyBaseEnd >= 0 ? tidyBaseEnd : addedFrom;        // items added since then go
+  if (keepTo > 0 && (long)kindsFile.size() > keepTo) {
+    long size = kindsFile.size(); long addedFrom = keepTo;
     kindsFile.close(); cutBytes("KINDS.TSV", addedFrom, size); kindsFile = cardOpen("KINDS.TSV");
     File c = cardOpen("CODES.TSV"); cardRemove("CUT.TMP"); File o = cardOpen("CUT.TMP", FILE_WRITE); long pos = 0, next, kept = 0;
     while (c && o && (next = readLine(c, pos)) >= 0) {             // keep only the barcodes of items that are still there
@@ -2622,7 +2762,7 @@ void startOver() {
   loadBoards(); loadMoves(); findAddedFrom();
   clearPutAway(); homeCursor = 0; goHome();
   go(SYNC); syncPage = 0; syncPages = 1; draw();                   // the code that puts the website back too
-  char msg[64]; strcpy_P(msg, PSTR("Console is back to the ")); strcat_P(msg, BACKUP_NAME); strcat_P(msg, PSTR(".  Back = Home"));
+  char msg[64]; strcpy_P(msg, PSTR("Console is back to the ")); if (tidyEpoch) strcat_P(msg, PSTR("last tidy-up")); else strcat_P(msg, BACKUP_NAME); strcat_P(msg, PSTR(".  Back = Home"));
   tft.fillRect(0, 294, 480, 26, PANEL); text(14, 312, msg, ACCENT, SMALL);
 }
 void undoLast() {                                // takes the last change back
@@ -2650,7 +2790,7 @@ void undoLast() {                                // takes the last change back
 // staff page reads the changes straight out of the address, so nobody has to open the site first and scan from inside it.
 // Only letters, digits, - and . are safe everywhere in an address, so: tab is written ~, end of line is written !,
 // and anything else (a space in an item's name) as % and its two-digit code, like %20.
-const byte SYNC_BYTES = 80;                    // letters of the change list per QR page, counted the way they are written in the address
+const byte SYNC_BYTES = 76;                    // letters of the change list per QR page, counted the way they are written in the address
 bool syncPlain(char c) { return isalnum(c) || c == '-' || c == '.'; }
 int syncLen(File& f, long pos, long next) {      // how long the line from pos to next gets in the address
   int n = 0; f.seek(pos);
@@ -2673,7 +2813,7 @@ int syncText(char* out, int size, byte page, byte pages, int* first, int* total)
   strcpy_P(out, STAFF_URL); len = strlen(out);
   out[len++] = '#'; out[len] = '\0';
   if (webPass[0]) len += snprintf_P(out + len, size - len, PSTR("k=%s&"), webPass);   // the website pass first, so the page can save
-  len += snprintf_P(out + len, size - len, PSTR("RLSYNC~%d~%d~%d~%ld~%ld!"), page + 1, pages, *total, from, syncTag);   // (v5.46: where these start, and where they end)
+  len += snprintf_P(out + len, size - len, tidyEpoch ? PSTR("RLSYNC~%d~%d~%d~%ld~%ld~%d!") : PSTR("RLSYNC~%d~%d~%d~%ld~%ld!"), page + 1, pages, *total, from, syncTag, tidyEpoch);   // (v5.46: where these start, and where they end; v5.51: which tidy-up they follow)
   pos = from;
   while (f && (next = readLine(f, pos)) >= 0) {
     int n = syncLen(f, pos, next);
@@ -2712,7 +2852,7 @@ void drawSync() {
   char buf[40];
   textF(276, 72, F("Point a phone's"), WHITE, SMALL); textF(276, 94, F("camera at this."), WHITE, SMALL); textF(276, 116, F("The staff page opens"), WHITE, SMALL); textF(276, 138, F("with these changes."), WHITE, SMALL);
   if (total) { snprintf_P(buf, sizeof(buf), PSTR("Changes %d to %d of %d"), first + 1, first + lines, total); text(276, 178, buf, DIM, SMALL, 196); }
-  else if (syncFrom() == 0) { textF(276, 178, F("No changes here: this"), DIM, SMALL); textF(276, 200, F("puts the website back to"), DIM, SMALL); textF(276, 222, F("the Nov 16 setup too."), DIM, SMALL); }
+  else if (syncFrom() == 0) { textF(276, 178, F("No changes here: this"), DIM, SMALL); textF(276, 200, F("puts the website back to"), DIM, SMALL); textF(276, 222, tidyEpoch ? F("the last tidy-up too.") : F("the Nov 16 setup too."), DIM, SMALL); }
   else { textF(276, 178, F("Nothing new to send."), DIM, SMALL); textF(276, 200, F("The website has every"), DIM, SMALL); textF(276, 222, F("change made here."), DIM, SMALL); }
   if (total) { textF(276, 212, F("Then show the phone's"), ACCENT, SMALL); textF(276, 234, F("code to the scanner."), ACCENT, SMALL); }
   footer(syncPages > 1 ? F("Up / Down = next page     Back") : F("Back"));
@@ -3086,7 +3226,8 @@ void setup() {
   kindsFile = cardOpen("KINDS.TSV");
   staffUntil = 0;                                                  // a restart locks changes again
   for (byte i = 0; i < sizeof(OLD_FILES) / sizeof(OLD_FILES[0]); i++) { char old[14]; strcpy_P(old, (const char*)pgm_read_ptr(&OLD_FILES[i])); cardRemove(old); }
-  loadUnits(); loadBoards(); loadMoves(); loadSent(); loadStaff(); loadWeb(); findAddedFrom(); loadAudit();
+  { File g = cardOpen("TIDY.GO"); bool cut = g; if (g) g.close(); if (cut) finishTidy(); }                         // a tidy-up was cut short by a power cut: finish it
+  loadUnits(); loadBoards(); loadMoves(); loadSent(); loadStaff(); loadWeb(); findAddedFrom(); loadAudit(); loadTidy();
   if (!kindsFile || unitTotal == 0) {                              // card without the v5 files: wait for the laptop to send them
     stopWith(F("Waiting for the laptop"), F("The SD card needs the data files (push_card.py)"));
     while (!kindsFile || unitTotal == 0) readLaptop();
@@ -3116,5 +3257,8 @@ void loop() {
   if (livePending && millis() - liveAt > 250 && !Serial1.available()) { livePending = false; if (queryLen >= 2) liveSearch(); }
   if (staffUntil && millis() - lastActivity > IDLE_MS) staffUntil = 0;          // nobody touched it for 2 minutes: changes lock again
   if (mode == PIN && pinRestUntil && !pinResting()) draw();                     // the minute of rest is over: the message goes away
-  if (millis() - lastActivity > IDLE_MS && (mode != HOME || homeCursor == 8)) { clearPutAway(); homeCursor = 0; goHome(); lastActivity = millis(); }
+  if (millis() - lastActivity > IDLE_MS && (mode != HOME || homeCursor == 8)) {
+    if (mode == CHECK && auditOpen && checkN && checkLo >= 1 && checkLo <= 16) { auditShelves[checkU] |= 1 << (checkLo - 1); saveAudit(); }   // left in the middle of a shelf check: what was scanned still counts for the audit
+    clearPutAway(); homeCursor = 0; goHome(); lastActivity = millis();
+  }
 }

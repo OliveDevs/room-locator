@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><link rel="icon" href="favicon.ico?v=2" sizes="any"><link rel="icon" type="image/png" href="favicon.png?v=2"><link rel="apple-touch-icon" href="apple-touch-icon.png?v=2"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400..700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=audit-2"><link rel="stylesheet" href="staff-layout.css?v=audit-2"><link rel="stylesheet" href="dark.css?v=audit-2"><script src="theme.js?v=1"></script></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a><a href="#log">Change history</a><a href="#manuals">Manuals</a></nav></div></header>
+  <link rel="stylesheet" href="styles.css?v=tidy-1"><link rel="stylesheet" href="staff-layout.css?v=tidy-1"><link rel="stylesheet" href="dark.css?v=tidy-1"><script src="theme.js?v=1"></script></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a><a href="#log">Change history</a><a href="#manuals">Manuals</a></nav></div></header>
 <main class="staff-main">
 <h1>Staff tools</h1>
 
@@ -279,6 +279,16 @@
 <p class="tool-note">On a CMU campus printer (printing.andrew.cmu.edu) these are already the defaults, so upload the file and print. If the backs come out upside down on another printer, print again with flip on short edge.</p>
 <p class="tool-note"><strong>Then</strong> keep the sheets in the order they come out, fold the stack in half with the cover outside, and staple on the three small marks along the fold.</p>
 </details>
+<details class="staff-fold" id="editions"><summary>Earlier editions</summary>
+<p class="tool-note">The item list as it was on any day it changed, to look at: what Lending had, where it lived, and what has changed since. Nothing here changes the website.</p>
+<label>Show Lending as it was on<select id="edition-pick"></select></label>
+<p id="edition-why" class="tool-note"></p>
+<div id="edition-tools" hidden>
+<label>Find in that edition<input id="edition-find" type="search" placeholder="An item, a unit or a type" autocomplete="off"></label>
+<div class="sync-actions"><button type="button" id="edition-get" class="button-secondary">Download that edition as a spreadsheet</button></div>
+</div>
+<div id="edition-view"></div>
+</details>
 <details class="staff-fold" id="inventory"><summary>Inventory spreadsheet</summary>
 <p class="tool-note">Every item with where it lives: unit, shelf (1 is the bottom) and how many Lending has. It opens in Excel, Numbers or Google Sheets. Items taken out of Lending are at the end.</p>
 <div class="sync-actions"><button type="button" id="inventory-get">Download the spreadsheet</button></div>
@@ -354,7 +364,7 @@
 <details class="sync-paste"><summary>Sync with a laptop instead of a camera</summary><label>Paste the console's change list (type @MOVES in the Serial Monitor)<textarea id="sync-paste" rows="5"></textarea></label><button type="button" id="sync-use-paste" class="button-secondary">Use the pasted list</button></details>
 <p><a href="data.json" download>Download a copy of the item list</a> · <a href="room.json" download>Download a copy of the room map</a></p>
 <p><a href="STAFF-GUIDE.md">Full maintenance instructions ↗</a></p>
-<details class="sync-paste danger-zone manager-only" hidden><summary>Only after Start over on the console</summary><p class="tool-note">This wipes the website back to the Nov 16 setup: every move, count, new item, photo and description added since then, and every change waiting for the console. It can't be undone. Only use it right after Start over on the console, so the two match.</p><label>Type START OVER to unlock it<input id="web-reset-word" autocomplete="off" spellcheck="false"></label><button type="button" id="web-reset" class="button-secondary" disabled>Put the website back to the Nov 16 setup</button></details>
+<details class="sync-paste danger-zone manager-only" hidden><summary>Only after Start over on the console</summary><p class="tool-note">This wipes the website back to its starting point (the Nov 16 setup, or the console's last tidy-up if it has made room since): every move, count, new item, photo and description added since then, and every change waiting for the console. It can't be undone. Only use it right after Start over on the console, so the two match.</p><label>Type START OVER to unlock it<input id="web-reset-word" autocomplete="off" spellcheck="false"></label><button type="button" id="web-reset" class="button-secondary" disabled>Put the website back to the Nov 16 setup</button></details>
 </details>
 </div>
 </main>
@@ -363,4 +373,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="room3d.js?v=room-5"></script>
-<script src="staff.js?v=audit-2" defer></script></body></html>
+<script src="staff.js?v=tidy-1" defer></script></body></html>
