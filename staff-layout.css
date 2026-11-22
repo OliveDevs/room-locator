@@ -129,3 +129,4 @@
 .print-steps { padding-left: 20px; margin: 6px 0 4px; font-size: 14px; line-height: 1.45; }
 .print-steps li { margin: 4px 0; }
 #manuals h2 { font-size: 17px; margin: 10px 0 0; }
+.room3d-moved .key-full { width: 28px; height: 14px; display: inline-block; flex: none; background: linear-gradient(90deg, #f6efe3, #a06d36); }

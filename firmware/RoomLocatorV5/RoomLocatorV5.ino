@@ -204,7 +204,7 @@ MCUFRIEND_kbv tft;
 Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 // the screens (stored in a byte so the Arduino prototype maker is happy)
-enum { HOME, TYPES, KINDS, RESULTS, SHELF, ITEM, PUTAWAY, MAP, UNITVIEW, ACTIONS, MOVEOK, PIN, ADDNEW, RECENT, SYNC, RESETASK, STICKER, IDEAS };
+enum { HOME, TYPES, KINDS, RESULTS, SHELF, ITEM, PUTAWAY, MAP, UNITVIEW, ACTIONS, MOVEOK, PIN, ADDNEW, RECENT, SYNC, RESETASK, STICKER, IDEAS, RESETWORD };
 byte mode = HOME;                               // which screen is showing
 const byte BACK_MAX = 10;
 byte backTo[BACK_MAX], backCursor[BACK_MAX], backStage[BACK_MAX], backView[BACK_MAX]; byte backDepth = 0;     // where Back returns to
@@ -274,6 +274,7 @@ bool homeMessage = false;                        // a message is on the screen i
 // a new item from the phone (RL:ADD), set up in 3 steps
 byte addStep = 1, addCat = 0, addUnit = 0, addShelf = 0, addCopies = 1;
 char addName[40], addType[28], addCode[40], addProblem[48];   // (the sticker screen uses addCode and addProblem too: the two never run at once)
+byte resetLen = 0, resetPick = 0; bool resetWrong = false;   // Start over: RESET typed letter by letter before the PIN (v5.50)
 byte ideaU[5], ideaA[5], ideaB[5], ideaN[5], ideaKind[5], ideaCount = 0;   // shelf ideas: unit, the two shelves (or the shelf and the groove), things, 0 share / 1 split
 byte stickerAsk = 0, stickerDone = 0;              // the sticker screen: 0 the list, 1 add, 2 move from another item, 3 take off; what was just saved
 long stickerOther = -1;                          // the item a scanned sticker is on now
@@ -497,7 +498,7 @@ const unsigned long SLEEP_MS = 300000UL;
 bool asleep = false; byte sleepStep = 0; unsigned long sleepAt = 0;
 byte sleepTaps = 0;
 unsigned long lastSleepTap = 0;
-void drawIdeas(); void findIdeas(); void openIdea();   // (shelf ideas, v5.50)
+void drawIdeas(); void findIdeas(); void openIdea(); void drawResetWord(); void resetLetter(char c);   // (shelf ideas, v5.50)
 void drawStickers(); void stickerScanned(char* t); void saveSticker(); void openStickers(); bool copyFile(const char* from, const char* to, long upTo);   // (the sticker screen, v5.50)
 void draw(); void lightsOff(); bool drawQRText(int x, int y, const char* url); byte firstVisibleRow(); void blinkDot(byte slot, bool lit);   // (written further down)
 const int SLEEP_MID = 318, SLEEP_X = SLEEP_MID - SLEEP_W, SLEEP_Y = 150 - SLEEP_H;   // drawn double size, right of the website's code
@@ -1593,6 +1594,7 @@ void draw() {
   else if (mode == ADDNEW) drawAddNew();
   else if (mode == STICKER) drawStickers();
   else if (mode == IDEAS) drawIdeas();
+  else if (mode == RESETWORD) drawResetWord();
   else if (mode == SYNC) drawSync();
   else drawList();
   if (queryLen) drawTyping();
@@ -2191,6 +2193,28 @@ void findIdeas() {
     }
   }
 }
+// Start over asks for the word RESET, letter by letter, before the PIN: it erases every change, so it should take a
+// moment of meaning it (v5.50). A wrong letter starts the word again.
+void resetLetter(char c) {
+  const char* word = "RESET";
+  if (c == word[resetLen]) { resetLen++; resetPick = 0; resetWrong = false; if (resetLen == 5) { popScreen(); askPin(AFTER_RESET); return; } }
+  else { resetLen = 0; resetPick = 0; resetWrong = true; }
+  draw();
+}
+void drawResetWord() {
+  header("Start over", NULL);
+  textF(14, 70, F("To be sure, type RESET."), WHITE, BOLD);
+  textF(14, 96, F("Up / Down picks a letter, Select adds it."), DIM, SMALL);
+  for (byte i = 0; i < 5; i++) {
+    int x = 14 + i * 64; bool now = i == resetLen;
+    tft.fillRect(x, 120, 54, 66, now ? PICKED : PANEL); if (now) tft.drawRect(x, 120, 54, 66, ACCENT);
+    char ch[2] = { i < resetLen ? "RESET"[i] : now ? (char)('A' + resetPick) : ' ', 0 };
+    if (ch[0] != ' ') { useFont(TITLE); text(x + (54 - textWidth(ch)) / 2, 166, ch, i < resetLen ? WHITE : ACCENT, TITLE); }
+  }
+  if (resetWrong) textF(14, 222, F("That letter is not right. Start the word again."), RGB(255, 110, 100), SMALL);
+  else textF(14, 222, F("Then the PIN. It erases every change."), DIM, SMALL);
+  footer(F("Back = delete a letter, or cancel"));
+}
 void drawIdeas() {
   header("Shelf ideas", NULL);
   if (!ideaCount) { textF(18, 90, F("Every shelf looks fine."), WHITE, BOLD); textF(18, 116, F("Nothing to change right now."), DIM, SMALL); footer(F("Back")); return; }
@@ -2456,6 +2480,11 @@ void pressed(byte b) {                          // Up, Down, Select or Back, fro
     if (b != B_BACK) return;
   }
   if (mode == PIN && b == B_BACK && pinLen > 0) { pinLen--; pinDigit = 0; drawPinStep(); return; }
+  if (mode == RESETWORD && b == B_BACK && resetLen > 0) { resetLen--; resetWrong = false; draw(); return; }
+  if (mode == RESETWORD && b != B_BACK) {                           // Up / Down pick a letter, Select adds it
+    if (b == B_UP) resetPick = (resetPick + 1) % 26; else if (b == B_DOWN) resetPick = (resetPick + 25) % 26; else { resetLetter('A' + resetPick); return; }
+    draw(); return;
+  }
   if (b == B_BACK) { back(); return; }
   if (mode == PIN) {
     if (b == B_UP) pinDigit = (pinDigit + 1) % 10;
@@ -2465,7 +2494,7 @@ void pressed(byte b) {                          // Up, Down, Select or Back, fro
   }
   if (mode == RESETASK) {
     if (b == B_UP || b == B_DOWN) { resetYes = !resetYes; draw(); }
-    else if (b == B_SELECT) { if (resetYes) { resetYes = false; popScreen(); askPin(AFTER_RESET); } else back(); }
+    else if (b == B_SELECT) { if (resetYes) { resetYes = false; popScreen(); resetLen = 0; resetPick = 0; resetWrong = false; go(RESETWORD); draw(); } else back(); }
     return;
   }
   if (mode == SYNC) { if (b == B_DOWN && syncPage + 1 < syncPages) syncPage++; else if (b == B_UP && syncPage > 0) syncPage--; else return; draw(); return; }
@@ -2580,6 +2609,7 @@ void typed(byte c) {                            // one key from the keyboard
   if (c == 0x7F) c = 0x08;                                       // some keyboards send DEL (0x7F) for the delete key: treat it as backspace
   if (c == 0x1B) { pressed(B_BACK); return; }                    // Esc works like the Back button
   if (mode == ADDNEW || mode == STICKER) { if (c == 0x0D || c == 0x0A) pressed(B_SELECT); else if (c == 0x08) pressed(B_BACK); return; }
+  if (mode == RESETWORD) { if (isalpha(c)) resetLetter(toupper(c)); else if (c == 0x08) pressed(B_BACK); return; }
   if (mode == PIN) {                                             // the keyboard types the PIN
     if (c >= '0' && c <= '9') pinKey(c);
     else if (c == 0x08) pressed(B_BACK);

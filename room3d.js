@@ -11,6 +11,7 @@ window.Room3D = {
     const COLOR = { wood: 0xdcbf94, woodDark: 0xc9a877, floor: 0x2444b8, rail: 0xf4f4f0, pick: 0x2f9e58, from: 0xe08a1e, now: 0xe08a1e, moved: 0x3f73d9, hover: 0xfff2c4, ...(opts.colors || {}) };
     // how full a board is: pale when empty, deep wood at 8 things or more
     const EMPTY = new THREE.Color(0xf6efe3), FULL = new THREE.Color(0xa06d36);
+    let tintOn = opts.tint && !opts.tintOff;
     const tintFor = (u, n) => EMPTY.clone().lerp(FULL, Math.min(1, countOnShelf(u, n) / 8)).multiplyScalar(n % 2 ? 1 : 0.95).getHex();
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(38, 2, 1, 2000);
@@ -48,7 +49,7 @@ window.Room3D = {
         let m;
         if (peg && n === 4) { m = new THREE.Mesh(new THREE.BoxGeometry(w - 1, STEP * 2, 1.6), mat); m.position.set(cx, 3 * STEP + STEP, cz + d / 2 - 0.8); }   // the pegboard, standing at the back
         else { m = new THREE.Mesh(new THREE.BoxGeometry(w - 1, BOARD, d - 1), mat); m.position.set(cx, base + (n - 1) * STEP + BOARD / 2, cz); }
-        m.userData = { unit: u.code, shelf: n, name: u.name, board, base: board && opts.tint ? tintFor(u.code, n) : m.material.color.getHex() };
+        m.userData = { unit: u.code, shelf: n, name: u.name, board, plain: m.material.color.getHex() }; m.userData.base = board && tintOn ? tintFor(u.code, n) : m.userData.plain;
         scene.add(m); shelves.push(m);
       }
       const height = peg ? 3 * STEP : u.shelves * STEP;
@@ -115,12 +116,15 @@ window.Room3D = {
     });
     tip.textContent = describe(null);
 
-    const size = () => { const w = holder.clientWidth, h = opts.fill ? window.innerHeight : Math.round(Math.min(460, Math.max(260, w * 0.5))); renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); };
+    // a narrow view (a phone held upright) stands further back so the whole room fits, until someone turns it themselves
+    const baseOff = camera.position.clone().sub(controls.target).multiplyScalar(opts.far || 1); let touched = false;   // opts.far: stand further back
+    renderer.domElement.addEventListener('pointerdown', () => { touched = true; });
+    const size = () => { const w = holder.clientWidth, h = opts.fill ? window.innerHeight : Math.round(Math.min(460, Math.max(260, w * 0.5))); if (!w) return; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();
+      if (!touched) camera.position.copy(controls.target).add(baseOff.clone().multiplyScalar(camera.aspect < 1.8 ? 1 + (1.8 - camera.aspect) * 0.9 : 1)); };
     size(); window.addEventListener('resize', size);
-    if (camera.aspect < 1.3) camera.position.sub(controls.target).multiplyScalar(1.4 - camera.aspect * 0.15).add(controls.target);   // a phone held upright: stand back so the whole room fits
     (function loop() { requestAnimationFrame(loop); if (holder.offsetParent !== null) { controls.update(); renderer.render(scene, camera); } })();
 
-    const retint = () => { if (opts.tint) shelves.forEach(m => { if (m.userData.board) m.userData.base = tintFor(m.userData.unit, m.userData.shelf); }); paint(); };
-    return { retint, mark(list) { marks.clear(); (list || []).forEach(x => x && x.unit && x.shelf && marks.set(x.unit + '-' + x.shelf, x.kind || 'pick')); paint(); }, resize: size };
+    const retint = () => { shelves.forEach(m => { m.userData.base = m.userData.board && tintOn ? tintFor(m.userData.unit, m.userData.shelf) : m.userData.plain; }); paint(); };
+    return { retint, setTint(on) { tintOn = !!on; retint(); }, mark(list) { marks.clear(); (list || []).forEach(x => x && x.unit && x.shelf && marks.set(x.unit + '-' + x.shelf, x.kind || 'pick')); paint(); }, resize: size };
   }
 };

@@ -180,6 +180,9 @@ $('share-save').addEventListener('click', async e => {
   if (await publish({ 'key.json': await lockKey(pass, 'pass') }, 'Site key locked with the staff passcode (staff page)', e.target)) { $('share-pass').value = $('share-pass2').value = ''; $('share-why').textContent = 'Saved. In about a minute the new passcode works on any device, and the old one stops working. Devices already signed in stay signed in.'; }
 });
 // the owner passcode is only set from staff.html#owner, so the page shows staff a single passcode
+// the Manuals link at the top opens that section
+const showManuals = () => { if (location.hash === '#manuals') { $('manuals').open = true; $('manuals').scrollIntoView({ block: 'start' }); } };
+addEventListener('hashchange', showManuals); setTimeout(showManuals, 0);
 const showOwner = () => { if (location.hash === '#owner' && keep.get('rl-key')) { $('owner-box').hidden = false; $('device').hidden = false; $('device').open = true; $('owner-box').scrollIntoView({ block: 'center' }); } };
 addEventListener('hashchange', showOwner); setTimeout(showOwner, 800);
 $('owner-save').addEventListener('click', async e => {
@@ -952,7 +955,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
       else { setPlace(sf.elements.toUnit, sf.elements.toShelf, u, n); shelfStep = 'from'; }
     }
     refresh3d(); showShelf(u, n);
-  }, { tint: true });
+  }, { tint: true, tintOff: true });   // the shading by how full each shelf is starts off: a tick box turns it on
   // what is on the shelf that was clicked, with a button to start moving any of it
   const contents = $('shelf-contents');
   function showShelf(u, n) {
@@ -970,6 +973,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     $('room3d-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
   const lastChanged = (room.synced && Array.isArray(room.synced.changed) ? room.synced.changed : []).filter(x => unitBy[x[0]]);
+  $('full-show').addEventListener('change', e => { if (view3d) view3d.setTint(e.target.checked); });
   if (lastChanged.length) { $('moved-wrap').hidden = false; $('moved-when').textContent = room.synced.at ? ' (' + when(room.synced.at) + ')' : ''; $('moved-show').addEventListener('change', () => refresh3d()); }
   function refresh3d() {
     if (!view3d) return;
@@ -994,7 +998,6 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     tabs.forEach(t => $('tab-' + t).addEventListener('click', () => { activeTab = t; shelfStep = 'from'; card.hidden = !['move', 'shelf', 'add'].includes(t); if (!card.hidden && card.open) { view3d.resize(); refresh3d(); } }));
     [mf, sf, af].forEach(f => { f.addEventListener('change', refresh3d); f.addEventListener('input', refresh3d); });
     refresh3d();
-    try { if (sessionStorage.getItem('rl-moved')) { sessionStorage.removeItem('rl-moved'); card.open = true; } } catch (err) { }   // just synced: show what moved
   }
   // opened by pointing a phone camera at the console's "To the website" code: go straight to that tab and take the page in
   // ---- the status line at the top: is the website in step with the console, and can this device save

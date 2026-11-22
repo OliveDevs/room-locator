@@ -369,7 +369,7 @@ const loadScript=src=>new Promise((ok,no)=>{const t=document.createElement('scri
 async function load3d(){
   if(!window.THREE)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
   if(!THREE.OrbitControls)await loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js');
-  if(!window.Room3D)await loadScript('room3d.js?v=room-1');
+  if(!window.Room3D)await loadScript('room3d.js?v=room-4');
 }
 function attach3d(root){
   root.querySelectorAll('.where-3d-go').forEach(b=>b.addEventListener('click',async()=>{
@@ -538,7 +538,7 @@ function roomView(){
   document.getElementById('room-flat').addEventListener('click',flat);
   load3d().then(()=>{
     const box=document.getElementById('room-3d');if(!box)return;box.hidden=false;
-    const view=Room3D.init(box,ROOM,(code,shelf)=>itemsIn(code).filter(k=>boardFor(ROOM.units.find(x=>x.code===code)||{},k.s)===shelf).length,(code,shelf)=>{view&&view.mark([{unit:code,shelf,kind:'pick'}]);showUnit(code,shelf)},{unitColors:UNIT_COLORS,idleTip:'Drag to turn the room. Tap a shelf to see what is on it.'});
+    const view=Room3D.init(box,ROOM,(code,shelf)=>itemsIn(code).filter(k=>boardFor(ROOM.units.find(x=>x.code===code)||{},k.s)===shelf).length,(code,shelf)=>{view&&view.mark([{unit:code,shelf,kind:'pick'}]);showUnit(code,shelf)},{unitColors:UNIT_COLORS,far:1.2,idleTip:'Drag to turn the room. Tap a shelf to see what is on it.'});
     if(!view){flat();return}
     document.getElementById('room-3d-status').hidden=true;document.getElementById('room-flat').hidden=false;
   }).catch(flat);
