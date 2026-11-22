@@ -368,7 +368,7 @@ const loadScript=src=>new Promise((ok,no)=>{const t=document.createElement('scri
 async function load3d(){
   if(!window.THREE)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
   if(!THREE.OrbitControls)await loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js');
-  if(!window.Room3D)await loadScript('room3d.js?v=tint-1');
+  if(!window.Room3D)await loadScript('room3d.js?v=tint-2');
 }
 function attach3d(root){
   root.querySelectorAll('.where-3d-go').forEach(b=>b.addEventListener('click',async()=>{
