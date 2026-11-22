@@ -405,7 +405,7 @@ function itemView(k,fromConsole){
   if(img)img.addEventListener('error',()=>{img.hidden=true;img.parentElement?.classList.add('photo-unavailable')});
 }
 const pup=(pose,cls)=>'<img class="pup '+(cls||'')+'" src="dog/'+pose+'.png?v=2" alt="" aria-hidden="true" loading="lazy">';   // drawings of Loki, Diana's dog, as decoration
-function renderCards(rows){const target=document.getElementById('results');document.getElementById('count').textContent=rows.length+' of '+K.length+' items';target.innerHTML=rows.length?rows.map(k=>'<a class="item-card" style="'+catStyle(k.c)+'" href="#i'+k.h+'"><span class="card-photo">'+thumbHtml(k)+'</span><div><strong>'+esc(k.n)+'</strong><small>'+esc(k.t)+'</small><span class="card-where"><i class="led" aria-hidden="true"></i>'+esc(k.in?k.w:'Ask at the desk')+'</span></div></a>').join(''):'<div class="empty-state">'+pup('dig')+'<p>Dug around and found nothing. Try a shorter name or another category.</p></div>'}
+function renderCards(rows){const target=document.getElementById('results');document.getElementById('count').textContent=rows.length+' of '+K.length+' items';target.innerHTML=rows.length?rows.map(k=>'<a class="item-card" style="'+catStyle(k.c)+'" href="#i'+k.h+'"><span class="card-photo">'+thumbHtml(k)+'</span><div><strong>'+esc(k.n)+'</strong><small>'+esc(k.t)+'</small><span class="card-where"><i class="led" aria-hidden="true"></i>'+esc(k.in?k.w:'Ask at the desk')+'</span></div></a>').join(''):'<div class="empty-state">'+pup('tilt')+'<p>Dug around and found nothing. Try a shorter name or another category.</p></div>'}
 const homeSearch = { query: '', category: '', mode: 'name' };
 function listing(category='',type=''){
   const isHome = !category && !type;
