@@ -915,7 +915,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     return (await fetch('kits.json?v=' + Date.now()).then(r => r.json())).kits;
   }
   function drawKitPick(selectId) {
-    kitPick.innerHTML = '<option value="">Pick a kit...</option><option value="+">New kit</option>' + kitList.map(k => '<option value="' + esc(k.id) + '">' + esc(k.name) + '</option>').join('');
+    kitPick.innerHTML = '<option value="">Pick a kit...</option>' + kitList.map(k => '<option value="' + esc(k.id) + '">' + esc(k.name) + '</option>').join('');
     kitPick.value = selectId || '';
   }
   function drawKitParts() {
@@ -950,6 +950,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     drawKitParts();
     if (b.dataset.add) { const again = kitParts.querySelector('.kit-part[data-i="' + i + '"] [data-find]'); if (again) again.focus(); }
   });
+  $('kit-new').addEventListener('click', () => { kitPick.value = ''; openKit(null); kf.elements.name.focus(); });
   $('kit-add-part').addEventListener('click', () => { kit.parts.push({ role: '', pick: [] }); drawKitParts(); const last = kitParts.querySelector('.kit-part:last-child [data-role]'); if (last) last.focus(); });
   $('kit-save').addEventListener('click', async e => {
     if (!kit) return;

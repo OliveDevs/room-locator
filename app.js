@@ -353,7 +353,6 @@ function problemLink(k,live){
   return 'mailto:help@ideate.cmu.edu?subject='+encodeURIComponent('Problem with '+k.n)+'&body='+encodeURIComponent('Hi IDeATe Lending,\n\nSomething is wrong with the '+k.n+' ('+where+').\n\nWhat is wrong: \nWhen I noticed: \n\nIts page: '+location.origin+location.pathname+(k.url||'?i='+(k.h||''))+'\n\nThank you\n');
 }
 function kitsFor(k){const mine=KITS.filter(x=>x.parts.some(p=>p.pick.includes(k.n)));return mine.length?'<div class="side-block"><h2>Part of a kit</h2>'+mine.map(x=>'<a class="source-link" href="#kit-'+esc(x.id)+'">'+esc(x.name)+' \u2192</a>').join('')+'</div>':''}
-// Counts how often each guide is opened, so staff can see what students look for. Only the item's code is sent, to a free
 // the dog shows on an item page only where it is holding that very thing: the tape measure and the headphones
 function itemPose(k){
   if(k.n.startsWith('Measuring Tape'))return 'tape';
