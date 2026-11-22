@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400..700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=compact-loki-1"><link rel="stylesheet" href="staff-layout.css?v=kits-1"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
+  <link rel="stylesheet" href="styles.css?v=compact-loki-1"><link rel="stylesheet" href="staff-layout.css?v=pending-1"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
 <main class="staff-main">
 <h1>Staff tools</h1>
 
@@ -22,6 +22,7 @@
 <p id="ack-what">Hold this up to the console's scanner so it knows the website is updated.</p>
 <button type="button" id="ack-done" class="button-secondary">The console took it</button>
 </section>
+<p class="status-line home-wait-line"><span id="home-wait"></span> <button type="button" id="home-wait-show" class="link-button" hidden>Show the console code</button></p>
 <p class="status-line"><span id="home-sync"></span> <span id="home-key"></span> <button type="button" id="home-key-set" class="link-button"></button></p>
 <p id="home-expiry" class="health-warn" hidden></p>
 </section>
@@ -30,7 +31,8 @@
 <summary>Choose a shelf on the room map</summary>
 <p class="tool-note" id="room3d-help"></p>
 <div id="room3d" class="room3d"></div>
-<p class="room3d-key"><span class="key key-now"></span>where it is now<span class="key key-pick"></span>where it goes</p>
+<p class="room3d-key"><span class="key key-now"></span>where it is now<span class="key key-pick"></span>where it goes<span class="key key-full"></span>paler shelves hold fewer things</p>
+<label class="room3d-moved" id="moved-wrap" hidden><input type="checkbox" id="moved-show" checked> <span class="key key-moved"></span>Show the shelves the last sync changed<span id="moved-when"></span></label>
 <div id="shelf-contents" class="shelf-contents" hidden></div>
 </details>
 
@@ -44,7 +46,7 @@
 <p class="wide tool-note" id="move-now"></p>
 <label>Move to unit<select name="unit" required></select></label>
 <label>Shelf<select name="shelf" required></select></label>
-<button type="submit" class="wide">Make the console code</button>
+<button type="submit" class="wide save-code">Save and make the console code</button>
 </form>
 </section>
 
@@ -59,7 +61,7 @@
 <label><input type="radio" name="how" value="together" checked> Put them together</label>
 <label><input type="radio" name="how" value="swap"> Swap the two shelves</label>
 </fieldset>
-<button type="submit" class="wide">Make the console code</button>
+<button type="submit" class="wide save-code">Save and make the console code</button>
 </form>
 </section>
 
@@ -71,12 +73,12 @@
 <div class="wide many-list" id="many-list"></div>
 <label>To unit<select name="toUnit" required></select></label>
 <label>Shelf<select name="toShelf" required></select></label>
-<button type="submit" class="wide">Add these moves to the list</button>
+<button type="submit" class="wide save-code">Save these moves and make the console code</button>
 </form>
 </section>
 
 <section id="tool-add" class="tool" role="tabpanel" aria-labelledby="tab-add" hidden>
-<p class="tool-note">Fill these in, then make the code for the console.</p>
+<p class="tool-note">Fill these in, then save. The item goes on the website straight away, and its code waits on the list for the console.</p>
 <form id="add-form" class="staff-form">
 <label class="wide">Item name<input name="name" required placeholder="Exactly as it appears in the inventory"><small id="name-room" class="field-help"></small></label>
 <label>Category<select name="category" required></select></label>
@@ -84,7 +86,7 @@
 <label>Room unit<select name="unit" required></select></label>
 <label>Shelf<select name="shelf" required></select></label>
 <label>How many copies<input name="copies" required type="number" min="1" max="250" step="1" inputmode="numeric" value="1"></label>
-<button type="submit" class="wide">Make the console code</button>
+<button type="submit" class="wide save-code">Save and make the console code</button>
 
 <details class="wide add-extra">
 <summary>Add its guide page <span class="add-extra-hint">(optional)</span></summary>
@@ -99,7 +101,7 @@
 <label class="wide">Or paste a photo link<input name="photo" placeholder="https://..."><small class="field-help">Not sure it's the right photo? Leave it out.</small></label>
 <label>Photo credit<input name="credit" placeholder="IDeATe Lending staff"></label>
 <label>Photo source link<input name="crediturl" type="url" placeholder="https://..."></label>
-<button type="button" id="add-publish" class="wide">Save its guide page to the website</button>
+<button type="button" id="add-publish" class="wide">Save with its guide page</button>
 <p class="wide tool-note">You can add the rest later under Edit an item.</p>
 </div>
 </details>
@@ -232,6 +234,13 @@
 </section>
 
 <div class="staff-folds">
+<details class="staff-fold" id="log"><summary>Change history</summary>
+<p class="tool-note">Every change saved on this page goes on the website straight away and waits here until the console has it. Make them anywhere, then show the console one code. After it takes them, sync the website and they move to the history.</p>
+<h2>Waiting for the console</h2>
+<ul id="log-waiting" class="log-list"></ul>
+<h2>History</h2>
+<ul id="log-done" class="log-list"></ul>
+</details>
 <details class="staff-fold" id="checks"><summary>Check everything</summary>
 <p class="tool-note">Checks the website, the site key, the passcode and the console link.</p>
 <p><button type="button" id="health-go" class="button-secondary">Check everything</button></p>
@@ -277,14 +286,16 @@
 <ul>
 <li>The console PIN starts as 1234. To change it on the console: press Down past the last picture on Home, press Select, then choose Change staff PIN.</li>
 <li>Shelves are numbered from the bottom.</li>
-<li>This page shows the website's copy of the room. If it disagrees with the console, the console is right.</li>
+<li>This page shows the website's copy of the room. If it disagrees with the console, the console is right, except for changes still waiting for the console (see Change history).</li>
+<li>Saved something by mistake? If the console hasn't had it yet, press Undo next to it in the list under the code. It comes off the website too.</li>
 <li>Made a mistake? On the console, open Recent changes, pick the change and press Select twice. A newly added item can only be removed with Start over.</li>
-<li>Start over on the console clears every change and every item added there. To reset the website too, use the button below.</li>
+<li>Start over on the console clears every change and every item added there. To reset the website to match, use the locked section at the very bottom of Help.</li>
 </ul>
-<details class="sync-paste"><summary>Start over: put the website back to the Nov 16 setup</summary><p class="tool-note">Use this with Start over on the console so the two match. It removes every change and edit made since Nov 16.</p><button type="button" id="web-reset" class="button-secondary">Put the website back to the Nov 16 setup</button></details>
+
 <details class="sync-paste"><summary>Sync with a laptop instead of a camera</summary><label>Paste the console's change list (type @MOVES in the Serial Monitor)<textarea id="sync-paste" rows="5"></textarea></label><button type="button" id="sync-use-paste" class="button-secondary">Use the pasted list</button></details>
 <p><a href="data.json" download>Download a copy of the item list</a> · <a href="room.json" download>Download a copy of the room map</a></p>
 <p><a href="STAFF-GUIDE.md">Full maintenance instructions ↗</a></p>
+<details class="sync-paste danger-zone"><summary>Only after Start over on the console</summary><p class="tool-note">This wipes the website back to the Nov 16 setup: every move, count, new item, photo and description added since then, and every change waiting for the console. It can't be undone. Only use it right after Start over on the console, so the two match.</p><label>Type START OVER to unlock it<input id="web-reset-word" autocomplete="off" spellcheck="false"></label><button type="button" id="web-reset" class="button-secondary" disabled>Put the website back to the Nov 16 setup</button></details>
 </details>
 </div>
 </main>
@@ -292,5 +303,5 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-<script src="room3d.js?v=props-1"></script>
-<script src="staff.js?v=owner-2" defer></script></body></html>
+<script src="room3d.js?v=tint-1"></script>
+<script src="staff.js?v=pending-1" defer></script></body></html>

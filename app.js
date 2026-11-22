@@ -131,7 +131,7 @@ function attachCalendar(k,fromConsole){
   };
   const extend=document.getElementById('extend-link');
   const setExtend=()=>{if(!extend)return;const due=new Date(input.value),when=input.value&&!Number.isNaN(due.getTime())?due.toLocaleString([], {weekday:'long',month:'long',day:'numeric',hour:'numeric',minute:'2-digit'}):'[date and time from my checkout email]';
-    extend.href='mailto:help@ideate.cmu.edu?subject='+encodeURIComponent('Extension request: '+k.n+(input.value&&!Number.isNaN(due.getTime())?', due '+due.toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'}):''))+'&body='+encodeURIComponent('Hi IDeATe Lending,\n\nI have the '+k.n+' checked out, due '+when+'. I will not be able to bring it back by then and would like to ask for an extension.\n\nReason: \nI can return it by: \n\nName: \nAndrew ID: \n\nI know loans are not normally renewed, so thank you for considering it. If the answer is no, please tell me and I will get it back to A29 as soon as I can.\n')};
+    extend.href='mailto:help@ideate.cmu.edu?subject='+encodeURIComponent('Extension request: '+k.n+(input.value&&!Number.isNaN(due.getTime())?', due '+due.toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'}):''))+'&body='+encodeURIComponent('Hi IDeATe Lending,\n\nI have the '+k.n+' checked out, and it is due '+when+'. I won\'t be able to bring it back by then, so I would like to ask for an extension.\n\nReason: \n\nI can return it by: \n\nAndrew ID: \n\nI know loans are not normally renewed, so thank you for considering it. If the answer is no, just let me know and I will bring it back to A29 as soon as I can.\n\nBest,\n[Your name]\n')};
   input.addEventListener('change',setExtend);
   estimate.addEventListener('click',()=>{fillEstimate();setExtend()});
   fillEstimate();   // every reminder starts on the usual loan; the line under it says to change it if the checkout email differs
@@ -289,9 +289,11 @@ function photoHtml(k){
     const archive = photo.source === 'image-library';
     const title = archive ? 'From the Lending image library' : 'From the Lending catalog';
     const detail = archive ? 'Compare the photo against the unit at the desk.' : 'The library’s own picture of this item.';
-    const linkLabel = archive ? 'Original image' : 'Catalog record';
+    const linkLabel = archive ? 'Look it up in the library catalog' : 'Catalog record';
+    // the image library has no page of its own for a picture (its link was just the picture again), so point to the catalog search
+    const linkUrl = archive ? 'https://cmu.primo.exlibrisgroup.com/discovery/search?query=any,contains,' + encodeURIComponent(k.n) + '&vid=01CMU_INST:01CMU' : photo.page;
     const width = Math.round(photo.w*Math.min(2,300/photo.h,480/photo.w));
-    return '<figure class="item-photo item-photo-own"><img src="' + esc(photo.url) + '" alt="' + esc('Photo of ' + k.n + ' from IDeATe Lending') + '" style="width:' + width + 'px" loading="eager" referrerpolicy="no-referrer" onerror="const f=this.closest(\'figure\');if(f)f.classList.add(\'photo-unavailable\');this.remove()"><figcaption><strong>' + title + '</strong><span>' + detail + '</span><small>Source: IDeATe Lending, Carnegie Mellon University Libraries · <a href="' + esc(photo.page) + '" target="_blank" rel="noopener noreferrer">' + linkLabel + ' ↗</a></small></figcaption></figure>';
+    return '<figure class="item-photo item-photo-own"><img src="' + esc(photo.url) + '" alt="' + esc('Photo of ' + k.n + ' from IDeATe Lending') + '" style="width:' + width + 'px" loading="eager" referrerpolicy="no-referrer" onerror="const f=this.closest(\'figure\');if(f)f.classList.add(\'photo-unavailable\');this.remove()"><figcaption><strong>' + title + '</strong><span>' + detail + '</span><small>Source: IDeATe Lending, Carnegie Mellon University Libraries · <a href="' + esc(linkUrl) + '" target="_blank" rel="noopener noreferrer">' + linkLabel + ' ↗</a></small></figcaption></figure>';
   }
   const exact=!!k.p||PHOTO.exact?.includes(k.n),illustration=photo.kind==='illustration',alt=illustration?'Illustration of '+k.t:exact?'Photo showing '+k.n:'Representative photo for '+categoryName(k.c)+' / '+k.t;
   const license=photo.license||'',parts=license.match(/^CC (BY-SA|BY) (\d\.\d)$/),licenseUrl=parts?'https://creativecommons.org/licenses/'+parts[1].toLowerCase()+'/'+parts[2]+'/':license==='CC0'?'https://creativecommons.org/publicdomain/zero/1.0/':'';
@@ -359,7 +361,27 @@ function whereHtml(k,live){
   const code=live?live.u:k.u,unit=(ROOM.units||[]).find(u=>u.code===code);
   if(!unit||!unit.rect||!unit.shelves)return '';
   const shelf=live&&live.s?live.s:boardFor(unit,k.s),c=catColor(k.c);
-  return '<div class="where-map"><p><strong>'+esc(unit.name)+', shelf '+shelf+'</strong> lit up on the room map. Shelf 1 is the lowest.</p><div class="where-row">'+miniRoomHtml([{u:unit.code}],c)+shelfStackHtml(unit,shelf,c)+'</div></div>';
+  return '<div class="where-map"><p><strong>'+esc(unit.name)+', shelf '+shelf+'</strong> lit up on the room map. Shelf 1 is the lowest.</p><div class="where-row">'+miniRoomHtml([{u:unit.code}],c)+shelfStackHtml(unit,shelf,c)+'</div><button type="button" class="where-3d-go" data-u="'+esc(unit.code)+'" data-s="'+shelf+'" data-c="'+esc(c)+'">See the shelf in 3D</button><div class="where-3d room3d" hidden></div></div>';
+}
+// The same 3D room the staff page uses, loaded only when someone asks for it (it is a big download for a phone)
+const loadScript=src=>new Promise((ok,no)=>{const t=document.createElement('script');t.src=src;t.onload=ok;t.onerror=()=>{t.remove();no(Error(src))};document.head.appendChild(t)});
+async function load3d(){
+  if(!window.THREE)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
+  if(!THREE.OrbitControls)await loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js');
+  if(!window.Room3D)await loadScript('room3d.js?v=tint-1');
+}
+function attach3d(root){
+  root.querySelectorAll('.where-3d-go').forEach(b=>b.addEventListener('click',async()=>{
+    const box=b.nextElementSibling;if(!box.hidden){box.hidden=true;b.textContent='See the shelf in 3D';return}
+    b.disabled=true;b.textContent='Loading the room...';
+    try{await load3d();box.hidden=false;
+      if(!box.dataset.ready){const u=b.dataset.u,n=Number(b.dataset.s);
+        const view=Room3D.init(box,ROOM,(code,shelf)=>K.filter(k=>k.u===code&&k.in&&boardFor((ROOM.units.find(x=>x.code===code)||{}),k.s)===shelf).length,null,{focus:u,idleTip:'Drag to turn the room. The lit shelf is where it lives.'});
+        if(view){view.mark([{unit:u,shelf:n,kind:'pick'}]);box.dataset.ready='1'}else{box.hidden=true;b.remove();return}}
+      b.textContent='Hide the 3D room'}
+    catch(e){b.textContent='The 3D room could not load. Try again';box.hidden=true}
+    finally{b.disabled=false}
+  }));
 }
 function howtoFor(k){const m=HOWTO.items[k.n];if(!m)return null;const g=HOWTO.guides[m[0]];return g?{...g,note:m[1]||''}:null}
 function howtoHtml(h){
@@ -371,7 +393,7 @@ function howtoHtml(h){
 // an email to IDeATe's contact address with the item already filled in
 function problemLink(k,live){
   const where=live?live.text:k.w;
-  return 'mailto:help@ideate.cmu.edu?subject='+encodeURIComponent('Problem with '+k.n)+'&body='+encodeURIComponent('Hi IDeATe Lending,\n\nSomething is wrong with the '+k.n+' ('+where+').\n\nWhat is wrong: \nWhen I noticed: \n\nIts page: '+location.origin+location.pathname+(k.url||'?i='+(k.h||''))+'\n\nThank you\n');
+  return 'mailto:help@ideate.cmu.edu?subject='+encodeURIComponent('Problem with '+k.n)+'&body='+encodeURIComponent('Hi IDeATe Lending,\n\nSomething is wrong with the '+k.n+' ('+where+').\n\nWhat is wrong: \nWhen I noticed: \n\nIts page: '+location.origin+location.pathname+(k.url||'?i='+(k.h||''))+'\n\nThank you!\n\nBest,\n[Your name]\n');
 }
 function kitsFor(k){const mine=KITS.filter(x=>x.parts.some(p=>p.pick.includes(k.n)));return mine.length?'<div class="side-block"><h2>Part of a kit</h2>'+mine.map(x=>'<a class="source-link" href="#kit-'+esc(x.id)+'">'+esc(x.name)+' \u2192</a>').join('')+'</div>':''}
 // the dog shows on an item page only where it is holding that very thing: the tape measure and the headphones
@@ -394,7 +416,7 @@ function itemView(k,fromConsole){
   ((k.tips?.length||TIPS[k.n]||TIPS[group])?'<section class="guide-section"><h2>Useful tips</h2>'+listItems(k.tips||TIPS[k.n]||TIPS[group])+'</section>':'')+((howto&&!manual.length&&!MODEL_CHOICES[k.n])?(makerSupport(k.n)?'<section class="guide-section"><h2>Maker support</h2>'+external('Open '+makerSupport(k.n)[0]+'\u2019s own support site',makerSupport(k.n)[1])+'<p class="note">Read the model on the item to find its exact manual there.</p></section>':''):manualHtml(k,manual))+'</div><aside class="side-stack"><details class="side-block side-fold"><summary>Borrowing rules and late fees</summary><p>At checkout, confirm the exact model, included parts, condition, and return date with staff. For powered devices, test startup before leaving when possible.</p><p>Visit IDeATe Lending in Hunt Library basement, room A29, across from the elevator. Bring your CMU ID. Check current lending hours and borrowing rules before visiting.</p><p>During the semester, the normal loan is three days with a 6 p.m. due time. Weekends count; university holidays may shift the due date.</p><p>Loans cannot be renewed. Hand the item to staff in A29; drop boxes and other libraries do not count. Late fees run from $1 to $25 a day depending on what the item costs, and borrowing is blocked once fines reach $25.</p>'+external('Official IDeATe Lending rules','https://ideate.cmu.edu/resources/lending/index.html')+external('Full circulation policy','https://ideate.cmu.edu/resources/lending/ideate-circulation-policy.html')+external('Browse CMU’s '+categoryName(k.c)+' collection',collectionUrl(k.c))+'</details>'+(related.length?'<div class="side-block"><h2>Often used with</h2>'+related.map(g=>'<a class="source-link" href="#t'+encodeURIComponent(g)+'">'+esc(g.split('/')[1])+'</a>').join('')+'<p>Compatibility and availability vary by model.</p></div>':'')+''+kitsFor(k)+'<div class="side-block"><h2>Something wrong with it?</h2><p>Missing a part, broken, or this page is wrong? Tell the lending staff.</p><a class="source-link" href="'+esc(problemLink(k,live))+'">Report a problem by email</a></div></aside></div>';
   if (!location.search) app.querySelector('.back').href = '#';
   attachCalendar(k,fromConsole);
-  {const loc=app.querySelector('.item-summary .location');if(loc&&k.in)loc.insertAdjacentHTML('afterend',whereHtml(k,live))}
+  {const loc=app.querySelector('.item-summary .location');if(loc&&k.in){loc.insertAdjacentHTML('afterend',whereHtml(k,live));attach3d(app)}}
   if(k.in&&k.h){const loc=app.querySelector('.item-summary .location');if(loc){loc.insertAdjacentHTML('afterend','<div class="item-code" id="item-code"><div class="kit-qr"></div><p><strong>Light its shelf in Lending.</strong> Hold this up to the scanner on the console and its shelf lights up on the model.</p></div>');showItemCode(k)}}
   {const pose=itemPose(k),first=document.querySelector('.guide-stack .guide-section');if(pose&&first)first.insertAdjacentHTML('afterbegin',pup(pose,'pup-item'))}
   const modelChoice=document.getElementById('model-choice');
@@ -563,8 +585,8 @@ function kitsView(id){
   if(!kit){document.title='Kits \u00b7 IDeATe Lending';
     app.innerHTML='<a class="back" href="./">\u2190 All items</a><div class="hero-row"><div><h1>Kits for a whole project</h1><p class="intro">Pick what you are trying to do and get the full list to ask for, with the shelf for each piece.</p></div>'+pup('wave','pup-wave')+'</div><div class="item-grid">'+KITS.map(x=>'<a class="item-card kit-card" href="#kit-'+esc(x.id)+'"><div><strong>'+esc(x.name)+'</strong><span class="card-where">'+x.parts.length+' pieces</span></div><span class="arrow" aria-hidden="true">\u2197</span></a>').join('')+'</div>';return}
   document.title=kit.name+' \u00b7 IDeATe Lending';
-  app.innerHTML='<a class="back" href="#kits">\u2190 All kits</a>'+reminderHtml(true,kit.name+' kit')+'<div class="hero-row"><div><h1>'+esc(kit.name)+'</h1><p class="intro">'+esc(kit.why)+'</p></div></div>'+kitMapHtml(kit)+'<div class="kit-list">'+kit.parts.map((p,pi)=>{const items=p.pick.map(find).filter(Boolean);if(!items.length)return '';const first=items[0];
-    return '<div class="kit-row"><p class="kit-role">'+(first.in&&placeOf(first)?'<span class="kit-num">'+(pi+1)+'</span>':'')+esc(p.role)+'</p><a class="item-card" href="#i'+first.h+'">'+thumbHtml(first)+'<div><strong>'+esc(first.n)+'</strong><span class="card-where">'+esc(first.in?first.w:'Ask at the desk')+'</span></div><span class="arrow" aria-hidden="true">\u2197</span></a>'+(items.length>1?'<p class="kit-or">or '+items.slice(1).map(k=>'<a href="#i'+k.h+'">'+esc(k.n)+'</a> ('+esc(k.in?k.w:'ask at the desk')+')').join(', or ')+'</p>':'')+'</div>'}).join('')+'</div><div class="guide-section kit-tip"><h2>Light the shelves in Lending</h2><p><button type="button" id="kit-code-go" class="kit-code-go">Show the code for the console</button></p><div id="kit-code" aria-live="polite"></div></div><div class="guide-section kit-tip"><h2>Before you go</h2><p>'+esc(kit.tip)+'</p><p class="note">Each piece is checked out separately and may already be on loan. The desk has what is in today.</p></div>';
+  app.innerHTML='<a class="back" href="#kits">\u2190 All kits</a>'+reminderHtml(true,kit.name+' kit')+'<div class="hero-row"><div><h1>'+esc(kit.name)+'</h1><p class="intro">'+esc(kit.why)+'</p></div></div><div class="kit-body"><aside class="kit-side">'+kitMapHtml(kit)+'</aside><div class="kit-main"><div class="kit-list">'+kit.parts.map((p,pi)=>{const items=p.pick.map(find).filter(Boolean);if(!items.length)return '';const first=items[0];
+    return '<div class="kit-row"><p class="kit-role">'+(first.in&&placeOf(first)?'<span class="kit-num">'+(pi+1)+'</span>':'')+esc(p.role)+'</p><a class="item-card" href="#i'+first.h+'">'+thumbHtml(first)+'<div><strong>'+esc(first.n)+'</strong><span class="card-where">'+esc(first.in?first.w:'Ask at the desk')+'</span></div><span class="arrow" aria-hidden="true">\u2197</span></a>'+(items.length>1?'<p class="kit-or">or '+items.slice(1).map(k=>'<a href="#i'+k.h+'">'+esc(k.n)+'</a> ('+esc(k.in?k.w:'ask at the desk')+')').join(', or ')+'</p>':'')+'</div>'}).join('')+'</div><div class="guide-section kit-tip"><h2>Light the shelves in Lending</h2><p><button type="button" id="kit-code-go" class="kit-code-go">Show the code for the console</button></p><div id="kit-code" aria-live="polite"></div></div><div class="guide-section kit-tip"><h2>Before you go</h2><p>'+esc(kit.tip)+'</p><p class="note">Each piece is checked out separately and may already be on loan. The desk has what is in today.</p></div></div></div>';
   document.getElementById('kit-code-go').addEventListener('click', async e => {
     const button = e.currentTarget, box = document.getElementById('kit-code');
     button.disabled = true;

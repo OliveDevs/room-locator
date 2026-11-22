@@ -115,7 +115,7 @@ async function publish(files, message, button, blobs) {
   try {
     const stamp = new Date().toISOString();
     const entries = Object.entries(files);
-    for (const [path, value] of entries) if (path === 'data.json' || path === 'room.json') value.published = stamp;
+    for (const [path, value] of entries) if (path === 'data.json' || path === 'room.json' || path === 'pending.json') value.published = stamp;
     if (entries.length > 1 || blobs) await publishTogether(files, message, blobs);
     else for (const [path, value] of entries) {
       const now = await gh('/contents/' + path + '?ref=' + BRANCH);
@@ -125,7 +125,7 @@ async function publish(files, message, button, blobs) {
       if (!put.ok) throw Error('GitHub answered ' + put.status + ' for ' + path);
     }
     // the site itself takes about a minute to show new files; until then this browser uses the copy it just saved
-    const fresh = JSON.parse(keep.get('rl-fresh') || '{}'); fresh.at = Date.now(); Object.assign(fresh, Object.fromEntries(Object.entries(files).filter(([p]) => p === 'data.json' || p === 'room.json')));
+    const fresh = JSON.parse(keep.get('rl-fresh') || '{}'); fresh.at = Date.now(); Object.assign(fresh, Object.fromEntries(Object.entries(files).filter(([p]) => p === 'data.json' || p === 'room.json' || p === 'pending.json')));
     keep.set('rl-fresh', JSON.stringify(fresh));
     if (files['key.json']) { justLocked = JSON.stringify(files['key.json']); justLockedAt = Date.now(); }
     status.textContent = 'Saved to the website. Everyone sees it in about a minute.';
@@ -200,13 +200,27 @@ $('link-console').addEventListener('click', async e => {
 });
 $('connect-forget').addEventListener('click', () => { keep.set('rl-key', null); $('connect').hidden = true; status.textContent = 'The key was removed from this device.'; dispatchEvent(new Event('rl-key-changed')); });
 
-Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room.json?v=' + Date.now()).then(r => r.json())]).then(([data, room]) => {
+// The newest copy of a file: straight from the repository when it answers (the public pages lag about a minute behind
+// a save), otherwise the public copy.
+async function latest(name, isIt) {
+  try {
+    const res = await fetch(API + '/contents/' + name + '?ref=' + BRANCH + '&x=' + Date.now(), { headers: { Accept: 'application/vnd.github.raw+json', ...(keep.get('rl-key') ? { Authorization: 'Bearer ' + keep.get('rl-key') } : {}) } });
+    if (res.ok) { const got = await res.json(); if (isIt(got)) return got; }
+  } catch (e) {}
+  const res = await fetch(name + '?x=' + Date.now()); return res.ok ? res.json() : null;
+}
+// pending.json: changes saved to the website first that the console has not taken in yet, and a history of every change
+const cleanPend = p => ({ note: 'Changes saved to the website first, waiting for the console, and the history of changes. Written by the staff page.', waiting: Array.isArray(p && p.waiting) ? p.waiting.filter(e => e && e.id && typeof e.code === 'string') : [], history: Array.isArray(p && p.history) ? p.history.filter(Boolean).slice(0, 200) : [], ...(p && p.published ? { published: p.published } : {}) });
+const readPending = async () => cleanPend(await latest('pending.json', g => g && Array.isArray(g.waiting)).catch(() => null));
+
+Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room.json?v=' + Date.now()).then(r => r.json()), fetch('pending.json?v=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null)]).then(([data, room, pendIn]) => {
   // just saved from this browser and the site has not caught up yet: use the saved copy (for a quarter of an hour at most)
   try { const fresh = JSON.parse(keep.get('rl-fresh') || 'null');
-    if (fresh && Date.now() - fresh.at < 15 * 60 * 1000) { if (fresh['data.json'] && fresh['data.json'].published > (data.published || '')) data = fresh['data.json']; if (fresh['room.json'] && fresh['room.json'].published > (room.published || '')) room = fresh['room.json']; }
+    if (fresh && Date.now() - fresh.at < 15 * 60 * 1000) { if (fresh['data.json'] && fresh['data.json'].published > (data.published || '')) data = fresh['data.json']; if (fresh['room.json'] && fresh['room.json'].published > (room.published || '')) room = fresh['room.json']; if (fresh['pending.json'] && fresh['pending.json'].published > ((pendIn && pendIn.published) || '')) pendIn = fresh['pending.json']; }
     else if (fresh) keep.set('rl-fresh', null);
   } catch (e) {}
   const kinds = data.kinds, units = room.units, types = room.types || [];
+  let pend = cleanPend(pendIn);
   const unitBy = Object.fromEntries(units.map(u => [u.code, u]));
   const lit = units.filter(u => u.shelves > 0);
   const hasBoard = (u, n) => n === 1 || !u.boards || !u.boards.length || u.boards.includes(n);
@@ -316,9 +330,11 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     drawAll(all);
     $('code-out').hidden = false;
   }
-  $('code-done').addEventListener('click', () => {
+  $('code-done').addEventListener('click', async e => {
     const all = steps(), s = all[madeAt]; if (!s) return;
-    for (const c of s.items) made.splice(made.indexOf(c), 1);
+    const ids = s.items.filter(c => c.id).map(c => c.id);
+    if (ids.length && !(await markSent(ids, e.target))) return;
+    for (const c of s.items) if (!c.id && made.includes(c)) made.splice(made.indexOf(c), 1);
     sendNonce++;
     const left = steps().length;
     drawCode();
@@ -348,15 +364,17 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const box = $('code-all'), now = all[madeAt];
     box.hidden = !made.length || !!playTimer;
     if (box.hidden) return;
-    $('code-all-title').textContent = made.length + (made.length === 1 ? ' change on the list' : ' changes on the list');
-    $('code-all-what').textContent = all.length > 1 ? 'Too many for one code. The ones in this code are in bold.' : '';
+    const saved = made.filter(c => c.id).length;
+    $('code-all-title').textContent = made.length + (made.length === 1 ? ' change' : ' changes') + ' waiting for the console';
+    $('code-all-what').textContent = (saved ? (saved === made.length ? 'All saved on the website already. ' : saved + ' saved on the website already. ') + 'Undo takes a change back off the website too. ' : '') + (all.length > 1 ? 'Too many for one code. The ones in this code are in bold.' : '');
     $('code-all-go').hidden = !(now && now.big);
-    $('code-all-list').innerHTML = made.map((c, i) => '<li data-code="' + esc(c.code) + '" class="' + (now.items.includes(c) ? 'in-code' : 'not-in-code') + '"><span><strong>' + esc(c.title) + '</strong> ' + esc(c.what) + (all.length > 1 && !now.items.includes(c) ? ' <em>(code ' + (all.findIndex(s => s.items.includes(c)) + 1) + ')</em>' : '') + '</span><button type="button" class="remove-code" data-remove-code="' + i + '" aria-label="' + esc('Remove ' + c.title) + '">Remove</button></li>').join('');
+    $('code-all-list').innerHTML = made.map((c, i) => '<li data-code="' + esc(c.code) + '" class="' + (now.items.includes(c) ? 'in-code' : 'not-in-code') + '"><span><strong>' + esc(c.title) + '</strong> ' + esc(c.what) + (all.length > 1 && !now.items.includes(c) ? ' <em>(code ' + (all.findIndex(s => s.items.includes(c)) + 1) + ')</em>' : '') + (c.id ? ' <span class="saved-tag">On the website</span>' : '') + '</span><button type="button" class="remove-code" data-remove-code="' + i + '" aria-label="' + esc((c.id ? 'Undo ' : 'Remove ') + c.title) + '">' + (c.id ? 'Undo' : 'Remove') + '</button></li>').join('');
   }
-  $('code-all-list').addEventListener('click', e => {
+  $('code-all-list').addEventListener('click', async e => {
     const button = e.target.closest('[data-remove-code]');
     if (!button) return;
-    const index = Number(button.dataset.removeCode);
+    const index = Number(button.dataset.removeCode), c = made[index]; if (!c) return;
+    if (c.id) { await undoSaved([c.id], button); return; }
     made.splice(index, 1);
     drawCode();
     const next = $('code-all-list').querySelectorAll('button');
@@ -368,11 +386,13 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     tab.focus();
     tab.scrollIntoView({ block: 'center' });
   });
-  function stopPlay(finished) {
+  async function stopPlay(finished) {
     if (playTimer) clearInterval(playTimer); playTimer = null;
     $('code-play').hidden = true; $('code-how').hidden = false;
     if (finished) {
-      for (let i = made.length - 1; i >= 0; i--) if (playSent.includes(made[i])) made.splice(i, 1);
+      const ids = playSent.filter(c => c.id).map(c => c.id);
+      for (let i = made.length - 1; i >= 0; i--) if (playSent.includes(made[i]) && !made[i].id) made.splice(i, 1);
+      if (ids.length && !(await markSent(ids))) { playSent = []; drawCode(); return; }
       madeAt = made.length ? 0 : -1; sendNonce++; const left = made.filter(canBatch).length;
       status.textContent = left ? 'Sent. ' + left + ' more to send: the code below holds them.' : 'All sent. To bring the website up to date, press Select on the console and scan the code it shows with this phone.';
     }
@@ -416,7 +436,14 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   }
   $('code-prev').addEventListener('click', () => { if (madeAt > 0) { madeAt--; drawCode(); } });
   $('code-next').addEventListener('click', () => { madeAt++; drawCode(); });
-  $('code-clear').addEventListener('click', () => { if (playTimer) stopPlay(false); made.length = 0; madeAt = -1; drawCode(); status.textContent = 'The list is empty.'; });
+  $('code-clear').addEventListener('click', async e => {
+    if (playTimer) stopPlay(false);
+    const ids = made.filter(c => c.id).map(c => c.id);
+    if (ids.length && !confirm('Undo ' + (ids.length === 1 ? 'this change' : 'all ' + ids.length + ' changes') + ' on the website too? The console never got ' + (ids.length === 1 ? 'it.' : 'them.'))) return;
+    if (ids.length && !(await undoSaved(ids, e.target))) return;
+    for (let i = made.length - 1; i >= 0; i--) if (!made[i].id) made.splice(i, 1);
+    madeAt = -1; drawCode(); status.textContent = 'The list is empty.';
+  });
 
   // ---- move a thing
   const mf = $('move-form');
@@ -442,7 +469,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const u = mf.elements.unit.value, s = Number(mf.elements.shelf.value || 0);
     if (!unitBy[u]) { status.textContent = 'Choose where it goes.'; return; }
     if (u === k.u && unitBy[u].shelves && boardBelow(unitBy[u], s) === boardBelow(unitBy[u], k.s)) { status.textContent = 'It is already on that shelf. Click the shelf it is moving to.'; $('code-out').hidden = true; return; }
-    showCode('RL:MOVE:' + k.h + ':' + u + '-' + s, 'Move ' + k.n, 'From ' + placeName(k.u, k.s) + ' to ' + placeName(u, unitBy[u].shelves ? boardBelow(unitBy[u], s) : 0) + '.');
+    saveChanges([{ code: 'RL:MOVE:' + k.h + ':' + u + '-' + s, title: 'Move ' + k.n, what: 'From ' + placeName(k.u, k.s) + ' to ' + placeName(u, unitBy[u].shelves ? boardBelow(unitBy[u], s) : 0) + '.' }], e.submitter).then(ok => { if (ok) mf.elements.thing.dispatchEvent(new Event('input', { bubbles: true })); });
   });
 
   // ---- move several things: tick what leaves a shelf, pick where it goes, and each becomes a move on the list
@@ -467,8 +494,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     if (!unitBy[u]) { status.textContent = 'Choose where they go.'; return; }
     const dest = unitBy[u].shelves ? boardBelow(unitBy[u], s) : 0, from = yf.elements.fromUnit.value;
     if (u === from && dest === boardBelow(unitBy[from], Number(yf.elements.fromShelf.value))) { status.textContent = 'That is the shelf they are already on.'; return; }
-    picked.forEach((k, index) => showCode('RL:MOVE:' + k.h + ':' + u + '-' + s, 'Move ' + k.n, 'From ' + placeName(k.u, k.s) + ' to ' + placeName(u, dest) + '.', '', index === picked.length - 1));
-    status.textContent = picked.length + (picked.length === 1 ? ' move' : ' moves') + ' added. ' + made.length + ' changes are on the list below.';
+    saveChanges(picked.map(k => ({ code: 'RL:MOVE:' + k.h + ':' + u + '-' + s, title: 'Move ' + k.n, what: 'From ' + placeName(k.u, k.s) + ' to ' + placeName(u, dest) + '.' })), e.submitter).then(ok => { if (ok) manyList(); });
   });
 
   // ---- move a whole shelf
@@ -490,8 +516,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     if (a === b && boardBelow(unitBy[a], an) === bnb) { status.textContent = 'Those are the same shelf.'; return; }
     if (!onShelf(a, boardBelow(unitBy[a], an)).length) { status.textContent = 'The shelf you are moving from is empty on this copy of the room. If the console shows things there, move them on the console.'; return; }
     const swap = sf.elements.how.value === 'swap';
-    showCode('RL:SHELF:' + a + '-' + an + ':' + b + '-' + bn + (swap ? ':SWAP' : ''), swap ? 'Swap two shelves' : 'Move a whole shelf',
-      (swap ? 'Swap ' : 'Move everything on ') + placeName(a, boardBelow(unitBy[a], an)) + (swap ? ' with ' : ' to ') + placeName(b, bnb) + '.');
+    saveChanges([{ code: 'RL:SHELF:' + a + '-' + an + ':' + b + '-' + bn + (swap ? ':SWAP' : ''), title: swap ? 'Swap two shelves' : 'Move a whole shelf',
+      what: (swap ? 'Swap ' : 'Move everything on ') + placeName(a, boardBelow(unitBy[a], an)) + (swap ? ' with ' : ' to ') + placeName(b, bnb) + '.' }], e.submitter).then(ok => { if (ok) shelfNow(); });
   });
 
   // ---- add a new item
@@ -526,38 +552,39 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     if (addCode().length >= MAX_CODE) return 'The name is too long for the code. Shorten it.';
     return '';
   }
-  af.addEventListener('submit', e => {
-    e.preventDefault();
-    const problem = checkAdd(); if (problem) { status.textContent = problem; return; }
-    const f = af.elements, name = f.name.value.trim(), t = types[Number(f.type.value)], s = Number(f.shelf.value || 0);
-    showCode(addCode(), 'Add ' + name, CAT_ORDER[t[0]] + ' / ' + t[1] + ', ' + f.copies.value + (f.copies.value === '1' ? ' copy' : ' copies') + ', goes to ' + placeName(f.unit.value, s && unitBy[f.unit.value].shelves ? boardBelow(unitBy[f.unit.value], s) : 0) + '.',
-      'On the console: scan this, type the PIN, scan the item’s barcode sticker (or skip), then press Select. Then add its photo and description in the form above.');
-    document.querySelector('.add-extra').open = true;
-  });
+  // Both buttons put the item on the website straight away and add its console code to the list. The second also saves
+  // the guide-page details filled in below (photo, description, checklists).
+  const ADD_HOW = 'On the console: scan this, type the PIN, scan the item’s barcode sticker (or skip), then press Select.';
   let addPhoto = null;
+  async function addItem(button, withGuide) {
+    // added a moment ago with the first button, details filled in after: this only saves the details
+    const h = nameCode(af.elements.name.value.trim()), again = withGuide && kinds.some(k => k.h === h) && pend.waiting.some(e => e.item && e.item.h === h);
+    const problem = again ? '' : checkAdd(); if (problem) { status.textContent = problem; return; }
+    const f = af.elements, name = f.name.value.trim(), t = types[Number(f.type.value)], u = unitBy[f.unit.value], s = Number(f.shelf.value || 0);
+    if (withGuide && f.manual.value.trim() && !/^https:\/\//.test(f.manual.value.trim())) { status.textContent = 'The manual link has to start with https://'; return; }
+    const item = { n: name, c: CAT_ORDER[t[0]], t: t[1], x: Number(f.copies.value), w: placeName(u.code, s && u.shelves ? boardBelow(u, s) : 0), in: true, d: '', h: nameCode(name), u: u.code, s };
+    let blob;
+    if (withGuide) {
+      item.d = f.description.value.trim();
+      const need = lines(f.need.value), start = lines(f.start.value), tips = lines(f.tips.value);
+      if (need.length) item.need = need; if (start.length) item.start = start; if (tips.length) item.tips = tips;
+      if (f.manual.value.trim()) item.r = [['Official maker instructions', f.manual.value.trim()]];
+      if (addPhoto) { const path = 'photos/' + item.h + '-' + Date.now().toString(36) + '.jpg'; item.p = { url: path, w: addPhoto.w, h: addPhoto.h, own: true, artist: f.credit.value.trim() || 'IDeATe Lending staff' }; blob = { [path]: addPhoto.base64 }; }
+      else if (f.photo.value.trim()) item.p = { url: f.photo.value.trim(), page: f.crediturl.value.trim() || '#', artist: f.credit.value.trim() || 'IDeATe Lending', license: 'Photo source' };
+    }
+    const ok = again ? await saveChanges([], button, { needKey: true, blobs: blob, message: 'Guide page for ' + name + ' (staff page)', edit: fd => { const k = fd.kinds.find(x => x.h === h); if (k) for (const key of ['d', 'need', 'start', 'tips', 'r', 'p']) if (item[key] !== undefined) k[key] = item[key]; } })
+      : await saveChanges([{ code: addCode(), item, title: 'Add ' + name, what: CAT_ORDER[t[0]] + ' / ' + t[1] + ', ' + f.copies.value + (f.copies.value === '1' ? ' copy' : ' copies') + ', goes to ' + placeName(u.code, s && u.shelves ? boardBelow(u, s) : 0) + '.', extra: ADD_HOW }], button, { needKey: withGuide, blobs: blob, message: 'Add ' + name + ' (staff page, waiting for the console)' });
+    if (!ok) return;
+    if (withGuide) { addPhoto = null; f.photofile.value = ''; $('add-photo-note').textContent = ''; }
+    else document.querySelector('.add-extra').open = true;
+  }
+  af.addEventListener('submit', e => { e.preventDefault(); addItem(e.submitter, false); });
   af.elements.photofile.addEventListener('change', async () => {
     addPhoto = null; if (!af.elements.photofile.files[0]) return;
     try { addPhoto = await readPhoto(af.elements.photofile.files[0]); $('add-photo-note').textContent = 'Photo ready (' + addPhoto.kb + ' KB).'; }
     catch (err) { af.elements.photofile.value = ''; $('add-photo-note').textContent = 'That file could not be read as a picture. Try a JPEG or PNG.'; }
   });
-  $('add-publish').addEventListener('click', async e => {
-    const problem = checkAdd(); if (problem) { status.textContent = problem; return; }
-    const f = af.elements, name = f.name.value.trim(), t = types[Number(f.type.value)], u = unitBy[f.unit.value], s = Number(f.shelf.value || 0);
-    if (f.manual.value.trim() && !/^https:\/\//.test(f.manual.value.trim())) { status.textContent = 'The manual link has to start with https://'; return; }
-    const item = { n: name, c: CAT_ORDER[t[0]], t: t[1], x: Number(f.copies.value), w: placeName(u.code, s && u.shelves ? boardBelow(u, s) : 0), in: true, d: f.description.value.trim(), h: nameCode(name), u: u.code, s };
-    const need = lines(f.need.value), start = lines(f.start.value), tips = lines(f.tips.value);
-    if (need.length) item.need = need; if (start.length) item.start = start; if (tips.length) item.tips = tips;
-    if (f.manual.value.trim()) item.r = [['Official maker instructions', f.manual.value.trim()]];
-    let blob;
-    if (addPhoto) { const path = 'photos/' + item.h + '-' + Date.now().toString(36) + '.jpg'; item.p = { url: path, w: addPhoto.w, h: addPhoto.h, own: true, artist: f.credit.value.trim() || 'IDeATe Lending staff' }; blob = { [path]: addPhoto.base64 }; }
-    else if (f.photo.value.trim()) item.p = { url: f.photo.value.trim(), page: f.crediturl.value.trim() || '#', artist: f.credit.value.trim() || 'IDeATe Lending', license: 'Photo source' };
-    const out = { ...data, kinds: [...kinds, item].sort((a, b) => a.n.localeCompare(b.n)) };
-    if (!(await publish({ 'data.json': out }, 'Add ' + name + ' (staff page)', e.target, blob))) return;
-    addPhoto = null; f.photofile.value = ''; $('add-photo-note').textContent = '';
-    kinds.push(item);                                              // so pressing twice cannot add it twice
-    showCode(addCode(), 'Add ' + name, 'Guide page saved. Now show this to the console.', 'On the console: scan this, type the PIN, scan the item’s barcode sticker (or skip), then press Select.');
-    status.textContent = 'Saved: ' + name + ' is on the site in about a minute. Show the code below to the console.';
-  });
+  $('add-publish').addEventListener('click', e => addItem(e.target, true));
 
   // ---- from the console: its change list (MOVES.TSV) as QR pages "RLSYNC|page|pages|total" + lines with | for tabs
   // The console plays the lines back in order; this does the same to the website's copy, then offers the two files to upload.
@@ -634,7 +661,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     apply(text.split('\n').filter(l => l.trim() && !l.startsWith('@')).map(l => l.split(/\t|\|/)));
   });
 
-  let outData = null, outRoom = null;
+  let outData = null, outRoom = null, outPend = null;
   // The console's list is EVERY change since the Nov 16 setup, so the website is rebuilt from scratch each time:
   // the Nov 16 backup, then every line in order. That way a change taken back on the console disappears here too, and an
   // empty list (after Start over on the console) puts the website back to the setup. What only the website knows about an
@@ -657,11 +684,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const allLines = lines.length;
     // Straight from the repository when it answers: the public pages lag about a minute behind a save, and a second
     // sync inside that minute would otherwise be judged against the website as it was before the first one.
-    const fresh = async name => {
-      try { const res = await fetch(API + '/contents/' + name + '?ref=' + BRANCH + '&x=' + Date.now(), { headers: { Accept: 'application/vnd.github.raw+json', ...(keep.get('rl-key') ? { Authorization: 'Bearer ' + keep.get('rl-key') } : {}) } }); if (res.ok) { const got = await res.json(); if (got && (got.kinds || got.units)) return got; } } catch (e) {}
-      return fetch(name + '?x=' + Date.now()).then(x => x.json());
-    };
-    const [liveData, liveRoom] = await Promise.all([fresh('data.json'), fresh('room.json')]);
+    const [liveData, liveRoom, livePend] = await Promise.all([latest('data.json', g => g && Array.isArray(g.kinds)), latest('room.json', g => g && Array.isArray(g.units)), readPending()]);
+    if (!liveData || !liveRoom) throw Error('files');
     const have = liveRoom.synced && Number.isInteger(liveRoom.synced.bytes) ? liveRoom.synced.bytes : -1;   // how far into the console's list the website already is
     const adding = from > 0;                    // the console sent only what is new: add it to the website as it is now
     if (adding) {
@@ -685,6 +709,11 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const [baseData, baseRoom] = adding ? [liveData, liveRoom] : await loadBaseline();
     const d = JSON.parse(JSON.stringify(baseData)), r = JSON.parse(JSON.stringify(baseRoom));
     const nowBy = Object.fromEntries((adding ? liveData.kinds : kinds).map(k => [k.h, k]));
+    // changes saved on the website first: take them off (the website as it is holds them), then put back the ones the
+    // console still does not have, on top of its list
+    const waiting = JSON.parse(JSON.stringify(livePend.waiting));
+    if (adding) rewind(d, r, waiting);
+    else waiting.forEach(e => { if (e.item && nowBy[e.item.h]) e._back = JSON.parse(JSON.stringify(nowBy[e.item.h])); });
     const guideFields = ['p', 'r', 'd', 'g', 'need', 'start', 'tips'];
     for (const k of d.kinds) { const now = nowBy[k.h]; if (!now) continue; for (const key of guideFields) { if (now[key] !== undefined) k[key] = JSON.parse(JSON.stringify(now[key])); else delete k[key]; } }
     const ub = Object.fromEntries(r.units.map(u => [u.code, u]));
@@ -706,11 +735,29 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
         if (!byH[h]) { const now = nowBy[h] || {}; const k = { n: name, c: CAT_ORDER[Number(f[1])] || 'Cables & More', t: f[2], x: Number(f[6]) || 1, in: true, d: '', h, u: f[4], s: Number(f[5]) }; for (const key of guideFields) if (now[key] !== undefined) k[key] = now[key]; d.kinds.push(k); byH[h] = k; count.A++; }
       }
     }
+    const enc2 = new TextEncoder(); let off = adding ? have : 0;
+    const startAt = lines.map(f => { const o = off; off += enc2.encode(f.join('\t')).length + 2; return o; });
+    const ubNow = uBy(r), done = [], back = [], still = [];
+    waiting.forEach((e, i) => {
+      if (onConsole(e, d, ubNow, lines, startAt, waiting.slice(i + 1))) { done.push(e); return; }
+      if (e.sent && tag !== null) { e.sent = false; delete e.sentAt; back.push(e); }
+      still.push(e);
+    });
+    replay(d, r, still);
+    const at = stamp();
+    outPend = tidy({ waiting: still, history: [...back.map(e => ({ at, title: e.title, what: e.what, did: 'back' })), ...done.map(e => ({ at, title: e.title, what: e.what, did: 'console' })), ...livePend.history] });
     const names = Object.fromEntries(r.units.map(u => [u.code, u.name]));
     for (const k of d.kinds) { const u = ub[k.u]; k.w = u && u.shelves && k.s ? names[k.u] + ', shelf ' + boardBelowIn(u, k.s) : (names[k.u] || k.u); k.in = !!(u && u.shelves && k.s); }
     d.kinds.sort((a, b) => a.n.localeCompare(b.n));
     r.synced = { lines: lines.length, first: firstText, at: new Date().toISOString() };
     if (tag !== null) r.synced.bytes = tag;       // how far into the console's list the website now is
+    // the shelves whose things changed with this sync, so the staff map can show them in blue
+    const changed = new Map(), mark = (code, n) => { const u = ub[code]; if (u && u.shelves && n) { const b = boardBelowIn(u, n); changed.set(code + '-' + b, [code, b]); } };
+    for (const k of d.kinds) { const b = nowBy[k.h]; if (!b || b.u !== k.u || b.s !== k.s || b.x !== k.x) { mark(k.u, k.s); if (b) mark(b.u, b.s); } }
+    const byEnd = Object.fromEntries(d.kinds.map(k => [k.h, k]));                // and the ones changed on the website first that the console now has
+    done.forEach(e => { ((e.undo && e.undo.items) || []).forEach(([h, u, n]) => { mark(u, n); if (byEnd[h]) mark(byEnd[h].u, byEnd[h].s); }); if (e.item && byEnd[e.item.h]) mark(byEnd[e.item.h].u, byEnd[e.item.h].s); });
+    r.synced.changed = [...changed.values()].slice(0, 60);
+    outPend.history.unshift({ at, title: 'Website synced with the console', what: (lines.length ? lines.length + (lines.length === 1 ? ' change' : ' changes') + ' from the console' : 'No changes from the console') + (changed.size ? ', ' + changed.size + (changed.size === 1 ? ' shelf' : ' shelves') + ' changed.' : '.'), did: 'sync' });
     r.source = 'Room Locator console, changes brought over on ' + new Date().toISOString().slice(0, 10);
     outData = d; outRoom = r;
     const list = [];
@@ -719,7 +766,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
       const current = unitBy[u.code];
       return !current || ['first', 'shelves', 'rect', 'boards'].some(key => JSON.stringify(u[key]) !== JSON.stringify(current[key]));
     });
-    const needsSave = moved > 0 || layoutChanged || (tag !== null && have !== tag);
+    const needsSave = moved > 0 || layoutChanged || (tag !== null && have !== tag) || done.length > 0 || back.length > 0;
     list.push(adding ? 'The console has ' + lines.length + (lines.length === 1 ? ' new change' : ' new changes') + '. Saving adds ' + (lines.length === 1 ? 'it' : 'them') + ' to the website.' : lines.length ? 'The console has ' + lines.length + (lines.length === 1 ? ' change' : ' changes') + ' since the Nov 16 setup. Saving makes the website match it exactly.' : 'The console has no changes. Saving puts the website back to the Nov 16 setup.');
     if (moved) list.push(moved + (moved === 1 ? ' item page will change.' : ' item pages will change.'));
     if (layoutChanged) list.push('The room map will change.');
@@ -732,6 +779,9 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     if (count.B) list.push(count.B + (count.B === 1 ? ' shelf board put in or taken out' : ' shelf boards put in or taken out'));
     if (count.A) list.push(count.A + (count.A === 1 ? ' new item (its guide page starts plain; add details later)' : ' new items (their guide pages start plain; add details later)'));
     notes.forEach(n => list.push(n));
+    if (done.length) list.push(done.length + (done.length === 1 ? ' change made on the website first is' : ' changes made on the website first are') + ' now on the console too.');
+    if (back.length) list.push(back.length + (back.length === 1 ? ' change the console did not save is' : ' changes the console did not save are') + ' back on the list to show it. Check the console\'s Recent changes first.');
+    if (still.length - back.length > 0) list.push((still.length - back.length) + (still.length - back.length === 1 ? ' change saved on the website is' : ' changes saved on the website are') + ' still waiting for the console. The website keeps ' + (still.length - back.length === 1 ? 'it.' : 'them.'));
     $('sync-summary').innerHTML = list.map(x => '<li>' + esc(x) + '</li>').join('');
     $('sync-result').hidden = false;
     // Scanned straight from the console on a device that has the key: save by itself after a 5-second count, so keeping
@@ -745,14 +795,149 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     }
   }
   const boardBelowIn = (u, n) => { while (n > 1 && u.boards && u.boards.length && !u.boards.includes(n)) n--; return n; };
+
+  // ---- changes saved to the website first (pending.json)
+  // A move, a count or a new item goes on the website the moment it is made, and waits in pending.json for the console.
+  // Any device shows everything that is waiting as one code, so changes can be made at home and scanned in at the console
+  // later. When the console sends its list back, each change it now has is ticked off; the rest are put back on top of the
+  // console's list, so a sync never wipes a change the console has not had yet. Each change keeps what it replaced
+  // (`undo`), so one can be taken back off the website, in any order, until the console has it.
+  const uBy = r => Object.fromEntries(r.units.map(u => [u.code, u]));
+  const boardOf = (ub, code, n) => ub[code] && ub[code].shelves ? boardBelowIn(ub[code], n) : n;
+  function placeIn(r, k) { const u = uBy(r)[k.u]; k.w = u && u.shelves && k.s ? u.name + ', shelf ' + boardBelowIn(u, k.s) : (u ? u.name : k.u); k.in = !!(u && u.shelves && k.s); }
+  function doEntry(d, r, e) {
+    const f = e.code.split(':'), by = Object.fromEntries(d.kinds.map(k => [k.h, k])), ub = uBy(r);
+    if (f[1] === 'MOVE') { const k = by[f[2]]; if (!k) return null; const [u, s] = f[3].split('-'), undo = { items: [[k.h, k.u, k.s]] }; k.u = u; k.s = Number(s); placeIn(r, k); return undo; }
+    if (f[1] === 'COUNT') { const k = by[f[2]]; if (!k) return null; const undo = { count: [k.h, k.x] }; k.x = Number(f[3]); return undo; }
+    if (f[1] === 'SHELF') {
+      const [a, an] = f[2].split('-'), [b, bn] = f[3].split('-'), swap = f[4] === 'SWAP', from = boardOf(ub, a, Number(an)), to = boardOf(ub, b, Number(bn)), items = [];
+      for (const k of d.kinds) {
+        if (k.u === a && boardOf(ub, a, k.s) === from) { items.push([k.h, k.u, k.s]); k.u = b; k.s = to; placeIn(r, k); }
+        else if (swap && k.u === b && boardOf(ub, b, k.s) === to) { items.push([k.h, k.u, k.s]); k.u = a; k.s = from; placeIn(r, k); }
+      }
+      return { items };
+    }
+    if (f[1] === 'ADD') { const item = e._back || e.item; if (!item || by[item.h]) return { had: true }; d.kinds.push(JSON.parse(JSON.stringify(item))); d.kinds.sort((x, y) => x.n.localeCompare(y.n)); return { added: item.h }; }
+    return null;
+  }
+  function undoEntry(d, r, e) {
+    const u = e.undo; if (!u) return;
+    const by = Object.fromEntries(d.kinds.map(k => [k.h, k]));
+    (u.items || []).forEach(([h, unit, s]) => { const k = by[h]; if (k) { k.u = unit; k.s = s; placeIn(r, k); } });
+    if (u.count && by[u.count[0]]) by[u.count[0]].x = u.count[1];
+    if (u.added) { const i = d.kinds.findIndex(k => k.h === u.added); if (i >= 0) e._back = d.kinds.splice(i, 1)[0]; }   // kept, with any details added since, in case it goes back on
+  }
+  const rewind = (d, r, list) => { for (let i = list.length - 1; i >= 0; i--) undoEntry(d, r, list[i]); };
+  const replay = (d, r, list) => list.forEach(e => { e.undo = doEntry(d, r, e); });
+  const tidy = p => cleanPend({ waiting: p.waiting.map(({ _back, ...e }) => e), history: p.history });
+  const DID = { saved: 'Saved on the website', sent: 'Shown to the console', console: 'The console has it too', undone: 'Undone on the website', back: 'The console did not save it: back on the list', sync: 'Website synced with the console', reset: 'Cleared when the website was put back to Nov 16' };
+  const stamp = () => new Date().toISOString();
+  function syncMade() {                       // the list of codes = everything saved and waiting, then anything only on this device
+    const local = made.filter(c => !c.id);
+    made.length = 0;
+    made.push(...pend.waiting.filter(e => !e.sent).map(e => ({ id: e.id, code: e.code, title: e.title, what: e.what, extra: e.extra })), ...local);
+  }
+  function takeIn(d, p) {                     // the website was just saved: use the saved copy on this page too
+    kinds.splice(0, kinds.length, ...d.kinds); data.published = d.published;
+    if (p) pend = p;
+    syncMade(); madeAt = Math.max(0, madeAt); drawCode(); drawLog(); drawHomeStatus();
+    if (view3d) { view3d.retint(); refresh3d(); }
+  }
+  async function saveChanges(list, button, opts = {}) {
+    if (!keep.get('rl-key')) {
+      if (opts.needKey) { afterKey = () => button && button.click(); askForKey('Saving to the website needs the staff passcode on this device, once.'); return false; }
+      list.forEach((c, i) => showCode(c.code, c.title, c.what, c.extra, i === list.length - 1));
+      status.textContent = 'Added to the list on this phone only. This device is not signed in, so the website gets ' + (list.length === 1 ? 'this change' : 'these changes') + ' when the console syncs. Sign in with the staff passcode to save changes to the website first.';
+      return true;
+    }
+    const label = button ? button.textContent : ''; if (button) { button.disabled = true; button.textContent = 'Saving...'; }
+    let d = null, p = null;
+    try { [d, p] = await Promise.all([latest('data.json', g => g && Array.isArray(g.kinds)), readPending()]); } catch (err) {}
+    if (button) { button.disabled = false; button.textContent = label; }
+    if (!d || !p) { status.textContent = 'Could not reach the website. Check the internet connection and try again.'; return false; }
+    if (opts.edit) opts.edit(d);
+    const at = stamp(), since = room.synced && Number.isInteger(room.synced.bytes) ? room.synced.bytes : 0, added = [];
+    let already = 0;
+    for (const c of list) {
+      if (p.waiting.some(w => !w.sent && w.code === c.code)) { already++; continue; }
+      const e = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), code: c.code, title: c.title, what: c.what, at, since, sent: false };
+      if (c.extra) e.extra = c.extra; if (c.item) e.item = c.item;
+      e.undo = doEntry(d, room, e); if (!e.undo) continue;
+      p.waiting.push(e); added.push(e);
+    }
+    if (!added.length && !opts.edit) { status.textContent = already ? 'That change is already on the list, waiting for the console.' : 'That item is not on the website. Reload the page and try again.'; return false; }
+    p.history.unshift(...added.map(e => ({ at, title: e.title, what: e.what, did: 'saved' })));
+    const out = tidy(p), files = { 'data.json': d }; if (added.length) files['pending.json'] = out;
+    if (!(await publish(files, opts.message || (added.length === 1 ? added[0].title : added.length + ' changes') + ' (staff page, waiting for the console)', button, opts.blobs))) return false;
+    takeIn(d, added.length ? out : null);
+    if (added.length) {
+      status.textContent = 'Saved on the website (everyone sees it in about a minute). ' + (made.length === 1 ? 'Show the code below to the console when you are there.' : made.length + ' changes are waiting for the console: the code below has them all.') + (already ? ' One of them was already on the list.' : '');
+      $('code-out').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    return true;
+  }
+  async function markSent(ids, button) {      // the console took these: they stay on the website, waiting for its sync
+    const p = await readPending().catch(() => null); if (!p) { status.textContent = 'Could not reach the website. Check the internet connection and press it again.'; return false; }
+    const at = stamp(), hit = p.waiting.filter(e => ids.includes(e.id) && !e.sent);
+    hit.forEach(e => { e.sent = true; e.sentAt = at; });
+    p.history.unshift(...hit.map(e => ({ at, title: e.title, what: e.what, did: 'sent' })));
+    const out = tidy(p);
+    if (hit.length && !(await publish({ 'pending.json': out }, (hit.length === 1 ? hit[0].title : hit.length + ' changes') + ' shown to the console (staff page)', button))) return false;
+    pend = out; syncMade(); drawLog(); drawHomeStatus(); return true;
+  }
+  async function undoSaved(ids, button) {
+    let d = null, p = null;
+    try { [d, p] = await Promise.all([latest('data.json', g => g && Array.isArray(g.kinds)), readPending()]); } catch (err) {}
+    if (!d || !p) { status.textContent = 'Could not reach the website. Check the internet connection and try again.'; return false; }
+    const first = p.waiting.findIndex(e => ids.includes(e.id));
+    if (first < 0) { pend = p; syncMade(); drawCode(); status.textContent = 'That change is no longer waiting: the list has been brought up to date.'; return false; }
+    if (p.waiting.some(e => ids.includes(e.id) && e.sent)) { status.textContent = 'The console already has that change. Undo it on the console (Recent changes), then sync the website.'; return false; }
+    const tail = p.waiting.slice(first), gone = tail.filter(e => ids.includes(e.id)), rest = tail.filter(e => !ids.includes(e.id));
+    rewind(d, room, tail); replay(d, room, rest);
+    p.waiting = p.waiting.slice(0, first).concat(rest);
+    const at = stamp(); p.history.unshift(...gone.map(e => ({ at, title: e.title, what: e.what, did: 'undone' })));
+    const out = tidy(p);
+    if (!(await publish({ 'data.json': d, 'pending.json': out }, 'Undo ' + (gone.length === 1 ? gone[0].title : gone.length + ' changes') + ' (staff page)', button))) return false;
+    takeIn(d, out);
+    status.textContent = (gone.length === 1 ? 'Undone' : gone.length + ' changes undone') + ' on the website. The console never had ' + (gone.length === 1 ? 'it' : 'them') + ', so there is nothing to do there.';
+    return true;
+  }
+  // Does the console's list hold this change? Its own line for it (after the website's place in the list when the change
+  // was made) says so; for a move, a count or a new item, the console already showing the same result counts too.
+  function onConsole(e, d, ub, list, startAt, later) {
+    const f = e.code.split(':'), seen = test => list.some((line, i) => startAt[i] >= (e.since || 0) && test(line));
+    if (f[1] === 'MOVE') {
+      const [u, s] = f[3].split('-'), k = d.kinds.find(x => x.h === f[2]), same = (unit, n) => unit === u && boardOf(ub, u, Number(n)) === boardOf(ub, u, Number(s));
+      return seen(l => l[0].length > 1 && l[0].toLowerCase() === f[2] && same(l[1], l[2])) || (!!k && same(k.u, k.s) && !later.some(x => x.code.includes(':' + f[2] + ':')));
+    }
+    if (f[1] === 'COUNT') { const k = d.kinds.find(x => x.h === f[2]); return seen(l => l[0] === 'C' && (l[1] || '').toLowerCase() === f[2] && Number(l[2]) === Number(f[3])) || (!!k && k.x === Number(f[3]) && !later.some(x => x.code.startsWith('RL:COUNT:' + f[2] + ':'))); }
+    if (f[1] === 'ADD') return !!e.item && (d.kinds.some(k => k.h === e.item.h) || seen(l => l[0] === 'A' && nameCode(l[3] || '') === e.item.h));
+    if (f[1] === 'SHELF') {
+      const [a, an] = f[2].split('-'), [b, bn] = f[3].split('-'), swap = f[4] === 'SWAP';
+      return seen(l => (l[0] === 'S' || l[0] === 'X') && (l[0] === 'X') === swap && l[1] === a && boardOf(ub, a, Number(l[2])) === boardOf(ub, a, Number(an)) && l[4] === b && boardOf(ub, b, Number(l[5])) === boardOf(ub, b, Number(bn)));
+    }
+    return false;
+  }
+  // ---- the change history (at the bottom of the page)
+  const when = iso => new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  function drawLog() {
+    const w = pend.waiting;
+    $('log-waiting').innerHTML = w.length ? w.map(e => '<li><span class="log-when">' + esc(when(e.at)) + '</span><strong>' + esc(e.title) + '</strong> ' + esc(e.what || '') + ' <span class="saved-tag' + (e.sent ? ' sent' : '') + '">' + (e.sent ? 'Shown to the console, waiting for its sync' : 'On the website, waiting for the console') + '</span></li>').join('') : '<li>Nothing is waiting. The website and the console have the same changes.</li>';
+    const h = pend.history;
+    $('log-done').innerHTML = h.length ? h.slice(0, 80).map(x => '<li><span class="log-when">' + esc(when(x.at)) + '</span><strong>' + esc(x.title) + '</strong> ' + esc(x.what || '') + (x.did === 'sync' ? '' : ' <em>' + esc(DID[x.did] || x.did || '') + '</em>') + '</li>').join('') : '<li>No changes yet.</li>';
+  }
   const download = (obj, name) => { const blob = new Blob([JSON.stringify(obj, null, 2) + '\n'], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
-  $('sync-publish').addEventListener('click', async e => { if (!outData) return; if (await publish({ 'data.json': outData, 'room.json': outRoom }, 'Website matched to the console (staff page)', e.target)) { $('sync-saved').hidden = false; try { sessionStorage.setItem('rl-done', syncTag !== null ? 'Saved. The site updates in about a minute. One last step below.' : 'Saved. The site updates in about a minute. Nothing else to do.'); if (syncTag !== null) sessionStorage.setItem('rl-ack', String(syncTag)); } catch (err) { } setTimeout(() => location.reload(), 2500); } });
+  $('sync-publish').addEventListener('click', async e => { if (!outData) return; if (await publish({ 'data.json': outData, 'room.json': outRoom, ...(outPend ? { 'pending.json': outPend } : {}) }, 'Website matched to the console (staff page)', e.target)) { $('sync-saved').hidden = false; try { if (outRoom.synced && outRoom.synced.changed && outRoom.synced.changed.length) sessionStorage.setItem('rl-moved', '1'); sessionStorage.setItem('rl-done', syncTag !== null ? 'Saved. The site updates in about a minute. One last step below.' : 'Saved. The site updates in about a minute. Nothing else to do.'); if (syncTag !== null) sessionStorage.setItem('rl-ack', String(syncTag)); } catch (err) { } setTimeout(() => location.reload(), 2500); } });
   // after that reload, say plainly that it worked (the page used to come back looking as if nothing had happened)
   try { const done = sessionStorage.getItem('rl-done'); if (done) { sessionStorage.removeItem('rl-done'); $('home-done').textContent = done; $('home-done').hidden = false; } const ack = sessionStorage.getItem('rl-ack'); if (ack !== null) { sessionStorage.removeItem('rl-ack'); if (ack === 'RESEND') showAck('RL:RESEND', 'Does the console still hold changes?', 'The website is reset. To put the console\'s changes back on it, show the console this code and type the PIN, then scan the code it shows. To clear the console too, use Start over there.'); else ackGot(ack); } } catch (err) { }
+  $('web-reset-word').addEventListener('input', e => { $('web-reset').disabled = e.target.value.trim().toUpperCase() !== 'START OVER'; });
   $('web-reset').addEventListener('click', async e => {
+    if ($('web-reset-word').value.trim().toUpperCase() !== 'START OVER') return;
     if (!confirm('Put the website back to the Nov 16 setup? This removes every change and edit made since then.')) return;
     const [d, r] = await Promise.all([fetch('backup/2026-11-16/data.json?x=' + Date.now()).then(x => x.json()), fetch('backup/2026-11-16/room.json?x=' + Date.now()).then(x => x.json())]);
-    if (await publish({ 'data.json': d, 'room.json': r }, 'Website back to the Nov 16 setup (staff page)', e.target)) { try { sessionStorage.setItem('rl-ack', 'RESEND'); } catch (err) { } setTimeout(() => location.reload(), 1500); }
+    const p = await readPending().catch(() => cleanPend(null)), at = stamp();
+    p.history.unshift(...p.waiting.map(x => ({ at, title: x.title, what: x.what, did: 'reset' }))); p.waiting = [];
+    if (await publish({ 'data.json': d, 'room.json': r, 'pending.json': tidy(p) }, 'Website back to the Nov 16 setup (staff page)', e.target)) { try { sessionStorage.setItem('rl-ack', 'RESEND'); } catch (err) { } setTimeout(() => location.reload(), 1500); }
   });
   // ---- the 3D room: click a shelf instead of using the two menus
   const card = $('room3d-card'), help = $('room3d-help');
@@ -767,7 +952,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
       else { setPlace(sf.elements.toUnit, sf.elements.toShelf, u, n); shelfStep = 'from'; }
     }
     refresh3d(); showShelf(u, n);
-  });
+  }, { tint: true });
   // what is on the shelf that was clicked, with a button to start moving any of it
   const contents = $('shelf-contents');
   function showShelf(u, n) {
@@ -784,9 +969,11 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     refresh3d();
     $('room3d-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
+  const lastChanged = (room.synced && Array.isArray(room.synced.changed) ? room.synced.changed : []).filter(x => unitBy[x[0]]);
+  if (lastChanged.length) { $('moved-wrap').hidden = false; $('moved-when').textContent = room.synced.at ? ' (' + when(room.synced.at) + ')' : ''; $('moved-show').addEventListener('change', () => refresh3d()); }
   function refresh3d() {
     if (!view3d) return;
-    const marks = [];
+    const marks = lastChanged.length && $('moved-show').checked ? lastChanged.map(([unit, shelf]) => ({ unit, shelf, kind: 'moved' })) : [];
     if (activeTab === 'move') {
       const k = pickedItem(); if (k && unitBy[k.u] && unitBy[k.u].shelves) marks.push({ unit: k.u, shelf: boardBelow(unitBy[k.u], k.s), kind: 'now' });
       marks.push({ unit: mf.elements.unit.value, shelf: Number(mf.elements.shelf.value), kind: 'pick' });
@@ -807,12 +994,16 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     tabs.forEach(t => $('tab-' + t).addEventListener('click', () => { activeTab = t; shelfStep = 'from'; card.hidden = !['move', 'shelf', 'add'].includes(t); if (!card.hidden && card.open) { view3d.resize(); refresh3d(); } }));
     [mf, sf, af].forEach(f => { f.addEventListener('change', refresh3d); f.addEventListener('input', refresh3d); });
     refresh3d();
+    try { if (sessionStorage.getItem('rl-moved')) { sessionStorage.removeItem('rl-moved'); card.open = true; } } catch (err) { }   // just synced: show what moved
   }
   // opened by pointing a phone camera at the console's "To the website" code: go straight to that tab and take the page in
   // ---- the status line at the top: is the website in step with the console, and can this device save
   const drawHomeStatus = () => {
     const sy = room.synced, when = sy && sy.at ? new Date(sy.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
     $('home-sync').textContent = when ? 'Last website sync: ' + when + '.' : 'Website shows the Nov 16 setup.';
+    const wait = pend.waiting.filter(e => !e.sent).length, sent = pend.waiting.length - wait;
+    $('home-wait').textContent = wait ? wait + (wait === 1 ? ' change is' : ' changes are') + ' on the website, waiting for the console.' : sent ? 'The console took ' + sent + (sent === 1 ? ' change' : ' changes') + ' from the website. Sync the website so it knows.' : '';
+    $('home-wait-show').hidden = !wait; $('home-wait').parentElement.hidden = !$('home-wait').textContent;
     $('home-key').textContent = keep.get('rl-key') ? 'This device can save.' : 'To publish, enter the PIN at the console’s grey bar and scan its Staff page QR.';
     $('home-key-set').textContent = 'No console nearby? Use the passcode'; $('home-key-set').hidden = !!keep.get('rl-key');
     $('device').hidden = !keep.get('rl-key');
@@ -1086,10 +1277,13 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   $('edit-publish').addEventListener('click', async e => {
     const d = editedData(); if (!d) return; const k = editItem(), copies = d.kinds.find(x => x.h === k.h).x;
     const usePhoto = newPhoto && newPhoto.path && !ef.elements.nophoto.checked ? { [newPhoto.path]: newPhoto.base64 } : undefined;
-    if (!(await publish({ 'data.json': d }, 'Edit ' + k.n + ' (staff page)', e.target, usePhoto))) return;
-    if (copies !== k.x) { k.x = copies; showCode('RL:COUNT:' + k.h + ':' + copies, 'Show this to the console too', k.n + ': Lending now has ' + copies + '. The website is saved; this tells the console.', 'Without this the console keeps showing the old count.'); }
-    else setTimeout(() => location.reload(), 1500);
+    // the details go straight on the website; a new count also waits on the list for the console
+    const mine = d.kinds.find(x => x.h === k.h), list = copies !== k.x ? [{ code: 'RL:COUNT:' + k.h + ':' + copies, title: 'Count of ' + k.n, what: 'Lending now has ' + copies + ' (was ' + k.x + ').' }] : [];
+    const ok = await saveChanges(list, e.target, { needKey: true, blobs: usePhoto, message: 'Edit ' + k.n + ' (staff page)', edit: fd => { const i = fd.kinds.findIndex(x => x.h === k.h); if (i >= 0) { const was = fd.kinds[i]; fd.kinds[i] = { ...mine, u: was.u, s: was.s, w: was.w, in: was.in, x: was.x }; } } });
+    if (ok && !list.length) setTimeout(() => location.reload(), 1500);
   });
   $('edit-count-code').addEventListener('click', () => { const k = editItem(); if (!k) { status.textContent = 'Pick the item from the list first.'; return; } const n = ef.elements.copies.valueAsNumber; if (!Number.isInteger(n) || n < 1 || n > 250) { status.textContent = 'Enter a whole count from 1 to 250.'; return; } showCode('RL:COUNT:' + k.h + ':' + n, 'Show this to the console', k.n + ': Lending now has ' + n + '.', 'This only changes the count on the console. Press Save to change the website.'); });
+  $('home-wait-show').addEventListener('click', () => { if (!made.length) return; madeAt = 0; drawCode(); $('code-out').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  syncMade(); drawLog(); drawHomeStatus(); if (made.length) { madeAt = 0; drawCode(); }
   window.__rlSync = { readPage, apply: async lines => { await apply(lines); return { data: outData, room: outRoom }; } };   // (for testing)
 }).catch(err => { console.error(err); status.textContent = 'Could not load the inventory. Open this page from the published site or a local web server.'; });

@@ -1,11 +1,16 @@
 // A small 3D copy of the Room Locator model. Click a shelf to pick it.
-// Room3D.init(holder, room, countOnShelf, onPick) -> { mark(list) }   list = [{unit, shelf, kind: 'pick' | 'from' | 'now'}]
+// Room3D.init(holder, room, countOnShelf, onPick, opts) -> { mark(list), retint(), resize() }
+//   list = [{unit, shelf, kind: 'pick' | 'from' | 'now' | 'moved'}]
+//   opts: spin, fill, tint (paler boards hold fewer things), focus (a unit code to turn towards), colors, idleTip
 window.Room3D = {
   init(holder, room, countOnShelf, onPick, opts) {
     opts = opts || {};
     if (!window.THREE || !THREE.OrbitControls) return null;
     const W = 200, D = 150, STEP = 7, BOARD = 5;                    // room size (the same numbers the console's map uses), shelf spacing
-    const COLOR = { wood: 0xdcbf94, woodDark: 0xc9a877, floor: 0x2444b8, rail: 0xf4f4f0, pick: 0x2f9e58, from: 0xe08a1e, now: 0xe08a1e, hover: 0xfff2c4 };
+    const COLOR = { wood: 0xdcbf94, woodDark: 0xc9a877, floor: 0x2444b8, rail: 0xf4f4f0, pick: 0x2f9e58, from: 0xe08a1e, now: 0xe08a1e, moved: 0x3f73d9, hover: 0xfff2c4, ...(opts.colors || {}) };
+    // how full a board is: pale when empty, deep wood at 8 things or more
+    const EMPTY = new THREE.Color(0xf6efe3), FULL = new THREE.Color(0xa06d36);
+    const tintFor = (u, n) => EMPTY.clone().lerp(FULL, Math.min(1, countOnShelf(u, n) / 8)).multiplyScalar(n % 2 ? 1 : 0.95).getHex();
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(38, 2, 1, 2000);
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -41,7 +46,7 @@ window.Room3D = {
         let m;
         if (peg && n === 4) { m = new THREE.Mesh(new THREE.BoxGeometry(w - 1, STEP * 2, 1.6), mat); m.position.set(cx, 3 * STEP + STEP, cz + d / 2 - 0.8); }   // the pegboard, standing at the back
         else { m = new THREE.Mesh(new THREE.BoxGeometry(w - 1, BOARD, d - 1), mat); m.position.set(cx, base + (n - 1) * STEP + BOARD / 2, cz); }
-        m.userData = { unit: u.code, shelf: n, name: u.name, base: m.material.color.getHex() };
+        m.userData = { unit: u.code, shelf: n, name: u.name, board, base: board && opts.tint ? tintFor(u.code, n) : m.material.color.getHex() };
         scene.add(m); shelves.push(m);
       }
       const height = peg ? 3 * STEP : u.shelves * STEP;
@@ -74,6 +79,13 @@ window.Room3D = {
     controls.maxPolarAngle = Math.PI / 2 - 0.08; controls.enableDamping = true;
     if (opts.spin) { controls.autoRotate = true; controls.autoRotateSpeed = 0.8; renderer.domElement.addEventListener('pointerdown', () => { controls.autoRotate = false; }); }
     camera.position.set(-40, 120, 205);
+    const aim = opts.focus && room.units.find(u => u.code === opts.focus && u.rect);
+    if (aim) {                                                       // turn towards one unit, from the side of the room it faces
+      const [x1, y1, x2, y2] = aim.rect.map((v, i) => i % 2 ? v : v + (SHIFT[aim.code] || 0)), cx = (x1 + x2) / 2 - W / 2, cz = (y1 + y2) / 2 - D / 2;
+      controls.target.set(cx * 0.6, 14, cz * 0.6);
+      const away = new THREE.Vector3(-cx, 0, -cz); if (away.length() < 1) away.set(0, 0, 1); away.normalize();
+      camera.position.set(cx * 0.6 + away.x * 185, 125, cz * 0.6 + away.z * 185 + 40);
+    }
 
     const marks = new Map();
     const paint = () => shelves.forEach(m => {
@@ -90,14 +102,14 @@ window.Room3D = {
       return h ? h.object : null;
     };
     const tip = document.createElement('p'); tip.className = 'room3d-tip'; holder.appendChild(tip);
-    const describe = m => m ? m.userData.name + ', shelf ' + m.userData.shelf + ' · ' + (n => n ? n + (n === 1 ? ' thing' : ' things') : 'empty')(countOnShelf(m.userData.unit, m.userData.shelf)) : 'Drag to turn the room. Click a shelf to pick it.';
+    const describe = m => m ? m.userData.name + ', shelf ' + m.userData.shelf + ' · ' + (n => n ? n + (n === 1 ? ' thing' : ' things') : 'empty')(countOnShelf(m.userData.unit, m.userData.shelf)) : (opts.idleTip || 'Drag to turn the room. Click a shelf to pick it.');
     renderer.domElement.addEventListener('pointermove', e => { const m = hit(e); if (m !== hovered) { hovered = m; renderer.domElement.style.cursor = m ? 'pointer' : 'grab'; tip.textContent = describe(m); paint(); } });
     renderer.domElement.addEventListener('pointerleave', () => { hovered = null; tip.textContent = describe(null); paint(); });
     let down = null;
     renderer.domElement.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
     renderer.domElement.addEventListener('pointerup', e => {
       if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;      // a drag turns the room, it does not pick
-      const m = hit(e); if (m) onPick(m.userData.unit, m.userData.shelf);
+      const m = hit(e); if (m && onPick) onPick(m.userData.unit, m.userData.shelf);
     });
     tip.textContent = describe(null);
 
@@ -105,6 +117,7 @@ window.Room3D = {
     size(); window.addEventListener('resize', size);
     (function loop() { requestAnimationFrame(loop); if (holder.offsetParent !== null) { controls.update(); renderer.render(scene, camera); } })();
 
-    return { mark(list) { marks.clear(); (list || []).forEach(x => x && x.unit && x.shelf && marks.set(x.unit + '-' + x.shelf, x.kind || 'pick')); paint(); }, resize: size };
+    const retint = () => { if (opts.tint) shelves.forEach(m => { if (m.userData.board) m.userData.base = tintFor(m.userData.unit, m.userData.shelf); }); paint(); };
+    return { retint, mark(list) { marks.clear(); (list || []).forEach(x => x && x.unit && x.shelf && marks.set(x.unit + '-' + x.shelf, x.kind || 'pick')); paint(); }, resize: size };
   }
 };
