@@ -238,3 +238,5 @@ a.item-card.kit-card{padding:18px 20px!important;justify-content:center;min-heig
 
 .item-code{display:flex;gap:16px;align-items:center;margin-top:14px;max-width:540px}.item-code .kit-qr{width:120px;flex:none;margin:0}.item-code p{font-size:14px;margin:0;color:var(--muted)}.item-code strong{color:var(--ink)}
 .calendar-hint{font-size:13px;color:var(--muted);margin:8px 0 0}
+@media(max-width:580px){.header-inner{flex-wrap:wrap;row-gap:10px}.header-nav{width:100%;flex-wrap:wrap;gap:6px 18px}.header-nav a,.header-nav a[target],.header-nav a:last-child{display:inline;font-size:14px}}
+.reminder-top .link-button{margin:6px 0 0}
