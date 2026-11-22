@@ -307,6 +307,7 @@ char line[200];                                 // the one line being looked at 
 char* field[8];                                 // where each of its fields starts
 enum { K_CAT, K_TYPE, K_NAME, K_UNIT, K_SHELF, K_COPIES, K_GOOD, K_WHAT };    // the fields of a KINDS.TSV line
 
+const byte SYNC_QR_MAX = 192;                    // letters a version 8 QR holds at the lightest error correction
 const byte SYNC_QR = 8;                         // the website QR: version 8 = 49 x 49 dots, holds 192 letters
 uint8_t qrData[304];                            // room for a QR's dots: the item QR (33 x 33) and the website QR (49 x 49) share it
 
@@ -2793,6 +2794,7 @@ byte countSyncPages() {
   return pages;
 }
 // writes the address for page `page` (0 = the first) into out. Returns how many lines are in it; *first = the number of its first line, *total = all lines
+bool syncNoPass = false;                         // this page is too long for its QR with the website pass in it: leave the pass out
 int syncText(char* out, int size, byte page, byte pages, int* first, int* total) {
   int len = 0, lines = 0, used = 0, index = 0; byte at = 0; *first = -1; *total = 0;
   File f = cardOpen("MOVES.TSV"); const long from = syncFrom(); long pos = from, next;
@@ -2801,7 +2803,7 @@ int syncText(char* out, int size, byte page, byte pages, int* first, int* total)
   if (!webShown && (*total || webExtra)) { webShown = true; saveSent(); }   // from now on a phone may have it
   strcpy_P(out, STAFF_URL); len = strlen(out);
   out[len++] = '#'; out[len] = '\0';
-  if (webPass[0]) len += snprintf_P(out + len, size - len, PSTR("k=%s&"), webPass);   // the website pass first, so the page can save
+  if (webPass[0] && !syncNoPass) len += snprintf_P(out + len, size - len, PSTR("k=%s&"), webPass);   // the website pass first, so the page can save
   len += snprintf_P(out + len, size - len, tidyEpoch ? PSTR("RLSYNC~%d~%d~%d~%ld~%ld~%d!") : PSTR("RLSYNC~%d~%d~%d~%ld~%ld!"), page + 1, pages, *total, from, syncTag, tidyEpoch);   // (v5.46: where these start, and where they end; v5.51: which tidy-up they follow)
   pos = from;
   while (f && (next = readLine(f, pos)) >= 0) {
@@ -2830,9 +2832,13 @@ void drawSync() {
   header("To the website", right);
   char qtext[SYNC_BYTES + 128]; int first, total;
   int lines = syncText(qtext, sizeof(qtext), syncPage, syncPages, &first, &total);
+  // The QR holds 192 letters and the library does not say when it is given more (the code just comes out unreadable).
+  // One long line (a new item with a long name) can go over: then the page goes without the website pass, which only
+  // means a phone that is not signed in yet is asked to sign in.
+  if (strlen(qtext) > SYNC_QR_MAX) { syncNoPass = true; lines = syncText(qtext, sizeof(qtext), syncPage, syncPages, &first, &total); syncNoPass = false; }
   textF(18, 90, F("Making the code. About 3 seconds..."), DIM, SMALL);     // this big QR takes the Mega a while: say so
   QRCode qr;
-  bool made = qrcode_initText(&qr, qrData, SYNC_QR, ECC_LOW, qtext) == 0;
+  bool made = strlen(qtext) <= SYNC_QR_MAX && qrcode_initText(&qr, qrData, SYNC_QR, ECC_LOW, qtext) == 0;
   tft.fillRect(0, 60, 480, 50, BG);
   if (!made) { textF(18, 90, F("Too much for one code."), WHITE, SMALL); footer(F("Back")); return; }
   const int PX = 4, QUIET = 4, SIDE = (qr.size + 2 * QUIET) * PX, X = 14, Y = 50;

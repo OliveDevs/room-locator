@@ -156,6 +156,7 @@ async function withRecords(files) {
       for (const y of Object.keys(years)) { const was = (await readRecord('history/' + y + '.json')) || { history: [] }; out['history/' + y + '.json'] = { note: 'Changes from ' + y + ', newest first. Moved here from pending.json by the staff page.', history: years[y].concat(Array.isArray(was.history) ? was.history : []) }; known.add(y); }
       Object.assign(files, out); files['history/index.json'] = { note: 'The years that have a history file.', years: [...known].sort().reverse() };
       p.history = p.history.slice(0, HISTORY_KEEP);
+      dispatchEvent(new CustomEvent('rl-archived', { detail: old }));   // the page that is open keeps showing them
     }
   } catch (e) { for (const k of Object.keys(files)) if (/^(editions|history)\//.test(k)) delete files[k]; }   // records are extra: a save never fails because of them
   return files;
@@ -840,6 +841,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     // changes saved on the website first: take them off (the website as it is holds them), then put back the ones the
     // console still does not have, on top of its list
     const waiting = JSON.parse(JSON.stringify(livePend.waiting));
+    if (tidied) waiting.forEach(e => { e.since = 0; });   // the console's list starts again at 0: anything still waiting can turn up anywhere in it
     if (adding) rewind(d, r, waiting);
     else waiting.forEach(e => { if (e.item && nowBy[e.item.h]) e._back = JSON.parse(JSON.stringify(nowBy[e.item.h])); });
     const guideFields = ['p', 'r', 'd', 'g', 'need', 'start', 'tips'];
@@ -1061,6 +1063,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   // ---- the change history (at the bottom of the page)
   const when = iso => new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   let archived = [], archiveLoaded = false;
+  addEventListener('rl-archived', e => { archived = (e.detail || []).concat(archived); });
   function drawLog() {
     const w = pend.waiting;
   $('log-show').hidden = !made.length;
