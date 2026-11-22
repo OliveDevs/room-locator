@@ -404,8 +404,8 @@ function itemView(k,fromConsole){
   const img=app.querySelector('.item-photo img');
   if(img)img.addEventListener('error',()=>{img.hidden=true;img.parentElement?.classList.add('photo-unavailable')});
 }
-const pup=(pose,cls)=>'<img class="pup '+(cls||'')+'" src="dog/'+pose+'.png?v=2" alt="" aria-hidden="true" loading="lazy">';   // drawings of Loki, Diana's dog, as decoration
-function renderCards(rows){const target=document.getElementById('results');document.getElementById('count').textContent=rows.length+' of '+K.length+' items';target.innerHTML=rows.length?rows.map(k=>'<a class="item-card" style="'+catStyle(k.c)+'" href="#i'+k.h+'"><span class="card-photo">'+thumbHtml(k)+'</span><div><strong>'+esc(k.n)+'</strong><small>'+esc(k.t)+'</small><span class="card-where"><i class="led" aria-hidden="true"></i>'+esc(k.in?k.w:'Ask at the desk')+'</span></div></a>').join(''):'<div class="empty-state">'+pup('tilt')+'<p>Dug around and found nothing. Try a shorter name or another category.</p></div>'}
+const pup=(pose,cls)=>'<img class="pup '+(cls||'')+'" src="dog/'+pose+'.png?v=3" alt="" aria-hidden="true" loading="lazy">';   // drawings of Loki, Diana's dog, as decoration
+function renderCards(rows){const target=document.getElementById('results');document.getElementById('count').textContent=rows.length+' of '+K.length+' items';target.innerHTML=rows.length?rows.map(k=>'<a class="item-card" style="'+catStyle(k.c)+'" href="#i'+k.h+'"><span class="card-photo">'+thumbHtml(k)+'</span><div><strong>'+esc(k.n)+'</strong><small>'+esc(k.t)+'</small><span class="card-where"><i class="led" aria-hidden="true"></i>'+esc(k.in?k.w:'Ask at the desk')+'</span></div></a>').join(''):'<div class="empty-state">'+pup('tilt')+'<p>Nothing here, even after a good look around. Try a shorter name or another category.</p></div>'}
 const homeSearch = { query: '', category: '', mode: 'name' };
 function listing(category='',type=''){
   const isHome = !category && !type;
@@ -421,7 +421,9 @@ function listing(category='',type=''){
   // (a wrong, missing, extra or swapped letter) against names only. "What it is good for" reads what each thing is
   // for and ranks by how many of the typed words fit, so a sentence like "record an interview outside" works.
   const nameHay=k=>(k.n+' '+k.t).toLowerCase(), catHay=k=>(k.n+' '+k.t+' '+k.c).toLowerCase();
-  const useHay=k=>{const h=howtoFor(k);return (k.t+' '+goodFor(k)+' '+(k.d||'')+' '+introFor(k)+(h?' '+h.what+' '+h.note:'')).toLowerCase()};
+  // "What it is good for" reads the type and the Good for list (written for this search), not the descriptions: a word used in passing
+  // there ("recorded cleanly") made unrelated things come up
+  const useHay=k=>(k.t+' '+goodFor(k)).toLowerCase();
   const near=(word,hay)=>{if(word.length<4)return false;return hay.split(/[^a-z0-9]+/).some(h=>{if(!h||h[0]!==word[0]||Math.abs(h.length-word.length)>1)return false;let i=0;while(i<word.length&&i<h.length&&h[i]===word[i])i++;if(i===word.length)return true;if(i>=h.length)return i+1===word.length;const rest=(a,b)=>h.slice(a)===word.slice(b);return rest(i+1,i+1)||rest(i+1,i)||rest(i,i+1)||(i+1<word.length&&h[i]===word[i+1]&&h[i+1]===word[i]&&rest(i+2,i+2))})};
   const FILLER=new Set('a an the to for of on in my i me it is and or with want need needs some something that this how do can make making use using good get myself me we our you your thing stuff only has have at into from up out new better more less very really just also than then when where which who will would should could try'.split(' '));
   const stem=w=>{let x=w.length>4?w.replace(/(ing|ed|es|s)$/,''):w; if(x.length>4)x=x.replace(/e$/,''); return x};   // measure, measuring, measured all become measur
@@ -448,7 +450,7 @@ function listing(category='',type=''){
     const best=Math.max(0,...scored.map(x=>x[1]));
     return scored.filter(x=>x[1]>=best*0.5).sort((a,b)=>b[1]-a[1]).slice(0,24).map(x=>x[0])};
   const kitsFor=words=>{const keys=[...new Set(keysOf(words))];if(!keys.length)return [];
-    const scored=KITS.map(x=>{const t=(x.name+' '+x.why+' '+x.parts.map(p=>p.role).join(' ')).toLowerCase().split(/[^a-z0-9]+/);const direct=keys.filter(w=>has(t,w)).length, soft=keys.filter(w=>!has(t,w)&&alsoOf(w).some(a=>has(t,a))).length;return [x,direct,direct+soft*0.5]}).filter(x=>x[1]>=Math.min(2,keys.length));
+    const scored=KITS.map(x=>{const t=(x.name+' '+x.parts.map(p=>p.role).join(' ')).toLowerCase().split(/[^a-z0-9]+/);const direct=keys.filter(w=>has(t,w)).length, soft=keys.filter(w=>!has(t,w)&&alsoOf(w).some(a=>has(t,a))).length;return [x,direct,direct+soft*0.5]}).filter(x=>x[1]>=Math.min(2,keys.length));
     const best=Math.max(0,...scored.map(x=>x[2]));
     return scored.filter(x=>x[2]===best).map(x=>x[0]).slice(0,2)};
   let mode = isHome ? homeSearch.mode : 'name';
