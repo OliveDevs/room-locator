@@ -287,3 +287,6 @@ a.item-card.kit-card{padding:18px 20px!important;justify-content:center;min-heig
 .kit-piece .mini-stack{width:46px;padding:7px 6px;gap:4px}.kit-piece .mini-shelf{height:7px;font-size:0}.kit-piece .mini-shelf.lit{height:11px}
 .mini-unit b i{display:inline-block;min-width:15px;height:15px;margin:0 1px;border-radius:8px;font-style:normal;font-size:10px;line-height:15px;text-align:center;text-shadow:none;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
 .kit-map .mini-unit.lit{--glow:#fff!important;background:#fff;box-shadow:0 0 0 2px #c41230,0 0 10px 3px rgba(196,18,48,.35)}
+.how-borrow{margin:.4rem 0 0;max-width:62ch;font-size:.95rem;line-height:1.5}
+.how-borrow a{white-space:nowrap}
+.out-of-service{margin:.6rem 0;padding:.6rem .8rem;border-left:4px solid #c0392b;background:#fdecea;color:#5a1a12;border-radius:4px;line-height:1.45}

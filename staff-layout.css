@@ -133,3 +133,4 @@
 .access-list { display: grid; gap: 8px; margin: 10px 0 14px; }
 .staff-main label.access-row { display: flex; flex-direction: row; align-items: center; gap: 10px; font-weight: 500; }
 .staff-main .access-row input { width: 18px; height: 18px; min-height: 0; margin: 0; flex: none; }
+.log-list .log-by { color: #6d6e71; font-size: 13px; white-space: nowrap; }

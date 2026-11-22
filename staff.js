@@ -57,14 +57,26 @@ async function openLocked(all, pass, slot) {
 // when it signed in with the owner or manager passcode, or someone pasted the GitHub key on it.
 // (This is a lock on the page: everyone signed in uses the same GitHub key underneath.)
 const isManager = () => keep.get('rl-role') === 'manager';
+// a name or initials this device signs its changes with in Change history (optional, set under Passcode and sign-out)
+const byMe = () => keep.get('rl-name') ? { by: keep.get('rl-name').slice(0, 24) } : {};
 async function unlockKey(pass, slot = 'pass') {
   const all = await readLocked();
-  if (slot === 'pass') for (const top of ['owner', 'manager']) if (slotOf(all, top)) { const mine = await openLocked(all, pass, top); if (mine !== null) { keep.set('rl-key', mine); keep.set('rl-role', 'manager'); return ''; } }   // a manager's passcode works in the same box
+  if (slot === 'pass') for (const top of ['owner', 'manager']) if (slotOf(all, top)) { const mine = await openLocked(all, pass, top); if (mine !== null) { keep.set('rl-key', mine); keep.set('rl-role', 'manager'); keep.set('rl-slot', top + ':' + slotOf(all, top).salt); return ''; } }   // a manager's passcode works in the same box
   if (!slotOf(all, slot)) return slot === 'pass' ? 'No passcode has been set up for this site yet. Paste the key instead, then set one up.' : 'This console is not linked to the website yet.';
   const plain = await openLocked(all, pass, slot);
   if (plain === null) return slot === 'pass' ? 'That passcode is not right.' : 'The console\'s website pass does not match the website any more. Link the console again.';
-  keep.set('rl-key', plain); keep.set('rl-role', 'staff'); return '';
+  keep.set('rl-key', plain); keep.set('rl-role', 'staff'); keep.set('rl-slot', slot + ':' + slotOf(all, slot).salt); return '';
 }
+// A device remembers which passcode opened the key (rl-slot). When a manager sets that passcode again, every device that
+// signed in with the old one is signed out the next time it opens this page, so a new passcode really shuts the old one out.
+// (A device signed in by pasting the GitHub key has no passcode behind it and stays signed in.)
+const passcodeGone = async () => {
+  const mine = keep.get('rl-slot'); if (!mine || !keep.get('rl-key')) return false;
+  const all = await readLocked(); if (!all) return false;                         // offline: leave it alone
+  const [name, salt] = mine.split(':'); const now = slotOf(all, name);
+  if (now && now.salt === salt) return false;
+  keep.set('rl-key', null); keep.set('rl-role', null); keep.set('rl-slot', null); return true;
+};
 // After a passcode or the console's pass opened the locked copy: does GitHub still take the key inside? A key that has
 // run out (or was deleted on GitHub) is the one thing a passcode cannot fix, so the message says what to do.
 const DEAD_KEY = 'The passcode is right, but the site key behind it has run out or was replaced on GitHub. Someone with the GitHub account needs to paste a new key: open "Check everything" at the bottom of this page for the steps.';
@@ -132,7 +144,8 @@ async function publish(files, message, button, blobs) {
     // the site itself takes about a minute to show new files; until then this browser uses the copy it just saved
     const fresh = JSON.parse(keep.get('rl-fresh') || '{}'); fresh.at = Date.now(); Object.assign(fresh, Object.fromEntries(Object.entries(files).filter(([p]) => p === 'data.json' || p === 'room.json' || p === 'pending.json')));
     keep.set('rl-fresh', JSON.stringify(fresh));
-    if (files['key.json']) { justLocked = JSON.stringify(files['key.json']); justLockedAt = Date.now(); }
+    if (files['key.json']) { justLocked = JSON.stringify(files['key.json']); justLockedAt = Date.now();
+      const mine = keep.get('rl-slot'), name = mine.split(':')[0], now = name && slotOf(files['key.json'], name); if (now) keep.set('rl-slot', name + ':' + now.salt); }   // this device set its own passcode again: it stays signed in
     status.textContent = 'Saved to the website. Everyone sees it in about a minute.';
     return true;
   } catch (err) { status.textContent = 'Could not confirm the website save: ' + err.message + '. Check the website before retrying, or use the download.'; return false; }
@@ -143,7 +156,7 @@ $('connect-save').addEventListener('click', async () => {
   keep.set('rl-key', value); $('connect-why').textContent = 'Checking...';
   const problem = await checkKey().catch(() => 'Could not reach GitHub. Check the internet connection.');
   if (problem) { keep.set('rl-key', null); $('connect-why').textContent = problem; return; }
-  $('connect-key').value = ''; keep.set('rl-role', 'manager'); dispatchEvent(new Event('rl-key-changed'));
+  $('connect-key').value = ''; keep.set('rl-role', 'manager'); keep.set('rl-slot', null); dispatchEvent(new Event('rl-key-changed'));
   // A new key makes the locked copies on the site stale (they hold the old key). Renew what this device can:
   // the passcode copy if the passcode was typed here too, the console's copy if this phone came from the console's code.
   const all = (await readLocked()) || {}, pass = $('connect-newpass').value, cpass = keep.get('rl-cpass'), expires = $('connect-expires').value, did = [], left = [];
@@ -224,7 +237,7 @@ $('link-console').addEventListener('click', async e => {
   const qr = qrcode(0, 'M'); qr.addData('RL:WEB:' + pass); qr.make(); $('link-qr').innerHTML = qr.createSvgTag({ cellSize: 8, margin: 4, scalable: true });
   $('share-why').textContent = 'Saved. Now show this code to the console\'s scanner and type the staff PIN there.';
 });
-$('connect-forget').addEventListener('click', () => { keep.set('rl-key', null); keep.set('rl-role', null); $('connect').hidden = true; status.textContent = 'The key was removed from this device.'; dispatchEvent(new Event('rl-key-changed')); });
+$('connect-forget').addEventListener('click', () => { keep.set('rl-key', null); keep.set('rl-role', null); keep.set('rl-slot', null); $('connect').hidden = true; status.textContent = 'The key was removed from this device.'; dispatchEvent(new Event('rl-key-changed')); });
 
 // The newest copy of a file: straight from the repository when it answers (the public pages lag about a minute behind
 // a save), otherwise the public copy.
@@ -794,7 +807,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     });
     replay(d, r, still);
     const at = stamp();
-    outPend = tidy({ waiting: still, history: [...back.map(e => ({ at, title: e.title, what: e.what, did: 'back' })), ...done.map(e => ({ at, title: e.title, what: e.what, did: 'console' })), ...livePend.history] });
+    outPend = tidy({ waiting: still, history: [...back.map(e => ({ at, title: e.title, what: e.what, did: 'back', ...byMe() })), ...done.map(e => ({ at, title: e.title, what: e.what, did: 'console', ...byMe() })), ...livePend.history] });
     const names = Object.fromEntries(r.units.map(u => [u.code, u.name]));
     for (const k of d.kinds) { const u = ub[k.u]; k.w = u && u.shelves && k.s ? names[k.u] + ', shelf ' + boardBelowIn(u, k.s) : (names[k.u] || k.u); k.in = !!(u && u.shelves && k.s); }
     d.kinds.sort((a, b) => a.n.localeCompare(b.n));
@@ -806,7 +819,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const byEnd = Object.fromEntries(d.kinds.map(k => [k.h, k]));                // and the ones changed on the website first that the console now has
     done.forEach(e => { ((e.undo && e.undo.items) || []).forEach(([h, u, n]) => { mark(u, n); if (byEnd[h]) mark(byEnd[h].u, byEnd[h].s); }); if (e.item && byEnd[e.item.h]) mark(byEnd[e.item.h].u, byEnd[e.item.h].s); });
     r.synced.changed = [...changed.values()].slice(0, 60);
-    outPend.history.unshift({ at, title: 'Website synced with the console', what: (lines.length ? lines.length + (lines.length === 1 ? ' change' : ' changes') + ' from the console' : 'No changes from the console') + (changed.size ? ', ' + changed.size + (changed.size === 1 ? ' shelf' : ' shelves') + ' changed.' : '.'), did: 'sync' });
+    outPend.history.unshift({ at, title: 'Website synced with the console', what: (lines.length ? lines.length + (lines.length === 1 ? ' change' : ' changes') + ' from the console' : 'No changes from the console') + (changed.size ? ', ' + changed.size + (changed.size === 1 ? ' shelf' : ' shelves') + ' changed.' : '.'), did: 'sync', ...byMe() });
     r.source = 'Room Locator console, changes brought over on ' + new Date().toISOString().slice(0, 10);
     outData = d; outRoom = r;
     const list = [];
@@ -879,7 +892,8 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   const rewind = (d, r, list) => { for (let i = list.length - 1; i >= 0; i--) undoEntry(d, r, list[i]); };
   const replay = (d, r, list) => list.forEach(e => { e.undo = doEntry(d, r, e); });
   const tidy = p => cleanPend({ waiting: p.waiting.map(({ _back, ...e }) => e), history: p.history });
-  const DID = { saved: 'Saved on the website', sent: 'Shown to the console', console: 'The console has it too', undone: 'Undone on the website', back: 'The console did not save it: back on the list', sync: 'Website synced with the console', reset: 'Cleared when the website was put back to Nov 16' };
+  const withLog = async (files, title, what) => { const p = await readPending().catch(() => null); if (p) { p.history.unshift({ at: stamp(), title, what, did: 'edited', ...byMe() }); files['pending.json'] = tidy(p); } return files; };
+  const DID = { saved: 'Saved on the website', sent: 'Shown to the console', console: 'The console has it too', undone: 'Undone on the website', back: 'The console did not save it: back on the list', sync: 'Website synced with the console', edited: 'Edited on the website (nothing for the console)', reset: 'Cleared when the website was put back to Nov 16' };
   const stamp = () => new Date().toISOString();
   function syncMade() {                       // the list of codes = everything saved and waiting, then anything only on this device
     const local = made.filter(c => !c.id);
@@ -915,10 +929,11 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
       p.waiting.push(e); added.push(e);
     }
     if (!added.length && !opts.edit) { status.textContent = already ? 'That change is already on the list, waiting for the console.' : 'That item is not on the website. Reload the page and try again.'; return false; }
-    p.history.unshift(...added.map(e => ({ at, title: e.title, what: e.what, did: 'saved' })));
-    const out = tidy(p), files = { 'data.json': d }; if (added.length) files['pending.json'] = out;
+    p.history.unshift(...added.map(e => ({ at, title: e.title, what: e.what, did: 'saved', ...byMe() })));
+    if (!added.length) p.history.unshift({ at, title: (opts.log && opts.log.title) || (opts.message || 'Edit').replace(/ \(staff page\)$/, ''), what: (opts.log && opts.log.what) || '', did: 'edited', ...byMe() });   // details only: nothing for the console, but it still goes in the history
+    const out = tidy(p), files = { 'data.json': d, 'pending.json': out };
     if (!(await publish(files, opts.message || (added.length === 1 ? added[0].title : added.length + ' changes') + ' (staff page, waiting for the console)', button, opts.blobs))) return false;
-    takeIn(d, added.length ? out : null);
+    takeIn(d, out);
     if (added.length) {
       status.textContent = 'Saved on the website (everyone sees it in about a minute). ' + (made.length === 1 ? 'Show the code below to the console when you are there.' : made.length + ' changes are waiting for the console: the code below has them all.') + (already ? ' One of them was already on the list.' : '');
       $('code-out').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -929,7 +944,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const p = await readPending().catch(() => null); if (!p) { status.textContent = 'Could not reach the website. Check the internet connection and press it again.'; return false; }
     const at = stamp(), hit = p.waiting.filter(e => ids.includes(e.id) && !e.sent);
     hit.forEach(e => { e.sent = true; e.sentAt = at; });
-    p.history.unshift(...hit.map(e => ({ at, title: e.title, what: e.what, did: 'sent' })));
+    p.history.unshift(...hit.map(e => ({ at, title: e.title, what: e.what, did: 'sent', ...byMe() })));
     const out = tidy(p);
     if (hit.length && !(await publish({ 'pending.json': out }, (hit.length === 1 ? hit[0].title : hit.length + ' changes') + ' shown to the console (staff page)', button))) return false;
     pend = out; syncMade(); drawLog(); drawHomeStatus(); return true;
@@ -944,7 +959,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const tail = p.waiting.slice(first), gone = tail.filter(e => ids.includes(e.id)), rest = tail.filter(e => !ids.includes(e.id));
     rewind(d, room, tail); replay(d, room, rest);
     p.waiting = p.waiting.slice(0, first).concat(rest);
-    const at = stamp(); p.history.unshift(...gone.map(e => ({ at, title: e.title, what: e.what, did: 'undone' })));
+    const at = stamp(); p.history.unshift(...gone.map(e => ({ at, title: e.title, what: e.what, did: 'undone', ...byMe() })));
     const out = tidy(p);
     if (!(await publish({ 'data.json': d, 'pending.json': out }, 'Undo ' + (gone.length === 1 ? gone[0].title : gone.length + ' changes') + ' (staff page)', button))) return false;
     takeIn(d, out);
@@ -974,7 +989,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   $('log-show').hidden = !made.length;
     $('log-waiting').innerHTML = w.length ? w.map(e => '<li><span class="log-when">' + esc(when(e.at)) + '</span><strong>' + esc(e.title) + '</strong> ' + esc(e.what || '') + ' <span class="saved-tag' + (e.sent ? ' sent' : '') + '">' + (e.sent ? 'Shown to the console, waiting for its sync' : 'On the website, waiting for the console') + '</span></li>').join('') : '<li>Nothing is waiting. The website and the console have the same changes.</li>';
     const h = pend.history;
-    $('log-done').innerHTML = h.length ? h.slice(0, 80).map(x => '<li><span class="log-when">' + esc(when(x.at)) + '</span><strong>' + esc(x.title) + '</strong> ' + esc(x.what || '') + (x.did === 'sync' ? '' : ' <em>' + esc(DID[x.did] || x.did || '') + '</em>') + '</li>').join('') : '<li>No changes yet.</li>';
+    $('log-done').innerHTML = h.length ? h.slice(0, 80).map(x => '<li><span class="log-when">' + esc(when(x.at)) + '</span><strong>' + esc(x.title) + '</strong> ' + esc(x.what || '') + (x.by ? ' <span class="log-by">by ' + esc(x.by) + '</span>' : '') + (x.did === 'sync' ? '' : ' <em>' + esc(DID[x.did] || x.did || '') + '</em>') + '</li>').join('') : '<li>No changes yet.</li>';
   }
   const download = (obj, name) => { const blob = new Blob([JSON.stringify(obj, null, 2) + '\n'], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
   $('sync-publish').addEventListener('click', async e => { if (!outData) return; if (await publish({ 'data.json': outData, 'room.json': outRoom, ...(outPend ? { 'pending.json': outPend } : {}) }, 'Website matched to the console (staff page)', e.target)) { $('sync-saved').hidden = false; try { if (outRoom.synced && outRoom.synced.changed && outRoom.synced.changed.length) sessionStorage.setItem('rl-moved', '1'); sessionStorage.setItem('rl-done', syncTag !== null ? 'Saved. The site updates in about a minute. One last step below.' : 'Saved. The site updates in about a minute. Nothing else to do.'); if (syncTag !== null) sessionStorage.setItem('rl-ack', String(syncTag)); } catch (err) { } setTimeout(() => location.reload(), 2500); } });
@@ -986,7 +1001,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     if (!confirm('Put the website back to the Nov 16 setup? This removes every change and edit made since then.')) return;
     const [d, r] = await Promise.all([fetch('backup/2026-11-16/data.json?x=' + Date.now()).then(x => x.json()), fetch('backup/2026-11-16/room.json?x=' + Date.now()).then(x => x.json())]);
     const p = await readPending().catch(() => cleanPend(null)), at = stamp();
-    p.history.unshift(...p.waiting.map(x => ({ at, title: x.title, what: x.what, did: 'reset' }))); p.waiting = [];
+    p.history.unshift(...p.waiting.map(x => ({ at, title: x.title, what: x.what, did: 'reset', ...byMe() }))); p.waiting = [];
     if (await publish({ 'data.json': d, 'room.json': r, 'pending.json': tidy(p) }, 'Website back to the Nov 16 setup (staff page)', e.target)) { try { sessionStorage.setItem('rl-ack', 'RESEND'); } catch (err) { } setTimeout(() => location.reload(), 1500); }
   });
   // ---- the 3D room: click a shelf instead of using the two menus
@@ -1059,9 +1074,11 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     $('device').hidden = !keep.get('rl-key');
   };
   drawHomeStatus();
-  $('home-key-set').addEventListener('click', () => { if (keep.get('rl-key')) { keep.set('rl-key', null); keep.set('rl-role', null); drawHomeStatus(); } else askForKey('Type the staff passcode and this device can save.'); });
-  $('device-signout').addEventListener('click', () => { keep.set('rl-key', null); keep.set('rl-role', null); drawRole(); drawHomeStatus(); status.textContent = 'This device is signed out.'; });
+  $('home-key-set').addEventListener('click', () => { if (keep.get('rl-key')) { keep.set('rl-key', null); keep.set('rl-role', null); keep.set('rl-slot', null); drawHomeStatus(); } else askForKey('Type the staff passcode and this device can save.'); });
+  $('device-signout').addEventListener('click', () => { keep.set('rl-key', null); keep.set('rl-role', null); keep.set('rl-slot', null); drawRole(); drawHomeStatus(); status.textContent = 'This device is signed out.'; });
   addEventListener('rl-key-changed', drawHomeStatus);
+  $('device-name').value = keep.get('rl-name'); $('device-name').addEventListener('change', e => { keep.set('rl-name', e.target.value.trim() || null); status.textContent = e.target.value.trim() ? 'Your changes from this device now show \u201c' + e.target.value.trim() + '\u201d in Change history.' : 'Changes from this device no longer show a name.'; });
+  passcodeGone().then(gone => { if (!gone) return; drawRole(); drawHomeStatus(); dispatchEvent(new Event('rl-key-changed')); status.textContent = 'A manager changed the passcode this device signed in with, so it was signed out. Sign in again with the new passcode, or scan the console.'; });
   // ---- "Check everything": one button that looks at each link in the chain and says in plain words what is fine and
   // what is not. It only reads; the one thing it can change (renewing the locked copies of the key) has its own button.
   const health = $('health'), line = (state, text) => { const li = document.createElement('li'); li.className = 'health-' + state; li.textContent = (state === 'ok' ? 'OK: ' : state === 'bad' ? 'Problem: ' : state === 'warn' ? 'Look at this: ' : '') + text; health.appendChild(li); };
@@ -1219,7 +1236,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
       const out = { id, name: kit.name, why: kit.why, parts, tip: kit.tip };
       const at = list.findIndex(k => k.id === id); if (at >= 0) list[at] = out; else list.push(out);
       button.disabled = false;
-      if (await publish({ 'kits.json': { kits: list } }, 'Kit "' + kit.name + '" saved (staff page)', button)) {
+      if (await publish(await withLog({ 'kits.json': { kits: list } }, 'Kit ' + kit.name, 'Saved its pieces.'), 'Kit "' + kit.name + '" saved (staff page)', button)) {
         kitList = list; drawKitPick(id); openKit(out);
         status.textContent = 'Saved. The kit page updates on the website in about a minute' + (parts.length > 8 ? '. Its console code lights the first 8 pieces.' : '.');
       }
@@ -1230,7 +1247,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     if (!kit || !kit.orig) return;
     if (!kitDeleteArmed) { kitDeleteArmed = true; e.target.textContent = 'Press again to delete "' + kit.orig.name + '"'; return; }
     const list = (await latestKits()).filter(k => k.id !== kit.orig.id);
-    if (await publish({ 'kits.json': { kits: list } }, 'Kit "' + kit.orig.name + '" deleted (staff page)', e.target)) { kitList = list; drawKitPick(''); $('kit-fields').hidden = true; kit = null; status.textContent = 'Deleted. It leaves the website in about a minute.'; }
+    if (await publish(await withLog({ 'kits.json': { kits: list } }, 'Kit ' + kit.orig.name, 'Deleted.'), 'Kit "' + kit.orig.name + '" deleted (staff page)', e.target)) { kitList = list; drawKitPick(''); $('kit-fields').hidden = true; kit = null; status.textContent = 'Deleted. It leaves the website in about a minute.'; }
   });
   fetch('kits.json?v=' + Date.now()).then(r => r.json()).then(d => { kitList = d.kits || []; drawKitPick(''); }).catch(() => { kitPick.innerHTML = '<option value="">The kits could not be loaded. Reload the page.</option>'; });
 
@@ -1272,7 +1289,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     ef.elements.photo.value = k.p ? k.p.url : ''; ef.elements.credit.value = k.p ? k.p.artist || '' : ''; ef.elements.crediturl.value = k.p && k.p.page !== '#' ? k.p.page || '' : '';
     ef.elements.nophoto.checked = false; newPhoto = null; ef.elements.photofile.value = ''; $('edit-photo-note').textContent = '';
     ef.elements.manualname.value = k.r && k.r[0] ? k.r[0][0] : ''; ef.elements.manual.value = k.r && k.r[0] ? k.r[0][1] : '';
-    ef.elements.description.value = k.d || ''; ef.elements.copies.value = k.x || 1;
+    ef.elements.description.value = k.d || ''; ef.elements.copies.value = k.x || 1; ef.elements.out.checked = !!k.o; ef.elements.outwhy.value = typeof k.o === 'string' ? k.o : '';
     ef.elements.good.value = k.g || ''; ef.elements.need.value = (k.need || []).join('\n'); ef.elements.start.value = (k.start || []).join('\n'); ef.elements.tips.value = (k.tips || []).join('\n');
     showPreview(k.p && !k.p.none ? k.p.url : !k.p && shared ? shared.url : '');
   }
@@ -1323,6 +1340,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     item.g = f.good.value.trim();
     for (const part of ['need', 'start', 'tips']) { const list = lines(f[part].value); if (list.length) item[part] = list; else delete item[part]; }
     item.x = copies;
+    if (f.out.checked) item.o = f.outwhy.value.trim() || true; else delete item.o;
     return d;
   };
   $('edit-publish').addEventListener('click', async e => {
@@ -1330,7 +1348,9 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const usePhoto = newPhoto && newPhoto.path && !ef.elements.nophoto.checked ? { [newPhoto.path]: newPhoto.base64 } : undefined;
     // the details go straight on the website; a new count also waits on the list for the console
     const mine = d.kinds.find(x => x.h === k.h), list = copies !== k.x ? [{ code: 'RL:COUNT:' + k.h + ':' + copies, title: 'Count of ' + k.n, what: 'Lending now has ' + copies + ' (was ' + k.x + ').' }] : [];
-    const ok = await saveChanges(list, e.target, { needKey: true, blobs: usePhoto, message: 'Edit ' + k.n + ' (staff page)', edit: fd => { const i = fd.kinds.findIndex(x => x.h === k.h); if (i >= 0) { const was = fd.kinds[i]; fd.kinds[i] = { ...mine, u: was.u, s: was.s, w: was.w, in: was.in, x: was.x }; } } });
+    const said = { p: 'photo', d: 'description', g: 'good for', need: 'what you need', start: 'first steps', tips: 'tips', r: 'manual link' }, diff = Object.keys(said).filter(x => JSON.stringify(k[x] || null) !== JSON.stringify(mine[x] || null)).map(x => said[x]);
+    const outNow = mine.o && !k.o ? 'Marked out of service' + (typeof mine.o === 'string' ? ': ' + mine.o : '') + '. ' : !mine.o && k.o ? 'Back in service. ' : mine.o && k.o && mine.o !== k.o ? 'Out of service note changed. ' : '';
+    const ok = await saveChanges(list, e.target, { needKey: true, blobs: usePhoto, log: { title: 'Edit ' + k.n, what: (outNow + (diff.length ? 'Changed the ' + diff.join(', ') + '.' : outNow ? '' : 'Saved with no changes.')).trim() }, message: 'Edit ' + k.n + ' (staff page)', edit: fd => { const i = fd.kinds.findIndex(x => x.h === k.h); if (i >= 0) { const was = fd.kinds[i]; fd.kinds[i] = { ...mine, u: was.u, s: was.s, w: was.w, in: was.in, x: was.x }; } } });
     if (ok && !list.length) setTimeout(() => location.reload(), 1500);
   });
   $('log-show').addEventListener('click', () => $('home-wait-show').click());

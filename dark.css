@@ -43,3 +43,5 @@
 :root:not([data-theme=light]) .theme-toggle{color:#fff}
 }
 .theme-toggle{display:inline-flex;align-items:center;gap:6px;background:none;border:1px solid rgba(255,255,255,.55);border-radius:999px;color:inherit;font:inherit;font-size:13px;font-weight:650;padding:4px 11px;cursor:pointer;white-space:nowrap}.theme-toggle:hover{border-color:#fff}.theme-toggle svg{width:14px;height:14px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .out-of-service{background:#3a1d1a;color:#f6d0cb;border-left-color:#ff6b5a}}
+:root[data-theme="dark"] .out-of-service{background:#3a1d1a;color:#f6d0cb;border-left-color:#ff6b5a}
