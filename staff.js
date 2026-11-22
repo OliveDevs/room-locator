@@ -8,6 +8,8 @@ const CAT_ORDER = ['Photo & Video', 'Audio', 'Lighting', 'Computing', 'Virtual R
 const MAX_CODE = 60;
 const $ = id => document.getElementById(id);
 const status = $('staff-status');
+// good news is green, everything else stays red
+new MutationObserver(() => status.classList.toggle('ok', /^(Saved|Done|Undone|Thanks|This device can now|Opened from the console|Signed out|Your changes)/.test(status.textContent))).observe(status, { childList: true, characterData: true, subtree: true });
 const esc = s => String(s).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
 const lines = value => value.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
 function nameCode(name) {                        // FNV-1a over the name's bytes, last 24 bits: the same code the console and item pages use

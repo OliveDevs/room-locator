@@ -1,6 +1,6 @@
 .staff-main .tool-tabs {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 0;
   margin-top: 20px;
   overflow: visible;
@@ -147,3 +147,6 @@
 .staff-group { border-top: 2px solid var(--ink, #1a1a1a); margin-top: 18px; }
 .staff-group > summary { cursor: pointer; font: 700 23px var(--display); padding: 14px 0; }
 .staff-group > .staff-fold:first-of-type { border-top: 0; }
+
+#staff-status.ok { color: #0a7a33; }
+@media (max-width: 640px) { .header-nav { flex-wrap: wrap; row-gap: 6px; } }
