@@ -144,7 +144,7 @@ $('connect-save').addEventListener('click', async () => {
   const all = (await readLocked()) || {}, pass = $('connect-newpass').value, cpass = keep.get('rl-cpass'), expires = $('connect-expires').value, did = [], left = [];
   let out = null, firstLink = false;
   try {
-    if (pass.length >= 4) { out = await lockKey(pass, 'pass'); did.push('the staff passcode'); } else if (slotOf(all, 'pass')) left.push('The staff passcode still opens the OLD key: set the passcode again under "Passcode and sign-out".');
+    if (pass.length >= 10) { out = await lockKey(pass, 'pass'); did.push('the staff passcode'); } else if (slotOf(all, 'pass')) left.push('The staff passcode still opens the OLD key: set the passcode again under "Passcode and sign-out".');
     if (cpass && (!slotOf(all, 'console') || await openLocked(all, cpass, 'console') !== null)) {
       const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
       const box = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await lockBytes(cpass, salt), new TextEncoder().encode(value));
@@ -175,7 +175,8 @@ $('connect-unlock').addEventListener('click', async () => {
 $('share-save').addEventListener('click', async e => {
   const pass = $('share-pass').value, again = $('share-pass2').value;
   if (!keep.get('rl-key')) { $('share-why').textContent = 'This device needs the key first.'; return; }
-  if (pass.length < 4) { $('share-why').textContent = 'Use at least 4 characters.'; return; }
+  // the locked key sits in the public repository, so a short passcode can be guessed by trying every one: at least 10 characters
+  if (pass.length < 10) { $('share-why').textContent = 'Use at least 10 characters. A few words together works well, like "blue tripod on shelf four".'; return; }
   if (pass !== again) { $('share-why').textContent = 'The two do not match.'; return; }
   if (await publish({ 'key.json': await lockKey(pass, 'pass') }, 'Site key locked with the staff passcode (staff page)', e.target)) { $('share-pass').value = $('share-pass2').value = ''; $('share-why').textContent = 'Saved. In about a minute the new passcode works on any device, and the old one stops working. Devices already signed in stay signed in.'; }
 });
@@ -925,6 +926,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   const when = iso => new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   function drawLog() {
     const w = pend.waiting;
+  $('log-show').hidden = !made.length;
     $('log-waiting').innerHTML = w.length ? w.map(e => '<li><span class="log-when">' + esc(when(e.at)) + '</span><strong>' + esc(e.title) + '</strong> ' + esc(e.what || '') + ' <span class="saved-tag' + (e.sent ? ' sent' : '') + '">' + (e.sent ? 'Shown to the console, waiting for its sync' : 'On the website, waiting for the console') + '</span></li>').join('') : '<li>Nothing is waiting. The website and the console have the same changes.</li>';
     const h = pend.history;
     $('log-done').innerHTML = h.length ? h.slice(0, 80).map(x => '<li><span class="log-when">' + esc(when(x.at)) + '</span><strong>' + esc(x.title) + '</strong> ' + esc(x.what || '') + (x.did === 'sync' ? '' : ' <em>' + esc(DID[x.did] || x.did || '') + '</em>') + '</li>').join('') : '<li>No changes yet.</li>';
@@ -1285,6 +1287,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const ok = await saveChanges(list, e.target, { needKey: true, blobs: usePhoto, message: 'Edit ' + k.n + ' (staff page)', edit: fd => { const i = fd.kinds.findIndex(x => x.h === k.h); if (i >= 0) { const was = fd.kinds[i]; fd.kinds[i] = { ...mine, u: was.u, s: was.s, w: was.w, in: was.in, x: was.x }; } } });
     if (ok && !list.length) setTimeout(() => location.reload(), 1500);
   });
+  $('log-show').addEventListener('click', () => $('home-wait-show').click());
   $('home-wait-show').addEventListener('click', () => { if (!made.length) return; madeAt = 0; drawCode(); $('code-out').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
   syncMade(); drawLog(); drawHomeStatus(); if (made.length) { madeAt = 0; drawCode(); }
   window.__rlSync = { readPage, apply: async lines => { await apply(lines); return { data: outData, room: outRoom }; } };   // (for testing)

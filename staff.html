@@ -193,7 +193,7 @@
 </ol>
 <label>Site key<input id="connect-key" type="password" autocomplete="off" placeholder="github_pat_..."></label>
 <label>The date GitHub says it expires, if it has one<input id="connect-expires" type="date"></label>
-<label>Staff passcode (so other devices keep working)<input id="connect-newpass" type="password" autocomplete="off"></label>
+<label>Staff passcode, at least 10 characters (so other devices keep working)<input id="connect-newpass" type="password" autocomplete="off"></label>
 <div class="sync-actions"><button type="button" id="connect-save">Use this key on this device</button></div>
 </details>
 <p class="note">You stay signed in on this device until you sign out.</p>
@@ -238,6 +238,7 @@
 <details class="staff-fold" id="log"><summary>Change history</summary>
 <p class="tool-note">Every change saved on this page goes on the website straight away and waits here until the console has it. Make them anywhere, then show the console one code. After it takes them, sync the website and they move to the history.</p>
 <h2>Waiting for the console</h2>
+<p><button type="button" id="log-show" class="link-button" hidden>Show the one code that has all of them</button></p>
 <ul id="log-waiting" class="log-list"></ul>
 <h2>History</h2>
 <ul id="log-done" class="log-list"></ul>
@@ -283,7 +284,7 @@
 <details class="staff-fold" id="device" hidden><summary>Passcode and sign-out</summary>
 <div id="share">
 <h2>Staff passcode</h2>
-<p class="tool-note">Anyone with this passcode can save to the website. It's separate from the console PIN. Use more than 4 digits.</p>
+<p class="tool-note">Anyone with this passcode can save to the website. It's separate from the console PIN. Use at least 10 characters: a few words together is easy to remember and hard to guess.</p>
 <label>New passcode<input id="share-pass" type="password" autocomplete="off"></label>
 <label>Again<input id="share-pass2" type="password" autocomplete="off"></label>
 <div class="sync-actions"><button type="button" id="share-save">Save the passcode</button></div>
@@ -327,4 +328,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="room3d.js?v=room-4"></script>
-<script src="staff.js?v=history-link-1" defer></script></body></html>
+<script src="staff.js?v=pass10-1" defer></script></body></html>
