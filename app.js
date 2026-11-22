@@ -481,15 +481,29 @@ function listing(category='',type=''){
 }
 function roomView(){
   document.title='Room view · IDeATe Lending';
-  const placed=ROOM.units.filter(u=>u.rect);
-  app.innerHTML='<a class="back" href="./">← All items</a>'+pup('map','pup-room')+'<h1>Explore the lending room</h1><p class="intro">A top view of the Room Locator layout and shelves. '+esc(ROOM.synced&&ROOM.synced.at?'Shelves as the console in Lending had them on '+new Date(ROOM.synced.at).toLocaleDateString([], {month:'long',day:'numeric'})+'.':'Shelves as of the Nov 16 setup.')+' It shows where things live, not whether they are checked out.</p><div class="room-layout"><div class="room-map" aria-label="Top view of lending room">'+placed.map(u=>'<button type="button" class="room-unit" data-unit="'+esc(u.code)+'" style="left:'+(u.rect[0]/2)+'%;top:'+(u.rect[1]/1.5)+'%;width:'+Math.max(5,(u.rect[2]-u.rect[0])/2)+'%;height:'+Math.max(5,(u.rect[3]-u.rect[1])/1.5)+'%"'+((u.rect[3]-u.rect[1])/1.5>(u.rect[2]-u.rect[0])/2*1.4?' data-tall':'')+'><span>'+esc(u.name)+'</span></button>').join('')+'</div><div id="room-detail" class="room-detail"><h2>Choose a unit</h2><p>Tap a unit on the map to see its shelves and what is on each.</p></div></div><p class="note room-note">Shelves are numbered from the bottom: shelf 1 is the lowest. In Lending, the console lights the exact shelf when you look an item up.</p>';
-  app.querySelectorAll('.room-unit').forEach(button=>button.addEventListener('click',()=>{
+  const placed=ROOM.units.filter(u=>u.rect&&u.code!=='DOO');           // Doodads stands on top of Under the Desk: one block for both
+  const itemsIn=code=>K.filter(k=>k.u===code);
+  const colourOf=u=>{const n={};itemsIn(u.code).concat(u.code==='UND'?itemsIn('DOO'):[]).forEach(k=>n[k.c]=(n[k.c]||0)+1);const top=Object.entries(n).sort((x,y)=>y[1]-x[1])[0];return top?top[0]:''};
+  const nameOf=u=>u.code==='UND'?'Under the Desk + Doodads':u.name;
+  const pos=r=>'left:'+(r[0]/2)+'%;top:'+(r[1]/1.5)+'%;width:'+Math.max(4,(r[2]-r[0])/2)+'%;height:'+Math.max(4,(r[3]-r[1])/1.5)+'%';
+  const elsewhere=ROOM.units.filter(u=>!u.rect&&itemsIn(u.code).length);
+  app.innerHTML='<a class="back" href="./">← All items</a>'+pup('map','pup-room')+'<h1>Explore the lending room</h1><p class="intro">Tap a unit to see what is on each shelf. '+esc(ROOM.synced&&ROOM.synced.at?'Shelves as the console in Lending had them on '+new Date(ROOM.synced.at).toLocaleDateString([], {month:'long',day:'numeric'})+'.':'Shelves as of the Nov 16 setup.')+' It shows where things live, not whether they are checked out.</p>'+
+    '<div class="room-layout"><div class="room-map2" aria-label="Top view of the lending room">'+
+    DESK_RECTS.map(r=>'<span class="room-desk" style="'+pos(r)+'"></span>').join('')+'<span class="room-tag room-tag-desk">Front desk</span><span class="room-door" style="top:'+(119/1.5)+'%;height:'+(30/1.5)+'%"></span><span class="room-tag room-tag-door">Way in</span>'+
+    placed.map(u=>{const c=colourOf(u),small=(u.rect[2]-u.rect[0])<12,tall=(u.rect[3]-u.rect[1])/1.5>(u.rect[2]-u.rect[0])/2*1.4;
+      return '<button type="button" class="room-block'+(small?' small':'')+(tall?' tall':'')+'" data-unit="'+esc(u.code)+'" style="'+pos(u.rect)+';--cat:'+catColor(c)+';--cat-ink:'+(CAT_INK[c]||'#000')+'"><span>'+esc(nameOf(u))+'</span></button>'}).join('')+
+    '</div><div id="room-detail" class="room-detail"><h2>Choose a unit</h2><p>Tap a unit on the map to see its shelves and what is on each. Colours match the shelf lights on the console.</p></div></div>'+
+    (elsewhere.length?'<p class="room-note"><strong>Kept outside this room:</strong> '+elsewhere.map(u=>esc(u.name)+' ('+itemsIn(u.code).length+')').join(', ')+'. Ask at the desk for these.</p>':'')+
+    '<p class="room-note">Shelves are numbered from the bottom: shelf 1 is the lowest. In Lending, the console lights the exact shelf when you look an item up.</p>';
+  const shelvesOf=unit=>{const m=new Map();(unit.boards&&unit.boards.length?unit.boards:[1]).forEach(b=>m.set(b,[]));itemsIn(unit.code).forEach(k=>{const b=boardFor(unit,k.s);if(!m.has(b))m.set(b,[]);m.get(b).push(k)});return [...m.entries()].sort((x,y)=>y[0]-x[0])};
+  const unitHtml=(unit,title)=>{const sh=shelvesOf(unit),full=sh.filter(s=>s[1].length),empty=sh.filter(s=>!s[1].length).map(s=>s[0]);
+    return (title?'<h3 class="room-sub">'+esc(title)+'</h3>':'')+full.map(([s,items])=>'<div class="room-shelf"><h3>Shelf '+s+' <small>'+items.length+(items.length===1?' thing':' things')+'</small></h3>'+items.map(k=>'<a href="#i'+k.h+'">'+esc(k.n)+'</a>').join('')+'</div>').join('')+(empty.length?'<p class="room-empty">Nothing listed on shelf '+empty.sort((x,y)=>y-x).join(', ')+'.</p>':'')};
+  app.querySelectorAll('.room-block').forEach(button=>button.addEventListener('click',()=>{
     const unit=ROOM.units.find(u=>u.code===button.dataset.unit),detail=document.getElementById('room-detail');
-    app.querySelectorAll('.room-unit').forEach(b=>b.classList.toggle('selected',b===button));
-    const shelves=new Map();
-    for(let s=1;s<=unit.shelves;s++)if(unit.boards.includes(s))shelves.set(s,[]);
-    K.filter(k=>k.u===unit.code).forEach(k=>{const support=unit.boards.filter(b=>b<=k.s).at(-1)||k.s;if(!shelves.has(support))shelves.set(support,[]);shelves.get(support).push(k)});
-    detail.innerHTML='<h2>'+esc(unit.name)+'</h2><p>'+unit.boards.length+(unit.boards.length===1?' shelf':' shelves')+', top shelf first</p>'+[...shelves.entries()].sort((a,b)=>b[0]-a[0]).map(([s,items])=>'<div class="room-shelf"><h3>Shelf '+s+'</h3>'+(items.length?items.map(k=>'<a href="#i'+k.h+'">'+esc(k.n)+'</a>').join(''):'<p>No listed items</p>')+'</div>').join('');
+    app.querySelectorAll('.room-block').forEach(b=>b.classList.toggle('selected',b===button));
+    const doo=unit.code==='UND'?ROOM.units.find(u=>u.code==='DOO'):null;
+    detail.innerHTML='<h2>'+esc(nameOf(unit))+'</h2>'+(doo?unitHtml(doo,'Doodads, on top')+unitHtml(unit,'Under the Desk'):unitHtml(unit,''));
+    if(matchMedia('(max-width:780px)').matches)detail.scrollIntoView({behavior:'smooth',block:'start'});
   }));
 }
 // Kits: everything for one kind of project, each piece with its shelf. The first choice in each row is shown large; the others are alternatives.
