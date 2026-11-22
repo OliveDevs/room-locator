@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400..700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=compact-loki-1"><link rel="stylesheet" href="staff-layout.css?v=ack-1"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
+  <link rel="stylesheet" href="styles.css?v=compact-loki-1"><link rel="stylesheet" href="staff-layout.css?v=kits-1"></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a></nav></div></header>
 <main class="staff-main">
 <h1>Staff tools</h1>
 
@@ -10,6 +10,7 @@
 <button type="button" role="tab" id="tab-many" aria-controls="tool-many" aria-selected="false">Move several</button>
 <button type="button" role="tab" id="tab-add" aria-controls="tool-add" aria-selected="false">Add an item</button>
 <button type="button" role="tab" id="tab-edit" aria-controls="tool-edit" aria-selected="false">Edit an item</button>
+<button type="button" role="tab" id="tab-kits" aria-controls="tool-kits" aria-selected="false">Edit kits</button>
 <button type="button" role="tab" id="tab-sync" aria-controls="tool-sync" aria-selected="false">Sync website</button>
 </div>
 
@@ -132,6 +133,25 @@
 <label>How many Lending has<input name="copies" type="number" min="1" max="250" step="1" inputmode="numeric"></label>
 <button type="button" id="edit-publish" class="wide">Save to the website</button>
 <button type="button" id="edit-count-code" class="wide button-secondary">Send just the count to the console</button>
+</div>
+</div>
+</form>
+</section>
+
+<section id="tool-kits" class="tool" role="tabpanel" aria-labelledby="tab-kits" hidden>
+<form id="kit-form" class="staff-form">
+<p class="wide tool-note">A kit is a project and the pieces it needs. Students see it under Kits on the website, and its code lights every piece at the console.</p>
+<label class="wide">Kit<select name="kit" id="kit-pick"></select></label>
+<div class="wide" id="kit-fields" hidden>
+<div class="edit-grid">
+<label class="wide">Name<input name="name" placeholder="Record an interview or podcast" autocomplete="off"></label>
+<label class="wide">What it is for<textarea name="why" rows="2" placeholder="Two people talking, recorded cleanly on separate microphones."></textarea></label>
+<div class="wide kit-parts" id="kit-parts"></div>
+<button type="button" id="kit-add-part" class="wide button-secondary">Add a piece</button>
+<label class="wide">Tip<textarea name="tip" rows="2" placeholder="Record ten seconds and play it back before you start."></textarea></label>
+<p class="wide tool-note">The first item under each piece is the one the kit page shows first and the console lights. The console lights the first 8 pieces.</p>
+<button type="button" id="kit-save" class="wide">Save to the website</button>
+<button type="button" id="kit-delete" class="wide button-secondary">Delete this kit</button>
 </div>
 </div>
 </form>
@@ -264,4 +284,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="room3d.js?v=20261116g"></script>
-<script src="staff.js?v=plain-2" defer></script></body></html>
+<script src="staff.js?v=kits-1" defer></script></body></html>

@@ -95,3 +95,13 @@
 .ack p { max-width: 46ch; }
 
 .code-all-list li.in-code strong { font-weight: 700; }
+
+.kit-parts { display: grid; gap: 14px; }
+.kit-part { border: 0; background: var(--soft); padding: 14px 16px; margin: 0; display: grid; gap: 8px; }
+.kit-part legend { font-weight: 700; padding: 0; float: left; margin-bottom: 4px; }
+.kit-part legend + * { clear: left; }
+.kit-picks { margin: 0; padding-left: 22px; display: grid; gap: 4px; }
+.kit-picks .link-button { font-size: 13px; margin-left: 6px; }
+.kit-missing { color: #a3121f; }
+.kit-part-actions { margin: 0; display: flex; gap: 16px; }
+@media (max-width: 640px) { .staff-main .tool-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); } }

@@ -230,7 +230,7 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     }; i.onerror = () => no(Error('unreadable')); i.src = URL.createObjectURL(file); });
   }
   // ---- tabs
-  const tabs = ['move', 'shelf', 'many', 'add', 'edit', 'sync'];
+  const tabs = ['move', 'shelf', 'many', 'add', 'edit', 'kits', 'sync'];
   tabs.forEach(t => $('tab-' + t).addEventListener('click', () => {
     if ($('tab-' + t).getAttribute('aria-selected') === 'false' && playTimer) stopPlay(false);
     if (t !== 'sync' && stream) stopCamera();
@@ -905,6 +905,80 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
   };
   const fromConsoleCode = () => unlockFromAddress().then(takeAddress);
   fromConsoleCode(); addEventListener('hashchange', fromConsoleCode);   // (hashchange: the camera reused a tab that already had this page open)
+  // ---- kits: a project and the pieces it needs (kits.json). Each piece lists the items that work for it, first choice first.
+  // The website's kit pages and the console's kit code are made from this file, so nothing changes on the console.
+  const kf = $('kit-form'), kitPick = $('kit-pick'), kitParts = $('kit-parts');
+  let kitList = [], kit = null, kitDeleteArmed = false;
+  const kitSlug = name => { const base = searchName(name).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'kit'; let id = base, n = 2; while (kitList.some(k => k.id === id && k !== kit.orig)) id = base + '-' + n++; return id; };
+  async function latestKits() {                                    // the copy on GitHub when this device can read it, so two people never overwrite each other
+    if (keep.get('rl-key')) { const r = await gh('/contents/kits.json?ref=' + BRANCH, { headers: { Accept: 'application/vnd.github.raw+json' } }).catch(() => null); if (r && r.ok) return (await r.json()).kits; }
+    return (await fetch('kits.json?v=' + Date.now()).then(r => r.json())).kits;
+  }
+  function drawKitPick(selectId) {
+    kitPick.innerHTML = '<option value="">Pick a kit...</option><option value="+">New kit</option>' + kitList.map(k => '<option value="' + esc(k.id) + '">' + esc(k.name) + '</option>').join('');
+    kitPick.value = selectId || '';
+  }
+  function drawKitParts() {
+    kitParts.innerHTML = kit.parts.map((p, i) => '<fieldset class="kit-part" data-i="' + i + '"><legend>Piece ' + (i + 1) + '</legend>' +
+      '<label>What it is for<input data-role value="' + esc(p.role) + '" placeholder="Recorder, Two microphones, Something to hold them..."></label>' +
+      (p.pick.length ? '<ol class="kit-picks">' + p.pick.map((n, j) => '<li><span' + (kinds.some(k => k.n === n) ? '' : ' class="kit-missing"') + '>' + esc(n) + (kinds.some(k => k.n === n) ? '' : ' (not in the inventory)') + '</span> ' + (j ? '<button type="button" class="link-button" data-first="' + j + '">Make first</button> ' : '') + '<button type="button" class="link-button" data-unpick="' + j + '">Remove</button></li>').join('') + '</ol>' : '<p class="tool-note">No items yet. Add at least one.</p>') +
+      '<label>Add an item that works for it<input type="search" data-find placeholder="Type part of the item name" autocomplete="off"></label><ul class="edit-matches" data-matches></ul>' +
+      '<p class="kit-part-actions">' + (i ? '<button type="button" class="link-button" data-up>Move up</button> ' : '') + '<button type="button" class="link-button" data-drop>Remove this piece</button></p></fieldset>').join('');
+  }
+  function openKit(k) {
+    kit = k ? { orig: k, id: k.id, name: k.name, why: k.why || '', tip: k.tip || '', parts: k.parts.map(p => ({ role: p.role, pick: [...p.pick] })) } : { orig: null, id: '', name: '', why: '', tip: '', parts: [{ role: '', pick: [] }] };
+    kf.elements.name.value = kit.name; kf.elements.why.value = kit.why; kf.elements.tip.value = kit.tip;
+    $('kit-delete').hidden = !k; kitDeleteArmed = false; $('kit-delete').textContent = 'Delete this kit';
+    $('kit-fields').hidden = false; drawKitParts(); status.textContent = '';
+  }
+  kitPick.addEventListener('change', () => { const v = kitPick.value; if (!v) { $('kit-fields').hidden = true; kit = null; return; } openKit(v === '+' ? null : kitList.find(k => k.id === v)); if (v === '+') kf.elements.name.focus(); });
+  kitParts.addEventListener('input', e => {
+    const box = e.target.closest('.kit-part'); if (!box) return; const p = kit.parts[+box.dataset.i];
+    if (e.target.matches('[data-role]')) p.role = e.target.value;
+    if (e.target.matches('[data-find]')) { const q = searchName(e.target.value), list = box.querySelector('[data-matches]');
+      list.innerHTML = q ? itemMatches(q).filter(k => !p.pick.includes(k.n)).slice(0, 8).map(k => '<li><button type="button" data-add="' + esc(k.h) + '">' + esc(k.n) + '</button></li>').join('') || '<li class="tool-note">No matches. Try a shorter name.</li>' : ''; }
+  });
+  kitParts.addEventListener('click', e => {
+    const b = e.target.closest('button'), box = e.target.closest('.kit-part'); if (!b || !box) return;
+    const i = +box.dataset.i, p = kit.parts[i];
+    if (b.dataset.add) { const k = kinds.find(x => x.h === b.dataset.add); if (k && !p.pick.includes(k.n)) p.pick.push(k.n); }
+    else if (b.dataset.unpick !== undefined) p.pick.splice(+b.dataset.unpick, 1);
+    else if (b.dataset.first !== undefined) p.pick.unshift(p.pick.splice(+b.dataset.first, 1)[0]);
+    else if (b.hasAttribute('data-up')) kit.parts.splice(i - 1, 0, kit.parts.splice(i, 1)[0]);
+    else if (b.hasAttribute('data-drop')) { kit.parts.splice(i, 1); if (!kit.parts.length) kit.parts.push({ role: '', pick: [] }); }
+    else return;
+    drawKitParts();
+    if (b.dataset.add) { const again = kitParts.querySelector('.kit-part[data-i="' + i + '"] [data-find]'); if (again) again.focus(); }
+  });
+  $('kit-add-part').addEventListener('click', () => { kit.parts.push({ role: '', pick: [] }); drawKitParts(); const last = kitParts.querySelector('.kit-part:last-child [data-role]'); if (last) last.focus(); });
+  $('kit-save').addEventListener('click', async e => {
+    if (!kit) return;
+    kit.name = kf.elements.name.value.trim(); kit.why = kf.elements.why.value.trim(); kit.tip = kf.elements.tip.value.trim();
+    const parts = kit.parts.map(p => ({ role: p.role.trim(), pick: p.pick.filter(n => kinds.some(k => k.n === n)) })).filter(p => p.role || p.pick.length);
+    const problem = !kit.name ? 'Give the kit a name.' : !parts.length ? 'Add at least one piece.' : parts.some(p => !p.role) ? 'Every piece needs a line saying what it is for.' : parts.some(p => !p.pick.length) ? 'Every piece needs at least one item from the inventory.' : '';
+    if (problem) { status.textContent = problem; return; }
+    const button = e.target; button.disabled = true;
+    try {
+      const list = await latestKits();
+      const id = kit.orig ? kit.orig.id : kitSlug(kit.name);
+      const out = { id, name: kit.name, why: kit.why, parts, tip: kit.tip };
+      const at = list.findIndex(k => k.id === id); if (at >= 0) list[at] = out; else list.push(out);
+      button.disabled = false;
+      if (await publish({ 'kits.json': { kits: list } }, 'Kit "' + kit.name + '" saved (staff page)', button)) {
+        kitList = list; drawKitPick(id); openKit(out);
+        status.textContent = 'Saved. The kit page updates on the website in about a minute' + (parts.length > 8 ? '. Its console code lights the first 8 pieces.' : '.');
+      }
+    } catch (err) { status.textContent = 'Could not read the current kits: ' + err.message; }
+    finally { button.disabled = false; }
+  });
+  $('kit-delete').addEventListener('click', async e => {
+    if (!kit || !kit.orig) return;
+    if (!kitDeleteArmed) { kitDeleteArmed = true; e.target.textContent = 'Press again to delete "' + kit.orig.name + '"'; return; }
+    const list = (await latestKits()).filter(k => k.id !== kit.orig.id);
+    if (await publish({ 'kits.json': { kits: list } }, 'Kit "' + kit.orig.name + '" deleted (staff page)', e.target)) { kitList = list; drawKitPick(''); $('kit-fields').hidden = true; kit = null; status.textContent = 'Deleted. It leaves the website in about a minute.'; }
+  });
+  fetch('kits.json?v=' + Date.now()).then(r => r.json()).then(d => { kitList = d.kits || []; drawKitPick(''); }).catch(() => { kitPick.innerHTML = '<option value="">The kits could not be loaded. Reload the page.</option>'; });
+
   // ---- edit an item that is already on the website: its photo, manual link and description
   const ef = $('edit-form'), preview = $('edit-preview');
   let photos = null; fetch('photos.json?v=20261116h').then(r => r.json()).then(p => { photos = p; }).catch(() => {});
