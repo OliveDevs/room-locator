@@ -179,6 +179,9 @@ $('share-save').addEventListener('click', async e => {
   if (pass !== again) { $('share-why').textContent = 'The two do not match.'; return; }
   if (await publish({ 'key.json': await lockKey(pass, 'pass') }, 'Site key locked with the staff passcode (staff page)', e.target)) { $('share-pass').value = $('share-pass2').value = ''; $('share-why').textContent = 'Saved. In about a minute the new passcode works on any device, and the old one stops working. Devices already signed in stay signed in.'; }
 });
+// the owner passcode is only set from staff.html#owner, so the page shows staff a single passcode
+const showOwner = () => { if (location.hash === '#owner' && keep.get('rl-key')) { $('owner-box').hidden = false; $('device').hidden = false; $('device').open = true; $('owner-box').scrollIntoView({ block: 'center' }); } };
+addEventListener('hashchange', showOwner); setTimeout(showOwner, 800);
 $('owner-save').addEventListener('click', async e => {
   const pass = $('owner-pass').value, again = $('owner-pass2').value;
   if (!keep.get('rl-key')) { $('owner-why').textContent = 'This device needs the key first.'; return; }
