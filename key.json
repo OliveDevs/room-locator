@@ -1,9 +1,9 @@
 {
   "note": "The site key, locked. Made by the staff page.",
   "pass": {
-    "salt": "zHR9nyOLdg1Nr4sx+EKITw==",
-    "iv": "R2GtrgLduEd8fgPE",
-    "box": "IdI23NYEuNxsQGJxa44XLt0yBfopBK5rxnAxM2mSYLOlMhA89VGmhcCATU3RF1Rkuo41e6r5sTbsa6dIf53ozqql9kyUzEcz+U72lI050kxhyViYYf6mpLCVvBNvQ48m0pu2fPj5UIxP+f3hiA=="
+    "salt": "phk1JhIvNS6b4HkuXUokYg==",
+    "iv": "SLAv1lcF7070G54h",
+    "box": "oVX0TjfgnaKRYJbAmBe67FvA8HpRZFln2nrK/CtANK0O1y/ctWZVc7FIlzDEvBmHCCX4hrgEkujI6IohBl779SRXeHzmR/PYCLjC4Aezv0+qImAohBHB1Slc/GA5ng3728FqZ+1o+IMqX9oMww=="
   },
   "console": {
     "salt": "r4iFFfdjtAZXpNvQMFVJHQ==",
