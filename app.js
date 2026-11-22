@@ -337,9 +337,30 @@ function consolePlace(){
   if(!m)return null;
   const unit=(ROOM.units||[]).find(u=>u.code.toUpperCase()===m[1].toUpperCase()), shelf=Number(m[2]);
   if (!unit || (unit.shelves ? shelf < 1 || shelf > unit.shelves : shelf !== 0)) return null;
-  return {text:shelf>0&&unit.shelves?unit.name+', shelf '+shelf:'Ask at the desk · '+unit.name};
+  return {text:shelf>0&&unit.shelves?unit.name+', shelf '+shelf:'Ask at the desk · '+unit.name,u:unit.code,s:shelf};
 }
 // a hand-written how-to for the kind of thing this is: what it does, its parts, how to use it, what goes wrong
+// ---------- "Light it up on your phone": a small top view of the room with the unit lit, and that unit's shelves with the
+// shelf lit, so a student can walk to it without the console. Marks: [{u: unit code, s: shelf (board) number, n: label}]
+const DESK_RECTS=[[66.6,105.7,140.8,119],[127.4,119,140.8,150]];          // the front desk, in the same 200 x 150 map units
+function boardFor(unit,s){const b=(unit.boards&&unit.boards.length?unit.boards:[...Array(unit.shelves)].map((_,i)=>i+1)).filter(x=>x<=s);return b.length?b[b.length-1]:s}
+function miniRoomHtml(marks,colour){
+  const lit=new Map(marks.map(m=>[m.u,m]));
+  const pos=r=>'left:'+(r[0]/2)+'%;top:'+(r[1]/1.5)+'%;width:'+Math.max(2.5,(r[2]-r[0])/2)+'%;height:'+Math.max(2.5,(r[3]-r[1])/1.5)+'%';
+  return '<div class="mini-room" role="img" aria-label="Map of the Lending room with '+esc(marks.map(m=>(ROOM.units.find(u=>u.code===m.u)||{}).name).filter(Boolean).join(', '))+' lit">'+
+    DESK_RECTS.map(r=>'<span class="mini-desk" style="'+pos(r)+'"></span>').join('')+'<span class="mini-desk-label">Desk</span>'+
+    ROOM.units.filter(u=>u.rect).map(u=>{const m=lit.get(u.code);return '<span class="mini-unit'+(m?' lit':'')+'" style="'+pos(u.rect)+(m?';--glow:'+colour:'')+'">'+(m&&m.n?'<b>'+esc(m.n)+'</b>':'')+'</span>'}).join('')+'</div>';
+}
+function shelfStackHtml(unit,shelf,colour){
+  const boards=(unit.boards&&unit.boards.length?unit.boards:[...Array(unit.shelves)].map((_,i)=>i+1)).slice().sort((x,y)=>y-x);
+  return '<div class="mini-stack" aria-hidden="true">'+boards.map(b=>'<span class="mini-shelf'+(b===shelf?' lit':'')+'"'+(b===shelf?' style="--glow:'+colour+'"':'')+'>'+(b===shelf?'Shelf '+b:'')+'</span>').join('')+'</div>';
+}
+function whereHtml(k,live){
+  const code=live?live.u:k.u,unit=(ROOM.units||[]).find(u=>u.code===code);
+  if(!unit||!unit.rect||!unit.shelves)return '';
+  const shelf=live&&live.s?live.s:boardFor(unit,k.s),c=catColor(k.c);
+  return '<div class="where-map"><p><strong>'+esc(unit.name)+', shelf '+shelf+'</strong> lit up on the room map. Shelf 1 is the lowest.</p><div class="where-row">'+miniRoomHtml([{u:unit.code}],c)+shelfStackHtml(unit,shelf,c)+'</div></div>';
+}
 function howtoFor(k){const m=HOWTO.items[k.n];if(!m)return null;const g=HOWTO.guides[m[0]];return g?{...g,note:m[1]||''}:null}
 function howtoHtml(h){
   return '<section class="guide-section"><h2>What it is</h2><p>'+esc(h.what)+'</p>'+(h.note?'<p class="howto-note">'+esc(h.note)+'</p>':'')+'</section>'+
@@ -373,6 +394,7 @@ function itemView(k,fromConsole){
   ((k.tips?.length||TIPS[k.n]||TIPS[group])?'<section class="guide-section"><h2>Useful tips</h2>'+listItems(k.tips||TIPS[k.n]||TIPS[group])+'</section>':'')+((howto&&!manual.length&&!MODEL_CHOICES[k.n])?(makerSupport(k.n)?'<section class="guide-section"><h2>Maker support</h2>'+external('Open '+makerSupport(k.n)[0]+'\u2019s own support site',makerSupport(k.n)[1])+'<p class="note">Read the model on the item to find its exact manual there.</p></section>':''):manualHtml(k,manual))+'</div><aside class="side-stack"><details class="side-block side-fold"><summary>Borrowing rules and late fees</summary><p>At checkout, confirm the exact model, included parts, condition, and return date with staff. For powered devices, test startup before leaving when possible.</p><p>Visit IDeATe Lending in Hunt Library basement, room A29, across from the elevator. Bring your CMU ID. Check current lending hours and borrowing rules before visiting.</p><p>During the semester, the normal loan is three days with a 6 p.m. due time. Weekends count; university holidays may shift the due date.</p><p>Loans cannot be renewed. Hand the item to staff in A29; drop boxes and other libraries do not count. Late fees run from $1 to $25 a day depending on what the item costs, and borrowing is blocked once fines reach $25.</p>'+external('Official IDeATe Lending rules','https://ideate.cmu.edu/resources/lending/index.html')+external('Full circulation policy','https://ideate.cmu.edu/resources/lending/ideate-circulation-policy.html')+external('Browse CMU’s '+categoryName(k.c)+' collection',collectionUrl(k.c))+'</details>'+(related.length?'<div class="side-block"><h2>Often used with</h2>'+related.map(g=>'<a class="source-link" href="#t'+encodeURIComponent(g)+'">'+esc(g.split('/')[1])+'</a>').join('')+'<p>Compatibility and availability vary by model.</p></div>':'')+''+kitsFor(k)+'<div class="side-block"><h2>Something wrong with it?</h2><p>Missing a part, broken, or this page is wrong? Tell the lending staff.</p><a class="source-link" href="'+esc(problemLink(k,live))+'">Report a problem by email</a></div></aside></div>';
   if (!location.search) app.querySelector('.back').href = '#';
   attachCalendar(k,fromConsole);
+  {const loc=app.querySelector('.item-summary .location');if(loc&&k.in)loc.insertAdjacentHTML('afterend',whereHtml(k,live))}
   if(k.in&&k.h){const loc=app.querySelector('.item-summary .location');if(loc){loc.insertAdjacentHTML('afterend','<div class="item-code" id="item-code"><div class="kit-qr"></div><p><strong>Light its shelf in Lending.</strong> Hold this up to the scanner on the console and its shelf lights up on the model.</p></div>');showItemCode(k)}}
   {const pose=itemPose(k),first=document.querySelector('.guide-stack .guide-section');if(pose&&first)first.insertAdjacentHTML('afterbegin',pup(pose,'pup-item'))}
   const modelChoice=document.getElementById('model-choice');
@@ -514,13 +536,19 @@ function showKitCode(kit,box){
     document.head.appendChild(script);
   });
 }
+function placeOf(k){const u=(ROOM.units||[]).find(x=>x.code===k.u);return u&&u.rect&&u.shelves?u:null}
+function kitMapHtml(kit){
+  const marks=new Map();
+  kit.parts.forEach((p,i)=>{const k=p.pick.map(n=>K.find(x=>x.n===n)).filter(Boolean)[0];if(!k||!k.in||!placeOf(k))return;const m=marks.get(k.u)||{u:k.u,n:''};m.n+=(m.n?' ':'')+(i+1);marks.set(k.u,m)});
+  return marks.size?'<div class="where-map kit-map"><p><strong>Where the pieces are.</strong> Each number is a piece in the list below.</p>'+miniRoomHtml([...marks.values()],'#c41230')+'</div>':'';
+}
 function kitsView(id){
   const kit=KITS.find(x=>x.id===id), find=n=>K.find(k=>k.n===n);
   if(!kit){document.title='Kits \u00b7 IDeATe Lending';
     app.innerHTML='<a class="back" href="./">\u2190 All items</a><div class="hero-row"><div><h1>Kits for a whole project</h1><p class="intro">Pick what you are trying to do and get the full list to ask for, with the shelf for each piece.</p></div>'+pup('wave','pup-wave')+'</div><div class="item-grid">'+KITS.map(x=>'<a class="item-card kit-card" href="#kit-'+esc(x.id)+'"><div><strong>'+esc(x.name)+'</strong><span class="card-where">'+x.parts.length+' pieces</span></div><span class="arrow" aria-hidden="true">\u2197</span></a>').join('')+'</div>';return}
   document.title=kit.name+' \u00b7 IDeATe Lending';
-  app.innerHTML='<a class="back" href="#kits">\u2190 All kits</a>'+reminderHtml(true,kit.name+' kit')+'<div class="hero-row"><div><h1>'+esc(kit.name)+'</h1><p class="intro">'+esc(kit.why)+'</p></div></div><div class="kit-list">'+kit.parts.map(p=>{const items=p.pick.map(find).filter(Boolean);if(!items.length)return '';const first=items[0];
-    return '<div class="kit-row"><p class="kit-role">'+esc(p.role)+'</p><a class="item-card" href="#i'+first.h+'">'+thumbHtml(first)+'<div><strong>'+esc(first.n)+'</strong><span class="card-where">'+esc(first.in?first.w:'Ask at the desk')+'</span></div><span class="arrow" aria-hidden="true">\u2197</span></a>'+(items.length>1?'<p class="kit-or">or '+items.slice(1).map(k=>'<a href="#i'+k.h+'">'+esc(k.n)+'</a> ('+esc(k.in?k.w:'ask at the desk')+')').join(', or ')+'</p>':'')+'</div>'}).join('')+'</div><div class="guide-section kit-tip"><h2>Light the shelves in Lending</h2><p><button type="button" id="kit-code-go" class="kit-code-go">Show the code for the console</button></p><div id="kit-code" aria-live="polite"></div></div><div class="guide-section kit-tip"><h2>Before you go</h2><p>'+esc(kit.tip)+'</p><p class="note">Each piece is checked out separately and may already be on loan. The desk has what is in today.</p></div>';
+  app.innerHTML='<a class="back" href="#kits">\u2190 All kits</a>'+reminderHtml(true,kit.name+' kit')+'<div class="hero-row"><div><h1>'+esc(kit.name)+'</h1><p class="intro">'+esc(kit.why)+'</p></div></div>'+kitMapHtml(kit)+'<div class="kit-list">'+kit.parts.map((p,pi)=>{const items=p.pick.map(find).filter(Boolean);if(!items.length)return '';const first=items[0];
+    return '<div class="kit-row"><p class="kit-role">'+(first.in&&placeOf(first)?'<span class="kit-num">'+(pi+1)+'</span>':'')+esc(p.role)+'</p><a class="item-card" href="#i'+first.h+'">'+thumbHtml(first)+'<div><strong>'+esc(first.n)+'</strong><span class="card-where">'+esc(first.in?first.w:'Ask at the desk')+'</span></div><span class="arrow" aria-hidden="true">\u2197</span></a>'+(items.length>1?'<p class="kit-or">or '+items.slice(1).map(k=>'<a href="#i'+k.h+'">'+esc(k.n)+'</a> ('+esc(k.in?k.w:'ask at the desk')+')').join(', or ')+'</p>':'')+'</div>'}).join('')+'</div><div class="guide-section kit-tip"><h2>Light the shelves in Lending</h2><p><button type="button" id="kit-code-go" class="kit-code-go">Show the code for the console</button></p><div id="kit-code" aria-live="polite"></div></div><div class="guide-section kit-tip"><h2>Before you go</h2><p>'+esc(kit.tip)+'</p><p class="note">Each piece is checked out separately and may already be on loan. The desk has what is in today.</p></div>';
   document.getElementById('kit-code-go').addEventListener('click', async e => {
     const button = e.currentTarget, box = document.getElementById('kit-code');
     button.disabled = true;
