@@ -181,7 +181,7 @@ $('share-save').addEventListener('click', async e => {
 });
 // the owner passcode is only set from staff.html#owner, so the page shows staff a single passcode
 // the Manuals link at the top opens that section
-const showManuals = () => { if (location.hash === '#manuals') { $('manuals').open = true; $('manuals').scrollIntoView({ block: 'start' }); } };
+const showManuals = () => { const id = { '#manuals': 'manuals', '#log': 'log' }[location.hash]; if (id) { $(id).open = true; $(id).scrollIntoView({ block: 'start' }); } };   // (the header links to Change history and Manuals)
 addEventListener('hashchange', showManuals); setTimeout(showManuals, 0);
 const showOwner = () => { if (location.hash === '#owner' && keep.get('rl-key')) { $('owner-box').hidden = false; $('device').hidden = false; $('device').open = true; $('owner-box').scrollIntoView({ block: 'center' }); } };
 addEventListener('hashchange', showOwner); setTimeout(showOwner, 800);
