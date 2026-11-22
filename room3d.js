@@ -29,8 +29,9 @@ window.Room3D = {
     // Doodads stands on top of Under the Desk, and the Cables unit is a two-shelf cabinet with a counter (shelf 3) and a
     // pegboard behind it (shelf 4), as in the model in Lending
     const und = room.units.find(u => u.code === 'UND');
+    const SHIFT = { AUDW: -6, LP: -6, PV: -6 };                     // the left-wall units sit a little further left here, clear of Audio
     room.units.filter(u => u.rect && u.shelves).forEach(u => {
-      const [x1, y1, x2, y2] = u.rect, w = Math.max(8, x2 - x1), d = Math.max(8, y2 - y1);
+      const [x1, y1, x2, y2] = u.rect.map((v, i) => i % 2 ? v : v + (SHIFT[u.code] || 0)), w = Math.max(8, x2 - x1), d = Math.max(8, y2 - y1);
       const cx = (x1 + x2) / 2 - W / 2, cz = (y1 + y2) / 2 - D / 2;
       const base = u.code === 'DOO' && und ? und.shelves * STEP : 0;
       const peg = u.code === 'CBL' && u.shelves >= 4;
@@ -48,6 +49,25 @@ window.Room3D = {
       top.position.set(cx, base + height - 0.6, cz); scene.add(top);
       label(u.code === 'UND' ? 'Under the Desk' : u.name, cx, base + (peg ? 5 * STEP : height) + (u.code === 'UND' ? -2 : 9), cz + (u.code === 'UND' ? -d / 2 - 4 : 0));
     });
+
+    // what else stands in the room (not clickable): the front desk, the mannequin and the two carts by the left wall
+    const at = (x, z) => [x - W / 2, z - D / 2];
+    [[66.6, 105.7, 140.8, 119], [127.4, 119, 140.8, 150]].forEach(([a, b, c, d]) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(c - a, 20, d - b), new THREE.MeshLambertMaterial({ color: 0xe9e4da, transparent: true, opacity: 0.85 }));
+      const [x, z] = at((a + c) / 2, (b + d) / 2); m.position.set(x, 10, z); scene.add(m);
+    });
+    { const [x, z] = at(87, 130); label('Front desk', x, 30, z); }
+    { const dark = new THREE.MeshLambertMaterial({ color: 0x1d1d1f }), [x, z] = at(11, 124);
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 3, 30, 16), dark); body.position.set(x, 21, z); scene.add(body);
+      const legs = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 8, 8), dark); legs.position.set(x, 4, z); scene.add(legs);
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.5, 1, 16), dark); base.position.set(x, 0.5, z); scene.add(base);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(3, 16, 12), dark); head.position.set(x, 39, z); scene.add(head);
+      label('Mannequin', x, 50, z); }
+    [117, 130.5].forEach((cz, i) => { const [x, z] = at(20.4, cz), wood = new THREE.MeshLambertMaterial({ color: COLOR.woodDark });
+      const tub = new THREE.Mesh(new THREE.BoxGeometry(6, 9, 10), wood); tub.position.set(x, 7, z); scene.add(tub);
+      const handle = new THREE.Mesh(new THREE.BoxGeometry(1, 6, 1), wood); handle.position.set(x, 14, z - 4.5); scene.add(handle);
+      [-3.5, 3.5].forEach(dz => { const wheel = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 7, 12), new THREE.MeshLambertMaterial({ color: 0x333333 })); wheel.rotation.z = Math.PI / 2; wheel.position.set(x, 1.6, z + dz); scene.add(wheel); });
+      if (!i) label('Carts', x, 24, z + 6); });
 
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.target.set(-8, 16, -6); controls.enablePan = false; controls.minDistance = 90; controls.maxDistance = 520;
