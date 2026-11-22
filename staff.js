@@ -42,7 +42,7 @@ async function lockKey(pass, slot) {
   const box = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await lockBytes(pass, salt), new TextEncoder().encode(keep.get('rl-key')));
   const all = (await readLocked()) || {}; const out = { note: 'The site key, locked. Made by the staff page.' };
   if (all.salt) out.pass = { salt: all.salt, iv: all.iv, box: all.box };          // (the first version of this file had one copy at the top)
-  for (const name of ['pass', 'console', 'expires']) if (all[name]) out[name] = all[name];
+  for (const name of ['pass', 'console', 'owner', 'expires']) if (all[name]) out[name] = all[name];
   out[slot] = { salt: b64(salt), iv: b64(iv), box: b64(box) };
   return out;
 }
@@ -54,6 +54,7 @@ async function openLocked(all, pass, slot) {
 }
 async function unlockKey(pass, slot = 'pass') {
   const all = await readLocked();
+  if (slot === 'pass' && slotOf(all, 'owner')) { const mine = await openLocked(all, pass, 'owner'); if (mine !== null) { keep.set('rl-key', mine); return ''; } }   // the project owner's own passcode works in the same box
   if (!slotOf(all, slot)) return slot === 'pass' ? 'No passcode has been set up for this site yet. Paste the key instead, then set one up.' : 'This console is not linked to the website yet.';
   const plain = await openLocked(all, pass, slot);
   if (plain === null) return slot === 'pass' ? 'That passcode is not right.' : 'The console\'s website pass does not match the website any more. Link the console again.';
@@ -150,7 +151,8 @@ $('connect-save').addEventListener('click', async () => {
       out = out || await lockKey(cpass, 'console'); out.console = { salt: b64(salt), iv: b64(iv), box: b64(box) }; did.push('the console\'s link (nothing to do at the console)');
     } else if (!slotOf(all, 'console')) firstLink = true;
     else if (slotOf(all, 'console')) left.push('The console\'s link still holds the OLD key: press "Link the console again" (under Passcode and sign-out) and show the new code to the console, or open this page from the console\'s Staff page code and paste the key there.');
-    if (/^\d{4}-\d\d-\d\d$/.test(expires)) { out = out || { note: 'The site key, locked. Made by the staff page.', ...Object.fromEntries(['pass', 'console'].filter(n => slotOf(all, n)).map(n => [n, slotOf(all, n)])) }; out.expires = expires; }
+    if (slotOf(all, 'owner')) left.push('Your own passcode still opens the OLD key: set it again under "Passcode and sign-out".');
+    if (/^\d{4}-\d\d-\d\d$/.test(expires)) { out = out || { note: 'The site key, locked. Made by the staff page.', ...Object.fromEntries(['pass', 'console', 'owner'].filter(n => slotOf(all, n)).map(n => [n, slotOf(all, n)])) }; out.expires = expires; }
     else if (out) delete out.expires;                              // a new key with no date given: the old date no longer applies
   } catch (e) { out = null; left.push('The locked copies could not be renewed on this browser.'); }
   $('connect-newpass').value = ''; $('connect').hidden = true;
@@ -176,6 +178,13 @@ $('share-save').addEventListener('click', async e => {
   if (pass.length < 4) { $('share-why').textContent = 'Use at least 4 characters.'; return; }
   if (pass !== again) { $('share-why').textContent = 'The two do not match.'; return; }
   if (await publish({ 'key.json': await lockKey(pass, 'pass') }, 'Site key locked with the staff passcode (staff page)', e.target)) { $('share-pass').value = $('share-pass2').value = ''; $('share-why').textContent = 'Saved. In about a minute the new passcode works on any device, and the old one stops working. Devices already signed in stay signed in.'; }
+});
+$('owner-save').addEventListener('click', async e => {
+  const pass = $('owner-pass').value, again = $('owner-pass2').value;
+  if (!keep.get('rl-key')) { $('owner-why').textContent = 'This device needs the key first.'; return; }
+  if (pass.length < 8) { $('owner-why').textContent = 'Use at least 8 characters.'; return; }
+  if (pass !== again) { $('owner-why').textContent = 'The two do not match.'; return; }
+  if (await publish({ 'key.json': await lockKey(pass, 'owner') }, 'Site key locked with the owner passcode (staff page)', e.target)) { $('owner-pass').value = $('owner-pass2').value = ''; $('owner-why').textContent = 'Saved. In about a minute this passcode works in the same box as the staff passcode, on any device. Changing the staff passcode does not change it.'; }
 });
 $('link-console').addEventListener('click', async e => {
   if (!keep.get('rl-key')) { $('share-why').textContent = 'This device needs the key first.'; return; }

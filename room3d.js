@@ -26,19 +26,27 @@ window.Room3D = {
       const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
       s.scale.set(44, 8.25, 1); s.position.set(x, y, z); s.renderOrder = 5; scene.add(s);
     };
+    // Doodads stands on top of Under the Desk, and the Cables unit is a two-shelf cabinet with a counter (shelf 3) and a
+    // pegboard behind it (shelf 4), as in the model in Lending
+    const und = room.units.find(u => u.code === 'UND');
     room.units.filter(u => u.rect && u.shelves).forEach(u => {
       const [x1, y1, x2, y2] = u.rect, w = Math.max(8, x2 - x1), d = Math.max(8, y2 - y1);
       const cx = (x1 + x2) / 2 - W / 2, cz = (y1 + y2) / 2 - D / 2;
+      const base = u.code === 'DOO' && und ? und.shelves * STEP : 0;
+      const peg = u.code === 'CBL' && u.shelves >= 4;
       for (let n = 1; n <= u.shelves; n++) {
         const board = !u.boards || !u.boards.length || u.boards.includes(n) || n === 1;
-        const m = new THREE.Mesh(new THREE.BoxGeometry(w - 1, BOARD, d - 1), new THREE.MeshLambertMaterial({ color: n % 2 ? COLOR.wood : COLOR.woodDark, transparent: !board, opacity: board ? 1 : 0.35 }));
-        m.position.set(cx, (n - 1) * STEP + BOARD / 2, cz);
+        const mat = new THREE.MeshLambertMaterial({ color: n % 2 ? COLOR.wood : COLOR.woodDark, transparent: !board, opacity: board ? 1 : 0.35 });
+        let m;
+        if (peg && n === 4) { m = new THREE.Mesh(new THREE.BoxGeometry(w - 1, STEP * 2, 1.6), mat); m.position.set(cx, 3 * STEP + STEP, cz + d / 2 - 0.8); }   // the pegboard, standing at the back
+        else { m = new THREE.Mesh(new THREE.BoxGeometry(w - 1, BOARD, d - 1), mat); m.position.set(cx, base + (n - 1) * STEP + BOARD / 2, cz); }
         m.userData = { unit: u.code, shelf: n, name: u.name, base: m.material.color.getHex() };
         scene.add(m); shelves.push(m);
       }
+      const height = peg ? 3 * STEP : u.shelves * STEP;
       const top = new THREE.Mesh(new THREE.BoxGeometry(w, 1.2, d), new THREE.MeshLambertMaterial({ color: COLOR.woodDark }));
-      top.position.set(cx, u.shelves * STEP - 0.6, cz); scene.add(top);
-      label(u.name, cx, u.shelves * STEP + 9, cz);
+      top.position.set(cx, base + height - 0.6, cz); scene.add(top);
+      label(u.code === 'UND' ? 'Under the Desk' : u.name, cx, base + (peg ? 5 * STEP : height) + (u.code === 'UND' ? -2 : 9), cz + (u.code === 'UND' ? -d / 2 - 4 : 0));
     });
 
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
