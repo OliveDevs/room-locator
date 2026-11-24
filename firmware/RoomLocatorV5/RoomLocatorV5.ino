@@ -150,7 +150,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.51";
+const char VERSION[] PROGMEM = "5.52";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -180,6 +180,8 @@ const char STAFF_URL[] PROGMEM = "https://olivedevs.github.io/room-locator/staff
 const uint16_t BG = RGB(0, 0, 0), PANEL = RGB(40, 40, 42), PICKED = RGB(74, 74, 78), WHITE = 0xFFFF,
                DIM = RGB(176, 177, 180), ACCENT = RGB(253, 181, 21), BLACK = 0x0000, GREEN = RGB(0, 150, 71),
                CMU_RED = RGB(196, 18, 48);
+// v5.52: the dog pictures moved past the first 64 KB of memory (see dog.h). 5.51 had grown past that line, and on a real Mega
+// the screen stayed blank. Nothing else changed.
 // v5.51: an item can be taken out of Lending (a count of 0: RL:COUNT:<code6>:0). It comes from the website's Edit an
 // item and waits on its list like a move. A removed item no longer comes up in a search or counts on its shelf, and
 // scanning its sticker says it was removed. A new count puts it back.
@@ -404,7 +406,7 @@ const char WALK_SMILE[4][8] PROGMEM = {
 };
 const byte SMILE_X = 52, SMILE_Y = 27, SMILE_W = 7, SMILE_H = 4;
 static_assert(SMILE_X + SMILE_W <= WALK_W && SMILE_Y + SMILE_H <= WALK_H, "Walk smile is outside the sprite");
-void drawDog(int x, int y, const uint8_t* pic, byte w, byte h, byte scale, bool flip = false, bool happyWalk = false) {
+void drawDog(int x, int y, farptr pic, byte w, byte h, byte scale, bool flip = false, bool happyWalk = false) {
   uint16_t color[16], rowOf[200];                                 // the widest picture drawn double size is 200 pixels
   for (byte i = 0; i < 16; i++) color[i] = pgm_read_word(&DOG_COLOR[i]);
   tft.setAddrWindow(x, y, x + w * scale - 1, y + h * scale - 1);
@@ -412,7 +414,7 @@ void drawDog(int x, int y, const uint8_t* pic, byte w, byte h, byte scale, bool 
   for (byte r = 0; r < h; r++) {
     byte n = 0;
     for (byte i = 0; i < w; i++) {
-      if (!left) { byte run = pgm_read_byte(pic++); left = (run >> 4) + 1; c = color[run & 15]; }
+      if (!left) { byte run = pgm_read_byte_far(pic++); left = (run >> 4) + 1; c = color[run & 15]; }
       left--;
       uint16_t pixel = c;
       if (happyWalk) {
@@ -445,7 +447,7 @@ static_assert(REST_W * 2 <= 200 && WALK_W * 2 <= 200, "a dog picture drawn doubl
 const byte DOG_REST = 255; const unsigned int DOG_REST_MS = 4200;
 int dogStopX() { return 300 - WALK_W * dogScale - 2 * dogScale; }           // the walk ends here, short of the QR
 int dogRestX() { return dogLeft ? 2 : 300 - REST_W * dogScale; }
-void dogRestDraw(const uint8_t* const* pics, byte i, byte w, byte h, byte lift) {   // one sitting picture, standing on the ground line
+void dogRestDraw(byte pics, byte i, byte w, byte h, byte lift) {   // one sitting picture, standing on the ground line
   const int x = dogRestX(), y = 290 - (SIT_H + REST_LIFT) * dogScale;
   const int spriteW = w * dogScale, spriteH = h * dogScale;
   const int left = x + (REST_W * dogScale - spriteW) / 2, top = 290 - (h + lift) * dogScale;
@@ -455,7 +457,7 @@ void dogRestDraw(const uint8_t* const* pics, byte i, byte w, byte h, byte lift) 
   if (left > x) tft.fillRect(x, top, left - x, spriteH, BG);
   if (left + spriteW < right) tft.fillRect(left + spriteW, top, right - left - spriteW, spriteH, BG);
   if (top + spriteH < 290) tft.fillRect(x, top + spriteH, right - x, lift * dogScale, BG);
-  drawDog(left, top, (const uint8_t*)pgm_read_ptr(&pics[i]), w, h, dogScale);
+  drawDog(left, top, dogPic(pics, i), w, h, dogScale);
 }
 byte headMotionFrame(byte tick, byte frames) {
   const byte step = tick / 2;
@@ -503,7 +505,7 @@ void dogTick() {
     tft.fillRect(trailX, walkY, stepPx, WALK_H * dogScale, BG);
   }
   const byte pose = (((dogStep - 1) * stepMs) / 115) % WALK_N;
-  drawDog(dogX, walkY, (const uint8_t*)pgm_read_ptr(&WALK[pose]), WALK_W, WALK_H, dogScale, dogLeft, true);
+  drawDog(dogX, walkY, dogPic(WALK, pose), WALK_W, WALK_H, dogScale, dogLeft, true);
   dogX += dogLeft ? -stepPx : stepPx; dogStep++;
 }
 
@@ -522,7 +524,7 @@ void drawStickers(); void stickerScanned(char* t); void saveSticker(); void open
 void draw(); void lightsOff(); bool drawQRText(int x, int y, const char* url); byte firstVisibleRow(); void blinkDot(byte slot, bool lit);   // (written further down)
 const int SLEEP_MID = 318, SLEEP_X = SLEEP_MID - SLEEP_W, SLEEP_Y = 150 - SLEEP_H;   // drawn double size, right of the website's code
 void drawSleepingLoki() {
-  drawDog(SLEEP_X, SLEEP_Y, (const uint8_t*)pgm_read_ptr(&SLEEP[0]), SLEEP_W, SLEEP_H, 2);
+  drawDog(SLEEP_X, SLEEP_Y, dogPic(SLEEP, 0), SLEEP_W, SLEEP_H, 2);
   // Rounded bolsters cradle the sleeping sprite. Highlights suggest soft padding.
   const int floorY = SLEEP_Y + SLEEP_H * 2;
   const uint16_t seam = RGB(93, 36, 53), fabric = RGB(157, 62, 83), lining = RGB(243, 194, 178);
@@ -598,27 +600,27 @@ void wakeUp(bool stretch) {
   if (stretch) {
     startHello();
     tft.fillRect(SLEEP_X - 18, SLEEP_Y - 72, 480 - (SLEEP_X - 18), SLEEP_H * 2 + 104, BG);
-    for (byte i = 0; i < WAKE_N && !somethingWaiting(); i++) { drawDog(SLEEP_MID - WAKE_W, 246 - WAKE_H * 2, (const uint8_t*)pgm_read_ptr(&WAKE[i]), WAKE_W, WAKE_H, 2); holdWakePose(i == WAKE_N - 1 ? 700 : 450); }
+    for (byte i = 0; i < WAKE_N && !somethingWaiting(); i++) { drawDog(SLEEP_MID - WAKE_W, 246 - WAKE_H * 2, dogPic(WAKE, i), WAKE_W, WAKE_H, 2); holdWakePose(i == WAKE_N - 1 ? 700 : 450); }
     if (!somethingWaiting()) tft.fillRect(SLEEP_MID - WAKE_W, 246 - WAKE_H * 2, WAKE_W * 2, WAKE_H * 2, BG);   // awake: a wave hello before Home comes back (v5.24)
-    for (byte i = 0; i < WAVE_N * 2 && !somethingWaiting(); i++) { drawDog(SLEEP_MID - WAVE_W, 246 - WAVE_H * 2, (const uint8_t*)pgm_read_ptr(&WAVE[i % WAVE_N]), WAVE_W, WAVE_H, 2); holdWakePose(260); }
+    for (byte i = 0; i < WAVE_N * 2 && !somethingWaiting(); i++) { drawDog(SLEEP_MID - WAVE_W, 246 - WAVE_H * 2, dogPic(WAVE, i % WAVE_N), WAVE_W, WAVE_H, 2); holdWakePose(260); }
   }
   draw();
 }
 
 // A short animation in the corner of a message screen: a bark at a code that cannot be used, a hop when a batch is in.
-const uint8_t* const* showPics = NULL; byte showN = 0, showW = 0, showH = 0, showStep = 0, showSteps = 0, showLast = 0; unsigned long showAt = 0;
+byte showPics = NO_DOG; byte showN = 0, showW = 0, showH = 0, showStep = 0, showSteps = 0, showLast = 0; unsigned long showAt = 0;
 byte showWhere = 0;                                                // which screen the little show belongs to: 0 a Home message, 1 a search with no matches, 2 the put-away list
-void startShow(const uint8_t* const* pics, byte n, byte w, byte h, byte loops, byte last, byte where = 0) {
+void startShow(byte pics, byte n, byte w, byte h, byte loops, byte last, byte where = 0) {
   showPics = pics; showN = n; showW = w; showH = h; showStep = 0; showSteps = n * loops; showLast = last; showWhere = where; showAt = millis() - 200;
 }
 void showTick() {
   if (!showPics) return;
-  if (!(showWhere == 0 ? mode == HOME && homeMessage : showWhere == 1 ? mode == RESULTS && rowCount == 0 : mode == PUTAWAY)) { showPics = NULL; return; }
+  if (!(showWhere == 0 ? mode == HOME && homeMessage : showWhere == 1 ? mode == RESULTS && rowCount == 0 : mode == PUTAWAY)) { showPics = NO_DOG; return; }
   if (millis() - showAt < 160 || somethingWaiting()) return;
   showAt = millis();
   byte f = showStep < showSteps ? showStep % showN : showLast;
-  drawDog(464 - showW, 286 - showH, (const uint8_t*)pgm_read_ptr(&showPics[f]), showW, showH, 1);
-  if (showStep++ >= showSteps) showPics = NULL;                    // the last picture stays
+  drawDog(464 - showW, 286 - showH, dogPic(showPics, f), showW, showH, 1);
+  if (showStep++ >= showSteps) showPics = NO_DOG;                    // the last picture stays
 }
 void lightsOff() { strip.clear(); strip.show(); }
 void addLights(int first, byte span, uint32_t color) { if (first < 0) return; for (byte i = 0; i < span; i++) if (first + i < NUM_LEDS) strip.setPixelColor(first + i, color); }
@@ -1657,7 +1659,7 @@ void drawResetAsk() {
   footer(F("Up / Down to choose, Select.   Back = no"));
 }
 void draw() {
-  asleep = false; showPics = NULL; offerSync = false;      // (the item screen turns the offer back on when it has just saved something)
+  asleep = false; showPics = NO_DOG; offerSync = false;      // (the item screen turns the offer back on when it has just saved something)
   if (mode == HOME) drawHome();
   else if (mode == RESETASK) drawResetAsk();
   else if (mode == ITEM) drawItem();
@@ -3246,7 +3248,7 @@ void setup() {
   }
   tft.fillScreen(BG);                                              // hello: the dog waves while the lights are checked
   for (int i = 0; i < NUM_LEDS || i < 96; i++) {                   // sweep: every light works (and at least three waves on a short strip)
-    if (i % 8 == 0) drawDog(240 - WAVE_W, 160 - WAVE_H, (const uint8_t*)pgm_read_ptr(&WAVE[(i / 8) % WAVE_N]), WAVE_W, WAVE_H, 2);
+    if (i % 8 == 0) drawDog(240 - WAVE_W, 160 - WAVE_H, dogPic(WAVE, (i / 8) % WAVE_N), WAVE_W, WAVE_H, 2);
     strip.clear(); if (i < NUM_LEDS) strip.setPixelColor(i, LIGHT_SWEEP); strip.show(); delay(12);
   }
   Serial.print(F("Room Locator ")); Serial.print((const __FlashStringHelper*)VERSION); Serial.println(F(" ready"));
