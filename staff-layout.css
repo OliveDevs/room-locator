@@ -150,3 +150,20 @@
 
 #staff-status.ok { color: #0a7a33; }
 @media (max-width: 640px) { .header-nav { flex-wrap: wrap; row-gap: 6px; } }
+
+/* the sign-in box at the top of the page (signed out) and the one line that replaces it (signed in) */
+.signed-line{margin:-6px 0 0;color:var(--muted);font-size:14px}
+.connect{background:var(--soft);border-radius:12px;padding:24px 26px 20px;margin:18px 0 8px;max-width:none}
+.connect h2{margin:0 0 14px;font:700 24px/1.15 var(--display);letter-spacing:0}
+.connect h3{margin:0 0 6px;font:700 15px var(--body)}
+.connect-why{margin:-6px 0 14px;font-weight:600}.connect-why:empty{display:none}
+.connect-ways{display:grid;gap:22px}
+.connect label{display:block;font:700 15px var(--body);margin:0 0 6px}
+.connect-row{display:flex;gap:10px}
+.connect .connect-row input{flex:1;min-width:0;margin:0;min-height:48px;border-radius:8px;background:#fff;font-size:16px}
+.connect-row button{flex:none;background:var(--ink);color:#fff;border:0;border-radius:8px;padding:0 22px;min-height:48px;font:700 15px var(--body);cursor:pointer}
+.connect-row button:hover{background:#c41230}
+.connect .tool-note{margin:8px 0 0}
+#connect-how,#connect-none{margin:0;font-size:15px;line-height:1.5;max-width:46ch}
+.connect .sync-paste{margin-top:18px;font-size:14px}
+@media(min-width:760px){.connect-ways{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px}}

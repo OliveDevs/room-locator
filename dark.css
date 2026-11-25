@@ -50,3 +50,7 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .nf-row{border-bottom-color:#3b3e44}}
 :root[data-theme="dark"] #staff-status.ok{color:#5fd68a}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) #staff-status.ok{color:#5fd68a}}
+
+:root[data-theme=dark] .connect .connect-row input{background:var(--paper);color:var(--ink)}
+:root[data-theme=dark] .connect-row button{background:var(--ink);color:var(--paper)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]) .connect .connect-row input{background:var(--paper);color:var(--ink)}:root:not([data-theme=light]) .connect-row button{background:var(--ink);color:var(--paper)}}

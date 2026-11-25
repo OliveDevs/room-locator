@@ -1,8 +1,38 @@
 <!doctype html><html lang="en"><head><link rel="icon" href="favicon.ico?v=2" sizes="any"><link rel="icon" type="image/png" href="favicon.png?v=2"><link rel="apple-touch-icon" href="apple-touch-icon.png?v=2"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400..700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=final-1"><link rel="stylesheet" href="staff-layout.css?v=final-1"><link rel="stylesheet" href="dark.css?v=final-1"><script src="theme.js?v=1"></script></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a><a href="#log">Change history</a><a href="#manuals">Manuals</a></nav></div></header>
+  <link rel="stylesheet" href="styles.css?v=signin-1"><link rel="stylesheet" href="staff-layout.css?v=signin-1"><link rel="stylesheet" href="dark.css?v=signin-1"><script src="theme.js?v=1"></script></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a><a href="#log">Change history</a><a href="#manuals">Manuals</a></nav></div></header>
 <main class="staff-main">
 <h1>Staff tools</h1>
+<p id="signed" class="signed-line" hidden><span id="signed-as"></span> <button type="button" id="signed-out" class="link-button">Sign out</button></p>
+<section id="connect" class="connect" hidden>
+<h2>Sign in to make changes</h2>
+<p id="connect-why" class="connect-why" role="status"></p>
+<div class="connect-ways">
+<div id="connect-passway">
+<label id="connect-passrow" for="connect-pass">Passcode</label>
+<div class="connect-row"><input id="connect-pass" type="password" autocomplete="off" aria-describedby="connect-passnote"><button type="button" id="connect-unlock">Sign in</button></div>
+<p class="tool-note" id="connect-passnote">The staff or manager passcode. It is not the console PIN.</p>
+</div>
+<div id="connect-consoleway">
+<h3>Or sign in at the console</h3>
+<p id="connect-how"></p>
+</div>
+</div>
+<p id="connect-none" hidden></p>
+<details class="sync-paste"><summary>Set up a new site key</summary>
+<ol>
+<li>Sign in to GitHub with an account that can edit the room-locator repository, then open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">New fine-grained token &#8599;</a></li>
+<li>Repository access: Only select repositories, then pick room-locator</li>
+<li>Permissions, Repository permissions, Contents: Read and write</li>
+<li>Generate it, copy it, paste it here</li>
+</ol>
+<label>Site key<input id="connect-key" type="password" autocomplete="off" placeholder="github_pat_..."></label>
+<label>The date GitHub says it expires, if it has one<input id="connect-expires" type="date"></label>
+<label>Staff passcode, at least 10 characters (so other devices keep working)<input id="connect-newpass" type="password" autocomplete="off"></label>
+<div class="sync-actions"><button type="button" id="connect-save">Use this key on this device</button></div>
+</details>
+<button type="button" id="connect-forget" class="link-button" hidden>Sign this device out</button>
+</section>
 
 <div class="tool-tabs" role="tablist" aria-label="Staff tools">
 <button type="button" role="tab" id="tab-move" aria-controls="tool-move" aria-selected="true">Move an item</button>
@@ -186,27 +216,6 @@
 
 <p id="staff-status" class="tool-status" role="status"></p>
 
-<section id="connect" class="connect" hidden>
-<h2>Sign in to save</h2>
-<p id="connect-why" class="tool-note"></p>
-<p id="connect-how"></p>
-<label id="connect-passrow">Staff passcode (not the console PIN)<input id="connect-pass" type="password" autocomplete="off"></label>
-<div class="sync-actions"><button type="button" id="connect-unlock">Unlock saving</button><button type="button" id="connect-forget" class="button-secondary">Sign this device out</button></div>
-<details class="sync-paste"><summary>Set up a new site key</summary>
-<ol>
-<li>Sign in to GitHub with an account that can edit the room-locator repository, then open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">New fine-grained token &#8599;</a></li>
-<li>Repository access: Only select repositories, then pick room-locator</li>
-<li>Permissions, Repository permissions, Contents: Read and write</li>
-<li>Generate it, copy it, paste it here</li>
-</ol>
-<label>Site key<input id="connect-key" type="password" autocomplete="off" placeholder="github_pat_..."></label>
-<label>The date GitHub says it expires, if it has one<input id="connect-expires" type="date"></label>
-<label>Staff passcode, at least 10 characters (so other devices keep working)<input id="connect-newpass" type="password" autocomplete="off"></label>
-<div class="sync-actions"><button type="button" id="connect-save">Use this key on this device</button></div>
-</details>
-<p class="note">You stay signed in on this device until you sign out.</p>
-</section>
-
 <section id="code-out" class="code-out" hidden aria-live="polite">
 <div id="qr" class="qr"></div>
 <div class="code-steps">
@@ -379,4 +388,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="room3d.js?v=room-5"></script>
-<script src="staff.js?v=final-1" defer></script></body></html>
+<script src="staff.js?v=signin-1" defer></script></body></html>

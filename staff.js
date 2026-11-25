@@ -87,17 +87,23 @@ const passcodeGone = async () => {
 const DEAD_KEY = 'The passcode is right, but the site key behind it has run out or was replaced on GitHub. Someone with the GitHub account needs to paste a new key: open "Check everything" at the bottom of this page for the steps.';
 const checkUnlocked = async () => { const r = await gh('').catch(() => null); if (!r) return 'Could not reach GitHub. Check the internet connection.'; if (r.status === 401) return DEAD_KEY; return checkKey(); };
 let afterKey = null, cameWithPass = false;
-function askForKey(why) {
-  const box = $('connect'); box.hidden = false; $('connect-pass').focus({ preventScroll: true }); $('connect-why').textContent = why || ''; box.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  // Say what will actually work on this site right now, so nobody types a passcode that was never set up
+// The sign-in box sits at the top of the page whenever this device is signed out. It says what will actually work on
+// this site right now, so nobody types a passcode that was never set up.
+function drawSignIn() {
+  const box = $('connect'); box.hidden = false;
   readLocked().then(all => {
     const hasPass = !!slotOf(all, 'pass'), hasConsole = !!slotOf(all, 'console');
-    $('connect-passrow').hidden = !hasPass; $('connect-unlock').hidden = !hasPass;
-    $('connect-how').textContent = hasConsole ? 'Easiest: on the console, go down to the grey bar, press Select and type the staff PIN. Scan the code that comes up with this phone. It signs this phone in by itself and it stays signed in.' + (hasPass ? ' Or type the staff passcode below (it is not the console\'s PIN).' : '')
-      : hasPass ? 'Type the staff passcode. It is not the console\'s PIN.'
-      : 'Saving has not been set up on this site yet, so there is no passcode to type (the console\'s PIN does not work here). The person with the GitHub account does this once: open the line below and paste the site key. The page then shows a code for the console, and after that phones sign in just by scanning the console.';
+    $('connect-passway').hidden = !hasPass; $('connect-consoleway').hidden = !hasConsole;
+    box.querySelector('.connect-ways').hidden = !hasPass && !hasConsole;
+    $('connect-how').textContent = 'Go down to the grey bar, press Select and type the staff PIN. Scan the code that comes up with your phone. The phone is signed in and stays signed in.';
+    $('connect-consoleway').querySelector('h3').textContent = hasPass ? 'Or sign in at the console' : 'Sign in at the console';
+    $('connect-none').hidden = hasPass || hasConsole;
+    $('connect-none').textContent = 'Saving has not been set up on this site yet, so there is no passcode to type (the console PIN does not work here). The person with the GitHub account does this once: open the line below and paste the site key. The page then shows a code for the console, and after that phones sign in by scanning the console.';
     if (!hasPass && !hasConsole) box.querySelector('details').open = true;
   });
+}
+function askForKey(why) {
+  const box = $('connect'); drawSignIn(); $('connect-pass').focus({ preventScroll: true }); $('connect-why').textContent = why || ''; box.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 async function checkKey() {
   const r = await gh('');
@@ -230,7 +236,7 @@ $('connect-unlock').addEventListener('click', async () => {
   $('connect-why').textContent = 'Checking...';
   const problem = await unlockKey(pass) || await checkUnlocked();
   if (problem) { keep.set('rl-key', null); $('connect-why').textContent = problem; return; }
-  $('connect-pass').value = ''; keyReady();
+  $('connect-pass').value = ''; $('connect-why').textContent = ''; keyReady();
 });
 $('share-save').addEventListener('click', async e => {
   const pass = $('share-pass').value, again = $('share-pass2').value;
@@ -278,6 +284,7 @@ $('link-console').addEventListener('click', async e => {
   const qr = qrcode(0, 'M'); qr.addData('RL:WEB:' + pass); qr.make(); $('link-qr').innerHTML = qr.createSvgTag({ cellSize: 8, margin: 4, scalable: true });
   $('share-why').textContent = 'Saved. Now show this code to the console\'s scanner and type the staff PIN there.';
 });
+$('connect-pass').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('connect-unlock').click(); } });
 $('connect-forget').addEventListener('click', () => { keep.set('rl-key', null); keep.set('rl-role', null); keep.set('rl-slot', null); $('connect').hidden = true; status.textContent = 'The key was removed from this device.'; dispatchEvent(new Event('rl-key-changed')); });
 
 // The newest copy of a file: straight from the repository when it answers (the public pages lag about a minute behind
@@ -1234,12 +1241,15 @@ Promise.all([fetch('data.json?v=' + Date.now()).then(r => r.json()), fetch('room
     const wait = pend.waiting.filter(e => !e.sent).length, sent = pend.waiting.length - wait;
     $('home-wait').textContent = wait ? wait + (wait === 1 ? ' change is' : ' changes are') + ' on the website, waiting for the console.' : sent ? 'The console took ' + sent + (sent === 1 ? ' change' : ' changes') + ' from the website. Sync the website so it knows.' : '';
     $('home-wait-show').hidden = !wait; $('home-wait').parentElement.hidden = !$('home-wait').textContent;
-    $('home-key').textContent = keep.get('rl-key') ? 'This device can save.' : 'To publish, enter the PIN at the console’s grey bar and scan its Staff page QR.';
-    $('home-key-set').textContent = 'No console nearby? Use the passcode'; $('home-key-set').hidden = !!keep.get('rl-key');
+    const inNow = !!keep.get('rl-key');
+    $('home-key').textContent = ''; $('home-key-set').hidden = true;
+    $('signed').hidden = !inNow; $('signed-as').textContent = isManager() ? 'Signed in as a manager.' : 'Signed in as staff.';
+    if (inNow) $('connect').hidden = true; else drawSignIn();
     $('device').hidden = !keep.get('rl-key');
   };
   drawHomeStatus();
   $('home-key-set').addEventListener('click', () => { if (keep.get('rl-key')) { keep.set('rl-key', null); keep.set('rl-role', null); keep.set('rl-slot', null); drawHomeStatus(); } else askForKey('Type the staff passcode and this device can save.'); });
+  $('signed-out').addEventListener('click', () => $('device-signout').click());
   $('device-signout').addEventListener('click', () => { keep.set('rl-key', null); keep.set('rl-role', null); keep.set('rl-slot', null); drawRole(); drawHomeStatus(); status.textContent = 'This device is signed out.'; });
   addEventListener('rl-key-changed', drawHomeStatus);
   $('device-name').value = keep.get('rl-name'); $('device-name').addEventListener('change', e => { keep.set('rl-name', e.target.value.trim() || null); status.textContent = e.target.value.trim() ? 'Your changes from this device now show \u201c' + e.target.value.trim() + '\u201d in Change history.' : 'Changes from this device no longer show a name.'; });
