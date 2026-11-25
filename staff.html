@@ -1,9 +1,9 @@
 <!doctype html><html lang="en"><head><link rel="icon" href="favicon.ico?v=2" sizes="any"><link rel="icon" type="image/png" href="favicon.png?v=2"><link rel="apple-touch-icon" href="apple-touch-icon.png?v=2"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400..700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=signin-1"><link rel="stylesheet" href="staff-layout.css?v=signin-1"><link rel="stylesheet" href="dark.css?v=signin-1"><script src="theme.js?v=1"></script></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a><a href="#log">Change history</a><a href="#manuals">Manuals</a></nav></div></header>
+  <link rel="stylesheet" href="styles.css?v=signin-3"><link rel="stylesheet" href="staff-layout.css?v=signin-3"><link rel="stylesheet" href="dark.css?v=signin-3"><script src="theme.js?v=1"></script></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a><a href="#log">Change history</a><a href="#manuals">Manuals</a></nav></div></header>
 <main class="staff-main">
 <h1>Staff tools</h1>
-<p id="signed" class="signed-line" hidden><span id="signed-as"></span> <button type="button" id="signed-out" class="link-button">Sign out</button></p>
+<div id="signed" class="signed-line" hidden><p><span id="signed-as"></span> <button type="button" id="signed-out" class="link-button">Sign out</button></p><label for="device-name">Your name in Change history<input id="device-name" autocomplete="name" maxlength="24" placeholder="optional, like DL"></label></div>
 <section id="connect" class="connect" hidden>
 <h2>Sign in to make changes</h2>
 <p id="connect-why" class="connect-why" role="status"></p>
@@ -320,7 +320,6 @@
 <div id="link-code" hidden><div id="link-qr" class="qr"></div><p class="note">Unlock the console with its PIN, then show it this code. You only see it once.</p></div>
 </div>
 <h2>This device</h2>
-<label>Your name or initials <span class="add-extra-hint">(shows next to your changes in Change history)</span><input id="device-name" autocomplete="name" maxlength="24" placeholder="for example DL"></label>
 <p class="tool-note">After signing out, this device needs the console's Staff page code or the passcode to save again.</p>
 <div class="sync-actions"><button type="button" id="device-signout" class="button-secondary">Sign this device out</button></div>
 </div>
@@ -388,4 +387,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="room3d.js?v=room-5"></script>
-<script src="staff.js?v=signin-1" defer></script></body></html>
+<script src="staff.js?v=signin-3" defer></script></body></html>
