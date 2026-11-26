@@ -175,3 +175,30 @@
 .staff-main .home-status{max-width:none}
 .staff-main #health-go,.staff-main #web-reset,.staff-main #sync-use-paste,.staff-main #kit-new{background:var(--white);color:var(--ink);border:2px solid var(--ink);border-radius:8px;padding:11px 16px;font:700 14px var(--body);cursor:pointer;width:auto}
 .staff-main #kit-new{width:100%}
+
+/* the light board (Settings, managers) */
+.lights-row{display:flex;align-items:center;gap:10px;margin:12px 0}
+.lights-row label{font:600 14px var(--body)}
+.lights-row select{min-height:40px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--white);color:var(--ink);font:inherit}
+.lights-palette{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 6px}
+.lights-swatch{width:36px;height:36px;border-radius:8px;border:2px solid var(--line);padding:0;cursor:pointer}
+.lights-swatch.off{background:var(--white);color:var(--ink);font:700 11px var(--body)}
+.lights-swatch.picked{outline:3px solid var(--ink);outline-offset:2px}
+.lights-pictures{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px}
+.lights-tab{background:var(--white);color:var(--ink);border:2px solid var(--line);border-radius:8px;padding:8px 12px;font:600 14px var(--body);cursor:pointer}
+.lights-tab.picked{border-color:var(--ink)}
+.lights-board{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px 8px;background:#14161c;border-radius:12px;padding:18px 14px 12px;margin:10px 0 14px;touch-action:none;user-select:none}
+.lights-unit{display:flex;flex-direction:column;align-items:center;gap:6px}
+.lights-stack{display:flex;flex-direction:column-reverse;gap:3px}
+.lights-cell{width:38px;height:20px;border-radius:4px;border:0;padding:0;background:#2b2f3a;cursor:pointer}
+.lights-cell.on{box-shadow:0 0 8px rgba(255,255,255,.25)}
+.lights-cell:focus-visible,.lights-name:focus-visible,.lights-swatch:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.lights-name{background:none;border:0;color:#cfd3dc;font:600 11px var(--body);padding:2px 0;cursor:pointer}
+.lights-check{display:flex;align-items:center;gap:8px;margin:8px 0 14px;font:600 14px var(--body)}
+.lights-check input{width:20px;height:20px;margin:0}
+.lights-code{display:flex;flex-wrap:wrap;align-items:center;gap:18px;margin:16px 0}
+.lights-qr{width:240px;max-width:100%;background:#fff;border-radius:8px}.lights-qr:empty{display:none}.lights-qr svg{display:block;width:100%;height:auto}
+.lights-code p{margin:0;max-width:40ch;font-size:15px;line-height:1.5}
+@media(max-width:520px){.lights-cell{width:32px}.lights-board{gap:12px 6px;padding:14px 10px 10px}}
+.lights-row label{white-space:nowrap}.lights-row select{width:auto;flex:0 1 260px;margin:0}
+#lights > .tool-note:last-child{margin-top:16px}

@@ -150,7 +150,7 @@
 #include <Fonts/FreeSansBold18pt7b.h>
 
 // ============================== Settings and pins ==============================
-const char VERSION[] PROGMEM = "5.52";
+const char VERSION[] PROGMEM = "5.53";
 const int LED_PIN = A13;                       // data wire of the light chain (through the 330 ohm resistor)
 const int NUM_LEDS = 81;
 const byte LED_BRIGHTNESS = 50;                // out of 255. Keeps the power supply cool
@@ -180,6 +180,7 @@ const char STAFF_URL[] PROGMEM = "https://olivedevs.github.io/room-locator/staff
 const uint16_t BG = RGB(0, 0, 0), PANEL = RGB(40, 40, 42), PICKED = RGB(74, 74, 78), WHITE = 0xFFFF,
                DIM = RGB(176, 177, 180), ACCENT = RGB(253, 181, 21), BLACK = 0x0000, GREEN = RGB(0, 150, 71),
                CMU_RED = RGB(196, 18, 48);
+// v5.53: the wake-up lights can be drawn on the website (the light board) and sent over with one code: RL:LIGHTS.
 // v5.52: the dog pictures moved past the first 64 KB of memory (see dog.h). 5.51 had grown past that line, and on a real Mega
 // the screen stayed blank. Nothing else changed.
 // v5.51: an item can be taken out of Lending (a count of 0: RL:COUNT:<code6>:0). It comes from the website's Edit an
@@ -566,13 +567,49 @@ const unsigned int HELLO_MS = 2800;
 bool helloOn = false; unsigned long helloAt = 0, helloFrom = 0, helloLast = 0;
 void startHello() { if (!HELLO_LIGHTS) return; helloOn = true; helloAt = millis(); helloFrom = lastActivity; helloLast = 0; }
 void stopHello(bool clearLights) { if (!helloOn) return; helloOn = false; if (clearLights) lightsOff(); }
+// The wake-up show a manager drew on the website's light board (v5.53). It lives on the card as LIGHTS.DAT: how many
+// pictures (1 to 4), the speed, twinkle or not, then each picture as 81 colour numbers, two to a byte. One picture is
+// in memory at a time; the next is read from the card when its turn comes. No file = the usual wave.
+const uint32_t SHOW_COLOR[16] PROGMEM = { 0x000000, 0xFF0000, 0xFF5A00, 0xFFC800, 0x00C800, 0x00B4A0, 0x0050FF, 0x7800FF,
+                                          0xFF2896, 0xFFFFFF, 0xFFB46E, 0x64FF64, 0x64C8FF, 0x500000, 0x003C00, 0x000050 };
+File cardOpen(const char* name, uint8_t how);
+const byte SHOW_BYTES = (NUM_LEDS + 1) / 2;
+byte showFrames = 0, showSpeed = 2, showFx = 0, showNow = 255, showBuf[SHOW_BYTES];
+void loadShow() {
+  showFrames = 0; showNow = 255;
+  File f = cardOpen("LIGHTS.DAT", FILE_READ); if (!f) return;
+  int n = f.read(), sp = f.read(), fx = f.read();
+  if (n >= 1 && n <= 4 && f.size() == 3 + (unsigned long)SHOW_BYTES * n) { showFrames = n; showSpeed = constrain(sp, 1, 3); showFx = fx == 1; }
+  f.close();
+}
+bool showFrame(byte k) {                         // picture k into showBuf
+  if (k == showNow) return true;
+  File f = cardOpen("LIGHTS.DAT", FILE_READ); if (!f) return false;
+  bool ok = f.seek(3 + (unsigned long)SHOW_BYTES * k) && f.read(showBuf, SHOW_BYTES) == SHOW_BYTES;
+  f.close(); if (ok) showNow = k; return ok;
+}
+bool showTick(unsigned long t) {                 // false = the show is over
+  unsigned int each = showSpeed == 1 ? 1200 : showSpeed == 2 ? 700 : 350;
+  unsigned long whole = (unsigned long)each * showFrames * 2; if (whole < 4000) whole = 4000;
+  if (t >= whole) return false;
+  if (!showFrame((t / each) % showFrames)) { showFrames = 0; return false; }
+  byte beat = (t / 160) & 255;
+  for (int i = 0; i < NUM_LEDS; i++) {
+    byte v = (i & 1) ? (showBuf[i / 2] & 15) : (showBuf[i / 2] >> 4);
+    uint32_t col = pgm_read_dword(&SHOW_COLOR[v]);
+    if (showFx && v && (byte)(i * 7 + beat * 13) % 5 == 0) col = (col >> 3) & 0x1F1F1FUL;   // twinkle: one light in five dips, a different one each beat
+    strip.setPixelColor(i, col);
+  }
+  strip.show(); return true;
+}
 void helloTick() {
   if (!helloOn) return;
   if (lastActivity != helloFrom || mode != HOME || homeMessage) { stopHello(mode != ITEM && mode != PUTAWAY && mode != SHELF); return; }   // someone wants the console
   unsigned long t = millis() - helloAt;
-  if (t >= HELLO_MS) { stopHello(true); return; }
+  if (!showFrames && t >= HELLO_MS) { stopHello(true); return; }
   if (millis() - helloLast < 40 || Serial1.available()) return;  // (never talk to the strip in the middle of a scan)
   helloLast = millis();
+  if (showFrames) { if (!showTick(t)) stopHello(true); return; }
   int lo = 1000, hi = 0;                                          // the map's left and right ends, by each unit's middle
   for (byte u = 0; u < unitTotal; u++) if (unitCount[u] && unitMap[u][0] != 255) { int c = (unitMap[u][0] + unitMap[u][2]) / 2; if (c < lo) lo = c; if (c > hi) hi = c; }
   if (hi <= lo) { stopHello(true); return; }
@@ -2075,8 +2112,36 @@ void gotCode(char* c) {
   }
   else { textF(18, 150, F("The console and the website match."), DIM, SMALL); doneBar(F("Done. Website up to date.")); }
 }
+// RL:LIGHTS:<pictures><speed><twinkle>:<the pictures, 6 bits to a letter>   or   RL:LIGHTS:0 = back to the usual wave
+int sixBits(char c) { return c >= 'A' && c <= 'Z' ? c - 'A' : c >= 'a' && c <= 'z' ? c - 'a' + 26 : c >= '0' && c <= '9' ? c - '0' + 52 : c == '-' ? 62 : c == '_' ? 63 : -1; }
+void lightsCode(char* p) {
+  byte n = p[0] - '0';
+  bool plain = p[0] == '0' && !p[1];
+  if (!plain) {
+    unsigned int bytes = (unsigned int)SHOW_BYTES * n, letters = (bytes * 4 + 2) / 3;
+    if (n < 1 || n > 4 || p[1] < '1' || p[1] > '3' || (p[2] != '0' && p[2] != '1') || p[3] != ':' || strlen(p + 4) != letters) { codeProblem(F("That lights code is not complete. Scan it again.")); return; }
+    for (unsigned int i = 0; i < letters; i++) if (sixBits(p[4 + i]) < 0) { codeProblem(F("That lights code is not complete. Scan it again.")); return; }
+    cardRemove("LIGHTS.DAT"); File f = cardOpen("LIGHTS.DAT", FILE_WRITE);
+    if (!f) { codeProblem(F("The SD card would not write. Is it locked?")); return; }
+    f.write((byte)n); f.write((byte)(p[1] - '0')); f.write((byte)(p[2] - '0'));
+    unsigned long acc = 0; byte have = 0; unsigned int out = 0;
+    for (unsigned int i = 0; i < letters && out < bytes; i++) {
+      acc = (acc << 6) | (byte)sixBits(p[4 + i]); have += 6;
+      if (have >= 8) { have -= 8; f.write((byte)(acc >> have)); out++; }
+    }
+    f.close();
+  } else cardRemove("LIGHTS.DAT");
+  loadShow();
+  backDepth = 0; mode = HOME; homeMessage = true; offerSync = false;
+  header("Wake-up lights", NULL);
+  if (showFrames) { textF(18, 90, F("Saved. The lights play your design"), WHITE, SMALL); textF(18, 114, F("each time the console wakes up."), WHITE, SMALL); }
+  else if (plain) textF(18, 90, F("Back to the usual wave."), WHITE, SMALL);
+  else textF(18, 90, F("The SD card did not keep it. Scan it again."), WHITE, SMALL);
+  footer(F("Any button = Home"));
+}
 void runCode(char* c) {
   c += 3;
+  if (strncasecmp_P(c, PSTR("LIGHTS:"), 7) == 0) { lightsCode(c + 7); return; }
   if (strncasecmp_P(c, PSTR("GOT:"), 4) == 0 || strcasecmp_P(c, PSTR("RESEND")) == 0) { gotCode(c); return; }
   if (strncasecmp_P(c, PSTR("Q:"), 2) == 0) { allCode(c + 2); return; }
   if (strncasecmp_P(c, PSTR("B:"), 2) == 0) { batchWhole = false; batchCode(c + 2); return; }
@@ -3241,7 +3306,7 @@ void setup() {
   staffUntil = 0;                                                  // a restart locks changes again
   for (byte i = 0; i < sizeof(OLD_FILES) / sizeof(OLD_FILES[0]); i++) { char old[14]; strcpy_P(old, (const char*)pgm_read_ptr(&OLD_FILES[i])); cardRemove(old); }
   { File g = cardOpen("TIDY.GO"); bool cut = g; if (g) g.close(); if (cut) finishTidy(); }                         // a tidy-up was cut short by a power cut: finish it
-  loadUnits(); loadBoards(); loadMoves(); loadSent(); loadStaff(); loadWeb(); findAddedFrom(); loadAudit(); loadTidy();
+  loadUnits(); loadBoards(); loadMoves(); loadSent(); loadStaff(); loadWeb(); findAddedFrom(); loadAudit(); loadTidy(); loadShow();
   if (!kindsFile || unitTotal == 0) {                              // card without the v5 files: wait for the laptop to send them
     stopWith(F("Waiting for the laptop"), F("The SD card needs the data files (push_card.py)"));
     while (!kindsFile || unitTotal == 0) readLaptop();

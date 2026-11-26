@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><link rel="icon" href="favicon.ico?v=2" sizes="any"><link rel="icon" type="image/png" href="favicon.png?v=2"><link rel="apple-touch-icon" href="apple-touch-icon.png?v=2"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Staff tools · IDeATe Lending</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400..700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=signin-3"><link rel="stylesheet" href="staff-layout.css?v=signin-3"><link rel="stylesheet" href="dark.css?v=signin-3"><script src="theme.js?v=1"></script></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a><a href="#log">Change history</a><a href="#manuals">Manuals</a></nav></div></header>
+  <link rel="stylesheet" href="styles.css?v=signin-3"><link rel="stylesheet" href="staff-layout.css?v=lights-3"><link rel="stylesheet" href="dark.css?v=signin-3"><script src="theme.js?v=1"></script></head><body><header class="site-header"><div class="header-inner"><a class="brand" href="./">IDeATe Lending</a><nav class="header-nav"><a href="./">Item guides</a><a href="./#room">Room view</a><a href="#log">Change history</a><a href="#manuals">Manuals</a></nav></div></header>
 <main class="staff-main">
 <h1>Staff tools</h1>
 <div id="signed" class="signed-line" hidden><p><span id="signed-as"></span> <button type="button" id="signed-out" class="link-button">Sign out</button></p><label for="device-name">Your name in Change history<input id="device-name" autocomplete="name" maxlength="24" placeholder="optional, like DL"></label></div>
@@ -290,6 +290,20 @@
 <div class="sync-actions"><button type="button" id="access-save">Save for student staff</button></div>
 <p id="access-why" class="tool-note"></p>
 </details>
+<details class="staff-fold manager-only" id="lights" hidden><summary>Wake-up lights</summary>
+<p class="tool-note">Draw what the lights on the model do when the console wakes up. Pick a colour, then tap or drag across the lights. Each column is a unit, with shelf 1 at the bottom. Tap a unit's name to colour the whole unit.</p>
+<div class="lights-row"><label for="lights-start">Start from</label><select id="lights-start"><option value="">Choose a design…</option><option value="christmas">Christmas</option><option value="halloween">Halloween</option><option value="cmu">CMU red and white</option><option value="winter">Winter</option><option value="rainbow">Rainbow</option><option value="blank">A blank board</option></select></div>
+<div id="lights-palette" class="lights-palette" role="group" aria-label="Colour"></div>
+<p class="tool-note">Painting with: <strong id="lights-picked"></strong> <button type="button" id="lights-fill" class="link-button">Colour every light</button></p>
+<div id="lights-pictures" class="lights-pictures" role="group" aria-label="Picture"></div>
+<p class="tool-note"><button type="button" id="lights-add" class="link-button">Add a picture</button> <button type="button" id="lights-drop" class="link-button">Remove this picture</button> <span>Up to 4 pictures play one after another.</span></p>
+<div id="lights-board" class="lights-board"></div>
+<div class="lights-row" id="lights-speed-row"><label for="lights-speed">Speed</label><select id="lights-speed"><option value="1">Slow</option><option value="2">Medium</option><option value="3">Fast</option></select></div>
+<label class="lights-check"><input type="checkbox" id="lights-twinkle"> Twinkle</label>
+<div class="sync-actions"><button type="button" id="lights-play" class="button-secondary">Play it here</button><button type="button" id="lights-make">Send it to the console</button></div>
+<div id="lights-code" class="lights-code" hidden><div id="lights-qr" class="lights-qr"></div><p id="lights-code-note" role="status"></p></div>
+<p class="tool-note"><button type="button" id="lights-usual" class="link-button">Go back to the usual wave</button> This only changes the wake-up show. The colours for finding an item stay the same.</p>
+</details>
 <details class="staff-fold" id="device" hidden><summary>Passcode and sign-out</summary>
 <div id="share">
 <p id="role-note" class="tool-note"></p>
@@ -387,4 +401,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="room3d.js?v=room-5"></script>
-<script src="staff.js?v=signin-3" defer></script></body></html>
+<script src="staff.js?v=lights-3" defer></script><script src="lights.js?v=lights-3" defer></script></body></html>
